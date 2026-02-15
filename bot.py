@@ -1,3 +1,5 @@
+from aiohttp import web
+
 import asyncio
 import logging
 import os
@@ -1814,11 +1816,34 @@ def setup_handlers(dp: Dispatcher):
 
     dp.message.register(forward_to_admin)
 
+async def run_web_server():
+    app = web.Application()
+
+    async def health(request):
+        return web.Response(text="ok")
+
+    app.router.add_get("/", health)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    port = int(os.getenv("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+    print(f"Web server started on port {port}")
+
+    while True:
+        await asyncio.sleep(3600)
 
 # =========================
 # MAIN (устойчивый запуск для Render: автоперезапуск при ошибках)
 # =========================
-async def run_bot_forever():
+async def main():
+    await asyncio.gather(
+        run_bot_forever(),
+        run_web_server(),
+    )
     if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
         raise RuntimeError("Нужно задать BOT_TOKEN через переменные окружения (Render ENV).")
     if ADMIN_ID == 0:
@@ -1853,3 +1878,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
