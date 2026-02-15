@@ -1869,13 +1869,10 @@ async def main():
             await asyncio.sleep(2)
 
 
-async def main():
-    await run_bot_forever()
-
-
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
