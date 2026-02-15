@@ -1,0 +1,17 @@
+services:
+  - type: worker
+    name: trainer-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: BANK_NAME
+        sync: false
+      - key: CARD_NUMBER
+        sync: false
+      - key: CARD_HOLDER
+        sync: false
