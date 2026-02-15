@@ -1841,7 +1841,6 @@ async def run_web_server():
 # =========================
 async def main():
     await asyncio.gather(
-        run_bot_forever(),
         run_web_server(),
     )
     if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
@@ -1874,5 +1873,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
