@@ -1870,36 +1870,13 @@ async def main():
         bot_loop(),
         run_web_server(),
     )
-    if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
-        raise RuntimeError("Нужно задать BOT_TOKEN через переменные окружения (Render ENV).")
-    if ADMIN_ID == 0:
-        logger.warning("ADMIN_ID не задан. Подтверждение оплат админом работать не будет.")
-
-    await init_db()
-
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher()
-    setup_handlers(dp)
-
-    backoff = 2
-    while True:
-        try:
-            logger.info("Bot polling started.")
-            await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
-        except Exception:
-            logger.exception("Polling crashed. Restarting...")
-            await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, 60)
-        else:
-            backoff = 2
-            await asyncio.sleep(2)
-
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
 
