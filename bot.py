@@ -7,6 +7,7 @@ import random
 import re
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
+from typing import Optional, Set
 
 import aiosqlite
 from aiogram import Bot, Dispatcher, F
@@ -54,8 +55,14 @@ class ProfileFlow(StatesGroup):
     height = State()
     weight = State()
     place = State()
+
+    # НОВОЕ: опросы по оборудованию
+    equip_select = State()   # мультиселект оборудования
+    equip_level = State()    # уровень доступных весов/нагрузки
+
     exp = State()
     freq = State()
+    meals = State()
 
 
 class PaymentFlow(StatesGroup):
@@ -132,6 +139,57 @@ def place_inline_kb():
         [InlineKeyboardButton(text="🏠 Дом", callback_data="place:home")],
         [InlineKeyboardButton(text="🏋️ Зал", callback_data="place:gym")],
     ])
+
+
+# ====== НОВОЕ: Оборудование (мультиселект) + уровень доступных весов ======
+HOME_EQUIP = [
+    ("Турник", "home:bar"),
+    ("Гантели", "home:dumb"),
+    ("Резинки", "home:band"),
+    ("Скамья", "home:bench"),
+    ("Брусья", "home:dip"),
+    ("Нет ничего", "home:none"),
+]
+
+GYM_EQUIP = [
+    ("Штанга", "gym:barbell"),
+    ("Гантели", "gym:dumbbell"),
+    ("Блоки/кроссовер", "gym:cable"),
+    ("Смит/гакк", "gym:smith"),
+    ("Жим ногами", "gym:legpress"),
+    ("Турник/брусья", "gym:pullup"),
+]
+
+
+def equip_select_kb(place: str, selected: Optional[Set[str]] = None):
+    selected = selected or set()
+    items = HOME_EQUIP if place == "дом" else GYM_EQUIP
+
+    rows = []
+    for title, code in items:
+        mark = "✅ " if code in selected else ""
+        rows.append([InlineKeyboardButton(text=f"{mark}{title}", callback_data=f"eq:{code}")])
+
+    rows.append([InlineKeyboardButton(text="Готово ▶️", callback_data="eq:done")])
+    rows.append([InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def equip_level_kb(place: str):
+    if place == "дом":
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Лёгкие (до ~10–15 кг)", callback_data="eql:home:light")],
+            [InlineKeyboardButton(text="Средние (до ~25–35 кг)", callback_data="eql:home:mid")],
+            [InlineKeyboardButton(text="Тяжёлые (35+ кг / есть где грузиться)", callback_data="eql:home:heavy")],
+            [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        ])
+    else:
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Обычный зал (всё базовое)", callback_data="eql:gym:std")],
+            [InlineKeyboardButton(text="Сильная база (есть тяжёлые веса)", callback_data="eql:gym:heavy")],
+            [InlineKeyboardButton(text="Ограничено (мало веса/очереди)", callback_data="eql:gym:limited")],
+            [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        ])
 
 
 def measures_inline_kb():
@@ -261,8 +319,14 @@ def suggest_meals_count(calories: int) -> int:
     return 3
 
 
+def parse_equip(equip_str: Optional[str]) -> Set[str]:
+    if not equip_str:
+        return set()
+    return {x.strip() for x in equip_str.split(",") if x.strip()}
+
+
 # =========================
-# ТРЕНИРОВКИ (индивидуальная сборка)
+# ТРЕНИРОВКИ (индивидуальная сборка + учет оборудования)
 # =========================
 def _choose_split(freq: int, lvl: str, is_gym: bool) -> str:
     f = int(freq or 3)
@@ -275,35 +339,149 @@ def _choose_split(freq: int, lvl: str, is_gym: bool) -> str:
     return "ppl_5" if is_gym else "ul_4_plus_arms"
 
 
-def _exercise_pool(is_gym: bool):
+def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
+    """
+    Возвращает пул упражнений с фильтром по доступному оборудованию.
+    equip хранит коды типа: 'home:bar', 'gym:barbell'...
+    """
+    def has(code: str) -> bool:
+        return code in equip
+
+    if "home:none" in equip:
+        equip = {"home:none"}
+
+    has_pullup = has("home:bar") or has("gym:pullup")
+    has_bands = has("home:band")
+    has_dumb = has("home:dumb") or has("gym:dumbbell")
+    has_barbell = has("gym:barbell")
+    has_cable = has("gym:cable")
+    has_smith = has("gym:smith")
+    has_legpress = has("gym:legpress")
+
+    home_light = (equip_level == "home:light")
+
     if is_gym:
-        return {
-            "squat": ["Присед со штангой", "Жим ногами", "Гакк-присед"],
-            "hinge": ["Румынская тяга", "Становая тяга (лёгкий вариант)", "Гиперэкстензии с весом"],
-            "hpush": ["Жим лёжа", "Жим гантелей лёжа", "Жим в тренажёре"],
-            "vpush": ["Жим штанги стоя", "Жим гантелей сидя", "Жим в Смите"],
-            "pull_v": ["Подтягивания", "Верхний блок", "Подтягивания в гравитроне"],
-            "pull_h": ["Тяга горизонтального блока", "Тяга штанги в наклоне", "Тяга гантели одной рукой"],
-            "delts": ["Разведения в стороны", "Задняя дельта (пек-дек)", "Тяга каната к лицу (face pull)"],
-            "arms_bi": ["Сгибания на бицепс (штанга)", "Сгибания гантелей", "Сгибания на блоке"],
-            "arms_tri": ["Разгибания на блоке", "Французский жим", "Брусья (с ассистом)"],
-            "legs_iso": ["Сгибание ног", "Разгибание ног", "Икры стоя/сидя"],
+        pool = {
+            "squat": [],
+            "hinge": [],
+            "hpush": [],
+            "vpush": [],
+            "pull_v": [],
+            "pull_h": [],
+            "delts": [],
+            "arms_bi": [],
+            "arms_tri": [],
+            "legs_iso": [],
             "core": ["Скручивания", "Подъёмы ног", "Планка"],
         }
+
+        # squat/legs
+        if has_barbell:
+            pool["squat"].append("Присед со штангой")
+        if has_legpress:
+            pool["squat"].append("Жим ногами")
+        if has_smith:
+            pool["squat"].append("Присед в Смите / гакк")
+        if not pool["squat"]:
+            pool["squat"] = ["Жим ногами", "Гакк-присед", "Присед в Смите"]
+
+        # hinge
+        if has_barbell:
+            pool["hinge"].append("Румынская тяга (штанга)")
+        pool["hinge"] += ["Гиперэкстензии с весом", "Румынская тяга (гантели)"]
+
+        # push
+        pool["hpush"] = ["Жим лёжа", "Жим гантелей лёжа", "Жим в тренажёре"]
+        pool["vpush"] = (["Жим штанги стоя", "Жим гантелей сидя", "Жим в Смите"]
+                         if (has_barbell or has_smith) else ["Жим гантелей сидя", "Жим в тренажёре"])
+
+        # pull
+        if has_pullup:
+            pool["pull_v"] += ["Подтягивания", "Подтягивания в гравитроне"]
+        if has_cable:
+            pool["pull_v"] += ["Верхний блок"]
+            pool["pull_h"] += ["Тяга горизонтального блока"]
+        pool["pull_h"] += (["Тяга гантели одной рукой", "Тяга штанги в наклоне"]
+                           if has_barbell else ["Тяга гантели одной рукой", "Тяга в тренажёре"])
+
+        # delts/arms/iso
+        pool["delts"] = (["Разведения в стороны", "Face pull", "Задняя дельта (пек-дек)"]
+                         if has_cable else ["Разведения в стороны", "Задняя дельта (пек-дек)"])
+        pool["arms_bi"] = (["Сгибания гантелей", "Сгибания на блоке", "Сгибания штанги"]
+                           if (has_cable or has_barbell) else ["Сгибания гантелей", "Молотки"])
+        pool["arms_tri"] = (["Разгибания на блоке", "Французский жим", "Брусья (с ассистом)"]
+                            if has_cable else ["Французский жим", "Брусья (с ассистом)"])
+        pool["legs_iso"] = ["Сгибание ног", "Разгибание ног", "Икры стоя/сидя"]
+        return pool
+
+    # ===== HOME =====
+    pool = {
+        "squat": [],
+        "hinge": [],
+        "hpush": [],
+        "vpush": [],
+        "pull_v": [],
+        "pull_h": [],
+        "delts": [],
+        "arms_bi": [],
+        "arms_tri": [],
+        "legs_iso": [],
+        "core": ["Планка", "Скручивания", "Подъём ног лёжа"],
+    }
+
+    # Если вообще ничего — калистеника
+    if "home:none" in equip:
+        pool["squat"] = ["Приседания", "Болгарские выпады", "Выпады"]
+        pool["hinge"] = ["Ягодичный мост", "Наклоны без веса", "Доброе утро (без веса)"]
+        pool["hpush"] = ["Отжимания", "Отжимания узкие", "Отжимания с упором ног"]
+        pool["vpush"] = ["Пайк-отжимания", "Отжимания в стойке у стены (лёгк.)"]
+        pool["pull_v"] = ["Супермен (спина)", "Лодочка"]
+        pool["pull_h"] = ["Лодочка", "Тяга полотенца (изометрия)"]
+        pool["delts"] = ["Y-T-W подъёмы", "Разведения без веса (контроль)"]
+        pool["arms_bi"] = ["Сгибания с рюкзаком", "Изометрия на бицепс"]
+        pool["arms_tri"] = ["Отжимания узкие", "Отжимания на стуле"]
+        pool["legs_iso"] = ["Икры стоя", "Статика в выпаде"]
+        return pool
+
+    # squat/hinge
+    pool["squat"] = (["Гоблет-присед", "Болгарские выпады", "Присед с гантелями"]
+                     if has_dumb else ["Болгарские выпады", "Приседания", "Выпады"])
+    pool["hinge"] = (["Румынская тяга с гантелями", "Ягодичный мост", "Наклоны с гантелями"]
+                     if has_dumb else ["Ягодичный мост", "Наклоны без веса"])
+
+    # push
+    pool["hpush"] = (["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа"]
+                     if has_dumb else ["Отжимания", "Отжимания узкие", "Отжимания с упором ног"])
+    pool["vpush"] = (["Жим гантелей вверх", "Пайк-отжимания"]
+                     if has_dumb else ["Пайк-отжимания", "Отжимания в стойке у стены (лёгк.)"])
+
+    # pull
+    if has_pullup:
+        pool["pull_v"] = (["Подтягивания", "Подтягивания негативы", "Подтягивания с резинкой"]
+                          if has_bands else ["Подтягивания", "Негативы"])
     else:
-        return {
-            "squat": ["Присед с гантелями", "Гоблет-присед", "Болгарские выпады"],
-            "hinge": ["Румынская тяга с гантелями", "Ягодичный мост", "Наклоны с гантелями"],
-            "hpush": ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа (скамья)"],
-            "vpush": ["Жим гантелей вверх", "Пайк-отжимания", "Жим одной рукой (лёгкий)"],
-            "pull_v": ["Подтягивания (если есть турник)", "Тяга резинки сверху", "Тяга к поясу резинкой"],
-            "pull_h": ["Тяга гантели одной рукой", "Тяга двух гантелей в наклоне", "Тяга резинки к поясу"],
-            "delts": ["Разведения в стороны", "Разведения в наклоне (задняя дельта)", "Face pull резинкой"],
-            "arms_bi": ["Сгибания гантелей", "Молотки", "Сгибания с резинкой"],
-            "arms_tri": ["Французский жим гантелью", "Разгибания из-за головы", "Отжимания узкие"],
-            "legs_iso": ["Икры стоя", "Сгибания ног с резинкой", "Статические выпады"],
-            "core": ["Планка", "Скручивания", "Подъём ног лёжа"],
-        }
+        pool["pull_v"] = (["Тяга резинки сверху"] if has_bands else [])
+
+    pool["pull_h"] = (["Тяга гантели одной рукой", "Тяга двух гантелей в наклоне"] if has_dumb else [])
+    if has_bands:
+        pool["pull_h"].append("Тяга резинки к поясу")
+
+    if not pool["pull_v"]:
+        pool["pull_v"] = ["Супермен (спина)", "Лодочка"]
+    if not pool["pull_h"]:
+        pool["pull_h"] = ["Лодочка", "Тяга полотенца (изометрия)"]
+
+    pool["delts"] = (["Разведения в стороны", "Разведения в наклоне (задняя дельта)"]
+                     if has_dumb else (["Face pull резинкой"] if has_bands else ["Y-T-W подъёмы"]))
+    pool["arms_bi"] = (["Сгибания гантелей", "Молотки"]
+                       if has_dumb else (["Сгибания с резинкой"] if has_bands else ["Сгибания с рюкзаком"]))
+    pool["arms_tri"] = (["Французский жим гантелью", "Отжимания узкие"]
+                        if has_dumb else ["Отжимания узкие", "Отжимания на стуле"])
+    pool["legs_iso"] = ["Икры стоя", "Статические выпады"]
+
+    # home light — просто будет больше повторов в rep_ranges
+    _ = home_light
+    return pool
 
 
 def _pick(pool_list, rnd: random.Random, k: int = 1):
@@ -325,12 +503,21 @@ def _volume_by_goal(goal: str, lvl: str):
     return {"rir": "RIR 1–3, по самочувствию", "sets_main": (3, 4), "sets_iso": (2, 3)}
 
 
-def _rep_ranges(lvl: str):
+def _rep_ranges(lvl: str, equip_level: Optional[str] = None):
+    home_light = (equip_level == "home:light")
+
     if lvl == "novice":
-        return {"main": "6–10", "iso": "10–15", "core": "12–20"}
-    if lvl == "mid":
-        return {"main": "5–10", "iso": "10–20", "core": "12–20"}
-    return {"main": "4–10", "iso": "12–20", "core": "12–25"}
+        base = {"main": "6–10", "iso": "10–15", "core": "12–20"}
+    elif lvl == "mid":
+        base = {"main": "5–10", "iso": "10–20", "core": "12–20"}
+    else:
+        base = {"main": "4–10", "iso": "12–20", "core": "12–25"}
+
+    if home_light:
+        base["main"] = "10–15"
+        base["iso"] = "15–25"
+        base["core"] = "15–30"
+    return base
 
 
 def _plan_header(goal: str, place: str, exp: str, freq: int):
@@ -341,7 +528,9 @@ def _plan_header(goal: str, place: str, exp: str, freq: int):
     return lvl, is_gym, f"🏋️ ТРЕНИРОВКИ ({where}) — {freq}×/нед"
 
 
-def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: int = 0) -> str:
+def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
+                          equip: Optional[Set[str]] = None, equip_level: Optional[str] = None,
+                          user_id: int = 0) -> str:
     lvl, is_gym, header = _plan_header(goal, place, exp, freq)
     f = int(freq or 3)
 
@@ -349,9 +538,10 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
     rnd = random.Random(seed)
 
     split = _choose_split(f, lvl, is_gym)
-    pool = _exercise_pool(is_gym)
+    equip = equip or set()
+    pool = _exercise_pool(is_gym, equip, equip_level)
     vol = _volume_by_goal(goal, lvl)
-    reps = _rep_ranges(lvl)
+    reps = _rep_ranges(lvl, equip_level)
 
     main_min, main_max = vol["sets_main"]
     iso_min, iso_max = vol["sets_iso"]
@@ -523,9 +713,16 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
     elif "мас" in g:
         cardio_note = "• Масса: кардио умеренно (1–2× по 15–25 мин), чтобы не мешало восстановлению.\n"
 
+    equip_note = ""
+    if equip:
+        equip_note = "Оборудование: " + ", ".join(sorted(equip)) + "\n"
+    if equip_level:
+        equip_note += f"Уровень нагрузки: {equip_level}\n"
+
     return (
         f"{header}\n\n"
         f"Цель: {goal}\n"
+        f"{equip_note}"
         f"Интенсивность: {vol['rir']}\n"
         "Паузы: 90–180 сек базовые, 60–90 сек изоляция\n"
         f"{cardio_note}\n"
@@ -539,7 +736,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
 
 
 # =========================
-# ПИТАНИЕ (3 дня, ккал/БЖУ сходятся внутри вывода)
+# ПИТАНИЕ (как в твоём предыдущем коде)
 # =========================
 # Важно: крупы/макароны указаны В СУХОМ ВИДЕ (как на упаковке).
 FOOD_DB = {
@@ -580,8 +777,6 @@ def _fmt_tot(t):
     return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
 
 def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
-    # 3 разных дня — заранее заменяем блюда
-    # Далее алгоритм мягко добирает Б/Ж/У, чтобы цифры сходились (в выводе есть итог и цель).
     day_templates = [
         [  # День 1
             ["oats", "yogurt", "banana"],
@@ -606,7 +801,6 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
         ],
     ]
 
-    # Базовые граммы (потом добор)
     base = {
         "oats": 80, "yogurt": 300, "banana": 120,
         "rice": 90, "buckwheat": 90, "pasta": 90,
@@ -620,21 +814,18 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
     out = []
 
     def add_protein(items, need_p):
-        # добор белка курицей по 50г
         while need_p > 8:
             items.append(("chicken", 50.0))
             need_p -= _nutr_of("chicken", 50.0)["p"]
         return items
 
     def add_fat(items, need_f):
-        # добор жира маслом по 5г
         while need_f > 4:
             items.append(("oil", 5.0))
             need_f -= _nutr_of("oil", 5.0)["f"]
         return items
 
     def add_carbs(items, need_c):
-        # добор углеводов рисом по 20г (сухой)
         while need_c > 12:
             items.append(("rice", 20.0))
             need_c -= _nutr_of("rice", 20.0)["c"]
@@ -654,7 +845,6 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
             day_items_by_meal.append(meal_items)
             day_items_flat.extend(meal_items)
 
-        # добираем до цели по БЖУ
         tot = _sum_nutr(day_items_flat)
 
         need_p = target["p"] - tot["p"]
@@ -672,7 +862,6 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
             day_items_flat = add_carbs(day_items_flat, need_c)
         tot = _sum_nutr(day_items_flat)
 
-        # лёгкая подгонка по ккал (не ломая БЖУ сильно)
         delta_kcal = target["kcal"] - tot["kcal"]
         step_g = 20.0
         if abs(delta_kcal) > 140:
@@ -686,7 +875,6 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
                         break
         tot = _sum_nutr(day_items_flat)
 
-        # считаем "добор" (что добавили сверх базовых приёмов)
         grouped = {}
         for k, g in day_items_flat:
             grouped[k] = grouped.get(k, 0.0) + g
@@ -704,7 +892,6 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
             if extra > 0.1:
                 extras.append((k, extra))
 
-        # текст
         day_text = [f"📅 День {day_i + 1}", ""]
         for mi, meal_items in enumerate(day_items_by_meal, start=1):
             meal_tot = _sum_nutr(meal_items)
@@ -728,10 +915,9 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
     return "\n\n".join(out)
 
 
-def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: float, exp: str, freq: int = 3, place: str = "дом") -> str:
+def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: float, exp: str, freq: int = 3, place: str = "дом", meals: int = 3) -> str:
     calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
     p, f, c = calc_macros(calories, weight, goal)
-    meals = suggest_meals_count(calories)
 
     tips = (
         "Как держать прогресс правильно:\n"
@@ -769,7 +955,7 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
 
 
 # =========================
-# FAQ (понятнее + объёмнее)
+# FAQ (как в твоём предыдущем коде)
 # =========================
 def faq_text(topic: str) -> str:
     if topic == "pay":
@@ -794,7 +980,8 @@ def faq_text(topic: str) -> str:
             "• цель (масса/сушка/форма)\n"
             "• где тренируешься (дом/зал)\n"
             "• опыт (0 / 1–2 / 2+)\n"
-            "• сколько раз в неделю реально удобно\n\n"
+            "• сколько раз в неделю реально удобно\n"
+            "• оборудование (что реально есть под рукой)\n\n"
             "Что меняется:\n"
             "— Новичок: простая база, техника, без отказа\n"
             "— 1–2 года: больше недельный объём, распределение нагрузок\n"
@@ -955,6 +1142,9 @@ async def init_db():
             place TEXT,
             exp TEXT,
             freq INTEGER,
+            meals INTEGER,
+            equip TEXT,
+            equip_level TEXT,
             created_at TEXT
         )
         """)
@@ -1022,6 +1212,15 @@ async def init_db():
             created_at TEXT
         )
         """)
+
+        # ===== МИГРАЦИЯ: добавляем колонки, если база уже была создана раньше =====
+        async with conn.execute("PRAGMA table_info(users)") as cur:
+            cols = {r[1] for r in await cur.fetchall()}
+        if "equip" not in cols:
+            await conn.execute("ALTER TABLE users ADD COLUMN equip TEXT;")
+        if "equip_level" not in cols:
+            await conn.execute("ALTER TABLE users ADD COLUMN equip_level TEXT;")
+
         await conn.commit()
 
 
@@ -1042,7 +1241,7 @@ async def ensure_user(user_id: int, username: str):
 async def get_user(user_id: int):
     async with db() as conn:
         async with conn.execute("""
-            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq
+            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq, meals, equip, equip_level
             FROM users WHERE user_id=?
         """, (user_id,)) as cur:
             row = await cur.fetchone()
@@ -1052,7 +1251,8 @@ async def get_user(user_id: int):
     return {
         "user_id": row[0], "username": row[1], "goal": row[2], "sex": row[3],
         "age": row[4], "height": row[5], "weight": row[6], "place": row[7],
-        "exp": row[8], "freq": row[9]
+        "exp": row[8], "freq": row[9], "meals": row[10],
+        "equip": row[11], "equip_level": row[12],
     }
 
 
@@ -1265,7 +1465,7 @@ async def cmd_start(message: Message):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await message.answer(
         "Привет! Я составлю тебе:\n"
-        "• тренировки под цель и опыт\n"
+        "• тренировки под цель и опыт (с учётом оборудования)\n"
         "• питание (ккал/БЖУ) + 3 дня примеров\n"
         "• дневник тренировок\n"
         "• замеры прогресса\n\n"
@@ -1294,8 +1494,11 @@ async def open_profile(message: Message, state: FSMContext):
         f"Рост: {u.get('height') or '—'}\n"
         f"Вес: {u.get('weight') or '—'}\n"
         f"Где тренируешься: {u.get('place') or '—'}\n"
+        f"Оборудование: {u.get('equip') or '—'}\n"
+        f"Уровень нагрузки: {u.get('equip_level') or '—'}\n"
         f"Опыт: {u.get('exp') or '—'}\n"
-        f"Частота: {u.get('freq') or '—'}\n\n"
+        f"Частота: {u.get('freq') or '—'}\n"
+        f"Приёмов пищи: {u.get('meals') or '—'}\n\n"
         "Выбери цель:",
         reply_markup=goal_inline_kb()
     )
@@ -1367,6 +1570,59 @@ async def cb_place(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[1]
     place = "дом" if v == "home" else "зал"
     await update_user(callback.from_user.id, place=place)
+
+    await state.update_data(equip_set=set())
+    await callback.message.answer(
+        "Какие тренажёры/оборудование доступны? (можно выбрать несколько)\n"
+        "Нажимай кнопки — они будут отмечаться ✅\n"
+        "Когда выберешь — нажми «Готово ▶️»",
+        reply_markup=equip_select_kb(place, set())
+    )
+    await state.set_state(ProfileFlow.equip_select)
+    await callback.answer()
+
+
+async def cb_equip_toggle(callback: CallbackQuery, state: FSMContext):
+    data = callback.data.split(":", 1)[1]
+
+    u = await get_user(callback.from_user.id)
+    place = u.get("place") or "дом"
+
+    st = await state.get_data()
+    equip_set = set(st.get("equip_set") or set())
+
+    if data == "done":
+        equip_str = ",".join(sorted(equip_set))
+        await update_user(callback.from_user.id, equip=equip_str)
+
+        await callback.message.answer(
+            "Ок. Теперь второй вопрос:\n"
+            "Какой уровень весов/нагрузки доступен?",
+            reply_markup=equip_level_kb(place)
+        )
+        await state.set_state(ProfileFlow.equip_level)
+        await callback.answer()
+        return
+
+    code = data  # "home:bar" / "gym:barbell"
+    if code.endswith(":none"):
+        equip_set = {code}
+    else:
+        equip_set.discard("home:none")
+        if code in equip_set:
+            equip_set.remove(code)
+        else:
+            equip_set.add(code)
+
+    await state.update_data(equip_set=equip_set)
+    await callback.message.edit_reply_markup(reply_markup=equip_select_kb(place, equip_set))
+    await callback.answer()
+
+
+async def cb_equip_level(callback: CallbackQuery, state: FSMContext):
+    lvl = callback.data.split(":", 1)[1]  # "home:light" etc
+    await update_user(callback.from_user.id, equip_level=lvl)
+
     await callback.message.answer("Опыт? Напиши: 0 / 1-2 года / 2+ года")
     await state.set_state(ProfileFlow.exp)
     await callback.answer()
@@ -1379,8 +1635,8 @@ async def profile_exp(message: Message, state: FSMContext):
     lvl = exp_level(exp)
     if lvl == "novice":
         await update_user(message.from_user.id, freq=3)
-        await message.answer("✅ Профиль заполнен (для новичка будет 3×/нед).", reply_markup=main_menu_kb())
-        await state.clear()
+        await message.answer("Сколько приёмов пищи в день удобно? Напиши: 3 / 4 / 5")
+        await state.set_state(ProfileFlow.meals)
         return
 
     await message.answer("Сколько тренировок в неделю удобно? Напиши: 3 / 4 / 5")
@@ -1393,6 +1649,16 @@ async def profile_freq(message: Message, state: FSMContext):
         await message.answer("Напиши просто цифру: 3 или 4 или 5")
         return
     await update_user(message.from_user.id, freq=int(t))
+    await message.answer("Сколько приёмов пищи в день удобно? Напиши: 3 / 4 / 5")
+    await state.set_state(ProfileFlow.meals)
+
+
+async def profile_meals(message: Message, state: FSMContext):
+    t = re.sub(r"[^\d]", "", message.text or "")
+    if t not in ("3", "4", "5"):
+        await message.answer("Напиши цифру: 3 или 4 или 5")
+        return
+    await update_user(message.from_user.id, meals=int(t))
     await message.answer("✅ Профиль заполнен. Теперь: 💳 Оплата / Доступ", reply_markup=main_menu_kb())
     await state.clear()
 
@@ -1598,18 +1864,21 @@ async def build_plan(message: Message):
         return
 
     u = await get_user(message.from_user.id)
-    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq"]
+    need = ["goal", "sex", "age", "height", "weight", "place", "equip", "equip_level", "exp", "freq", "meals"]
     if any(not u.get(k) for k in need):
         await message.answer("⚠️ Не хватает данных профиля. Заполни: ⚙️ Профиль")
         return
 
+    equip_set = parse_equip(u.get("equip"))
     workout = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"]),
+        equip=equip_set,
+        equip_level=u.get("equip_level"),
         user_id=message.from_user.id
     )
     nutrition = generate_nutrition_plan(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
-        freq=int(u["freq"]), place=u["place"]
+        freq=int(u["freq"]), place=u["place"], meals=int(u["meals"])
     )
 
     await save_workout_plan(message.from_user.id, workout)
@@ -1848,6 +2117,10 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
     dp.callback_query.register(cb_place, F.data.startswith("place:"))
 
+    # НОВОЕ: оборудование
+    dp.callback_query.register(cb_equip_toggle, F.data.startswith("eq:"))
+    dp.callback_query.register(cb_equip_level, F.data.startswith("eql:"))
+
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
     dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
     dp.callback_query.register(admin_actions, F.data.startswith("admin_approve:") | F.data.startswith("admin_reject:"))
@@ -1865,6 +2138,7 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_weight, ProfileFlow.weight)
     dp.message.register(profile_exp, ProfileFlow.exp)
     dp.message.register(profile_freq, ProfileFlow.freq)
+    dp.message.register(profile_meals, ProfileFlow.meals)
 
     dp.message.register(pay_amount, PaymentFlow.waiting_amount)
     dp.message.register(pay_last4, PaymentFlow.waiting_last4)
