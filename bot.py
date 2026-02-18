@@ -7,7 +7,7 @@ import random
 import re
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
-from typing import Optional, Set
+from typing import Optional, Set, Dict, List, Tuple
 
 import aiosqlite
 from aiogram import Bot, Dispatcher, F
@@ -57,18 +57,16 @@ class ProfileFlow(StatesGroup):
     place = State()
 
     equip_select = State()   # мультиселект оборудования
-    equip_level = State()    # уровень доступных весов/нагрузки
+    equip_level = State()    # ориентировочные веса
 
     exp = State()
-    freq = State()
+    freq = State()           # ВАЖНО: теперь спрашиваем у всех
     meals = State()
 
 
 class PaymentFlow(StatesGroup):
     choose_tariff = State()
-    waiting_amount = State()
-    waiting_last4 = State()
-    waiting_receipt = State()
+    waiting_receipt = State()  # ИЗМЕНЕНО: после "я оплатил" просим только чек
 
 
 class DiaryFlow(StatesGroup):
@@ -140,7 +138,7 @@ def place_inline_kb():
     ])
 
 
-# ====== Оборудование (мультиселект) + уровень доступных весов ======
+# ====== Оборудование (мультиселект) + уровень доступных весов (упрощённый и понятный) ======
 HOME_EQUIP = [
     ("Турник", "home:bar"),
     ("Гантели", "home:dumb"),
@@ -153,10 +151,10 @@ HOME_EQUIP = [
 GYM_EQUIP = [
     ("Штанга", "gym:barbell"),
     ("Гантели", "gym:dumbbell"),
-    ("Блоки/кроссовер", "gym:cable"),
-    ("Смит/гакк", "gym:smith"),
-    ("Жим ногами", "gym:legpress"),
     ("Турник/брусья", "gym:pullup"),
+    ("Блоки/кроссовер", "gym:cable"),
+    ("Смит", "gym:smith"),
+    ("Жим ногами", "gym:legpress"),
 ]
 
 
@@ -175,18 +173,19 @@ def equip_select_kb(place: str, selected: Optional[Set[str]] = None):
 
 
 def equip_level_kb(place: str):
+    # ИЗМЕНЕНО: вместо слов — ориентировочные веса (понятнее)
     if place == "дом":
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Лёгкие (до ~10–15 кг)", callback_data="eql:home:light")],
-            [InlineKeyboardButton(text="Средние (до ~25–35 кг)", callback_data="eql:home:mid")],
-            [InlineKeyboardButton(text="Тяжёлые (35+ кг / есть где грузиться)", callback_data="eql:home:heavy")],
+            [InlineKeyboardButton(text="Гантели примерно до 10 кг", callback_data="eql:home:10")],
+            [InlineKeyboardButton(text="Гантели примерно до 20–25 кг", callback_data="eql:home:25")],
+            [InlineKeyboardButton(text="Гантели 30+ кг / можно нормально утяжелять", callback_data="eql:home:30plus")],
             [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
         ])
     else:
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Обычный зал (всё базовое)", callback_data="eql:gym:std")],
-            [InlineKeyboardButton(text="Сильная база (есть тяжёлые веса)", callback_data="eql:gym:heavy")],
-            [InlineKeyboardButton(text="Ограничено (мало веса/очереди)", callback_data="eql:gym:limited")],
+            [InlineKeyboardButton(text="Гантели до 20–30 кг, штанга до 60–80 кг", callback_data="eql:gym:80")],
+            [InlineKeyboardButton(text="Гантели до 40–50 кг, штанга до 100–120 кг", callback_data="eql:gym:120")],
+            [InlineKeyboardButton(text="Тяжёлый зал: гантели 50+ кг, штанга 140+ кг", callback_data="eql:gym:140")],
             [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
         ])
 
@@ -214,14 +213,14 @@ def faq_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Оплата и доступ", callback_data="faq:pay")],
         [InlineKeyboardButton(text="🧠 Как строится план", callback_data="faq:plan")],
-        [InlineKeyboardButton(text="🏋️ Объём/прогресс/отказ", callback_data="faq:progress")],
-        [InlineKeyboardButton(text="🍽 Калории/БЖУ", callback_data="faq:nutrition")],
+        [InlineKeyboardButton(text="🏋️ Прогресс и подходы", callback_data="faq:progress")],
+        [InlineKeyboardButton(text="🍽 Калории и БЖУ", callback_data="faq:nutrition")],
         [InlineKeyboardButton(text="📌 Как считать калории", callback_data="faq:count")],
         [InlineKeyboardButton(text="⚠️ Если нет результата", callback_data="faq:stuck")],
         [InlineKeyboardButton(text="😴 Сон/восстановление", callback_data="faq:recovery")],
         [InlineKeyboardButton(text="🦵 Боль/техника", callback_data="faq:safety")],
         [InlineKeyboardButton(text="📓 Дневник/замеры", callback_data="faq:diary")],
-        [InlineKeyboardButton(text="🔄 Ошибки/возврат", callback_data="faq:refund")],
+        [InlineKeyboardButton(text="🔄 Ошибки/спорные случаи", callback_data="faq:refund")],
         [InlineKeyboardButton(text="✍️ Задать вопрос", callback_data="faq:ask")],
         [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
     ])
@@ -317,86 +316,24 @@ def parse_equip(equip_str: Optional[str]) -> Set[str]:
 
 
 # =========================
-# ТРЕНИРОВКИ (индивидуальная сборка + учет оборудования)
+# ТРЕНИРОВКИ (СТРОГО по выбранному оборудованию)
 # =========================
-def _choose_split(freq: int, lvl: str, is_gym: bool) -> str:
-    f = int(freq or 3)
-    if lvl == "novice":
-        return "fullbody_3"
-    if f == 3:
-        return "fullbody_3" if not is_gym else "fullbody_3_gym"
-    if f == 4:
-        return "upper_lower_4"
-    return "ppl_5" if is_gym else "ul_4_plus_arms"
+# Каждое упражнение имеет "required" — какие коды оборудования должны быть выбраны
+Exercise = Dict[str, object]
 
 
-def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
-    def has(code: str) -> bool:
-        return code in equip
+def _ex(name: str, required: Set[str]) -> Exercise:
+    return {"name": name, "req": set(required)}
 
-    if "home:none" in equip:
-        equip = {"home:none"}
 
-    has_pullup = has("home:bar") or has("gym:pullup")
-    has_bands = has("home:band")
-    has_dumb = has("home:dumb") or has("gym:dumbbell")
-    has_barbell = has("gym:barbell")
-    has_cable = has("gym:cable")
-    has_smith = has("gym:smith")
-    has_legpress = has("gym:legpress")
+def _is_allowed(ex: Exercise, equip: Set[str]) -> bool:
+    return set(ex["req"]).issubset(equip)
 
-    home_light = (equip_level == "home:light")
 
-    if is_gym:
-        pool = {
-            "squat": [],
-            "hinge": [],
-            "hpush": [],
-            "vpush": [],
-            "pull_v": [],
-            "pull_h": [],
-            "delts": [],
-            "arms_bi": [],
-            "arms_tri": [],
-            "legs_iso": [],
-            "core": ["Скручивания", "Подъёмы ног", "Планка"],
-        }
-
-        if has_barbell:
-            pool["squat"].append("Присед со штангой")
-        if has_legpress:
-            pool["squat"].append("Жим ногами")
-        if has_smith:
-            pool["squat"].append("Присед в Смите / гакк")
-        if not pool["squat"]:
-            pool["squat"] = ["Жим ногами", "Гакк-присед", "Присед в Смите"]
-
-        if has_barbell:
-            pool["hinge"].append("Румынская тяга (штанга)")
-        pool["hinge"] += ["Гиперэкстензии с весом", "Румынская тяга (гантели)"]
-
-        pool["hpush"] = ["Жим лёжа", "Жим гантелей лёжа", "Жим в тренажёре"]
-        pool["vpush"] = (["Жим штанги стоя", "Жим гантелей сидя", "Жим в Смите"]
-                         if (has_barbell or has_smith) else ["Жим гантелей сидя", "Жим в тренажёре"])
-
-        if has_pullup:
-            pool["pull_v"] += ["Подтягивания", "Подтягивания в гравитроне"]
-        if has_cable:
-            pool["pull_v"] += ["Верхний блок"]
-            pool["pull_h"] += ["Тяга горизонтального блока"]
-        pool["pull_h"] += (["Тяга гантели одной рукой", "Тяга штанги в наклоне"]
-                           if has_barbell else ["Тяга гантели одной рукой", "Тяга в тренажёре"])
-
-        pool["delts"] = (["Разведения в стороны", "Face pull", "Задняя дельта (пек-дек)"]
-                         if has_cable else ["Разведения в стороны", "Задняя дельта (пек-дек)"])
-        pool["arms_bi"] = (["Сгибания гантелей", "Сгибания на блоке", "Сгибания штанги"]
-                           if (has_cable or has_barbell) else ["Сгибания гантелей", "Молотки"])
-        pool["arms_tri"] = (["Разгибания на блоке", "Французский жим", "Брусья (с ассистом)"]
-                            if has_cable else ["Французский жим", "Брусья (с ассистом)"])
-        pool["legs_iso"] = ["Сгибание ног", "Разгибание ног", "Икры стоя/сидя"]
-        return pool
-
-    pool = {
+def _pool_for(place_is_gym: bool, equip: Set[str]) -> Dict[str, List[Exercise]]:
+    # ВАЖНО: здесь НЕТ упражнений, которые требуют НЕвыбранные снаряды.
+    # Если пользователь не выбрал "gym:cable" — НЕ будет блоков/кроссовера вообще.
+    pool: Dict[str, List[Exercise]] = {
         "squat": [],
         "hinge": [],
         "hpush": [],
@@ -407,122 +344,220 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
         "arms_bi": [],
         "arms_tri": [],
         "legs_iso": [],
-        "core": ["Планка", "Скручивания", "Подъём ног лёжа"],
+        "core": [
+            _ex("Планка", set()),
+            _ex("Скручивания", set()),
+            _ex("Подъёмы ног", set()),
+        ],
     }
 
-    if "home:none" in equip:
-        pool["squat"] = ["Приседания", "Болгарские выпады", "Выпады"]
-        pool["hinge"] = ["Ягодичный мост", "Наклоны без веса", "Доброе утро (без веса)"]
-        pool["hpush"] = ["Отжимания", "Отжимания узкие", "Отжимания с упором ног"]
-        pool["vpush"] = ["Пайк-отжимания", "Отжимания в стойке у стены (лёгк.)"]
-        pool["pull_v"] = ["Супермен (спина)", "Лодочка"]
-        pool["pull_h"] = ["Лодочка", "Тяга полотенца (изометрия)"]
-        pool["delts"] = ["Y-T-W подъёмы", "Разведения без веса (контроль)"]
-        pool["arms_bi"] = ["Сгибания с рюкзаком", "Изометрия на бицепс"]
-        pool["arms_tri"] = ["Отжимания узкие", "Отжимания на стуле"]
-        pool["legs_iso"] = ["Икры стоя", "Статика в выпаде"]
-        return pool
+    if place_is_gym:
+        # SQUAT / LEGS
+        pool["squat"] += [
+            _ex("Присед со штангой", {"gym:barbell"}),
+            _ex("Присед в Смите", {"gym:smith"}),
+            _ex("Жим ногами", {"gym:legpress"}),
+            _ex("Болгарские выпады с гантелями", {"gym:dumbbell"}),
+            _ex("Гоблет-присед", {"gym:dumbbell"}),
+        ]
 
-    pool["squat"] = (["Гоблет-присед", "Болгарские выпады", "Присед с гантелями"]
-                     if has_dumb else ["Болгарские выпады", "Приседания", "Выпады"])
-    pool["hinge"] = (["Румынская тяга с гантелями", "Ягодичный мост", "Наклоны с гантелями"]
-                     if has_dumb else ["Ягодичный мост", "Наклоны без веса"])
+        # HINGE
+        pool["hinge"] += [
+            _ex("Румынская тяга (штанга)", {"gym:barbell"}),
+            _ex("Румынская тяга (гантели)", {"gym:dumbbell"}),
+            _ex("Гиперэкстензии (с весом/без)", set()),
+        ]
 
-    pool["hpush"] = (["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа"]
-                     if has_dumb else ["Отжимания", "Отжимания узкие", "Отжимания с упором ног"])
-    pool["vpush"] = (["Жим гантелей вверх", "Пайк-отжимания"]
-                     if has_dumb else ["Пайк-отжимания", "Отжимания в стойке у стены (лёгк.)"])
+        # PUSH
+        pool["hpush"] += [
+            _ex("Жим лёжа (штанга)", {"gym:barbell"}),
+            _ex("Жим гантелей лёжа", {"gym:dumbbell"}),
+            _ex("Отжимания (утяжелить можно блином)", set()),
+        ]
+        pool["vpush"] += [
+            _ex("Жим штанги стоя", {"gym:barbell"}),
+            _ex("Жим гантелей сидя", {"gym:dumbbell"}),
+            _ex("Жим в Смите", {"gym:smith"}),
+            _ex("Пайк-отжимания", set()),
+        ]
 
-    if has_pullup:
-        pool["pull_v"] = (["Подтягивания", "Подтягивания негативы", "Подтягивания с резинкой"]
-                          if has_bands else ["Подтягивания", "Негативы"])
+        # PULL
+        pool["pull_v"] += [
+            _ex("Подтягивания", {"gym:pullup"}),
+            _ex("Подтягивания в гравитроне", {"gym:pullup"}),
+            _ex("Верхний блок", {"gym:cable"}),
+        ]
+        pool["pull_h"] += [
+            _ex("Тяга штанги в наклоне", {"gym:barbell"}),
+            _ex("Тяга гантели одной рукой", {"gym:dumbbell"}),
+            _ex("Тяга горизонтального блока", {"gym:cable"}),
+            _ex("Тяга в Смите", {"gym:smith"}),
+            _ex("Тяга полотенца/ремня (изометрия)", set()),
+        ]
+
+        # DELTS / ARMS / ISO
+        pool["delts"] += [
+            _ex("Разведения в стороны (гантели)", {"gym:dumbbell"}),
+            _ex("Разведения в стороны (на блоке)", {"gym:cable"}),
+            _ex("Face pull", {"gym:cable"}),
+            _ex("Задняя дельта (разведения в наклоне)", {"gym:dumbbell"}),
+        ]
+        pool["arms_bi"] += [
+            _ex("Сгибания гантелей", {"gym:dumbbell"}),
+            _ex("Сгибания штанги", {"gym:barbell"}),
+            _ex("Сгибания на блоке", {"gym:cable"}),
+            _ex("Молотки", {"gym:dumbbell"}),
+        ]
+        pool["arms_tri"] += [
+            _ex("Разгибания на блоке", {"gym:cable"}),
+            _ex("Французский жим (штанга)", {"gym:barbell"}),
+            _ex("Французский жим (гантель)", {"gym:dumbbell"}),
+            _ex("Брусья", {"gym:pullup"}),
+            _ex("Отжимания узкие", set()),
+        ]
+        pool["legs_iso"] += [
+            _ex("Икры стоя (без/с весом)", set()),
+            _ex("Сгибание ног (тренажёр)", {"gym:legpress"}),  # условно: если выбрал жим ногами/станки
+            _ex("Разгибание ног (тренажёр)", {"gym:legpress"}),
+        ]
     else:
-        pool["pull_v"] = (["Тяга резинки сверху"] if has_bands else [])
+        # HOME
+        if "home:none" in equip:
+            # Только собственный вес
+            pool["squat"] += [_ex("Приседания", set()), _ex("Выпады", set()), _ex("Болгарские выпады", set())]
+            pool["hinge"] += [_ex("Ягодичный мост", set()), _ex("Наклоны (доброе утро)", set())]
+            pool["hpush"] += [_ex("Отжимания", set()), _ex("Отжимания узкие", set()), _ex("Отжимания с упором ног", set())]
+            pool["vpush"] += [_ex("Пайк-отжимания", set()), _ex("Отжимания в стойке у стены (лёгк.)", set())]
+            pool["pull_v"] += [_ex("Лодочка", set()), _ex("Супермен", set())]
+            pool["pull_h"] += [_ex("Тяга полотенца (изометрия)", set()), _ex("Лодочка", set())]
+            pool["delts"] += [_ex("Y-T-W подъёмы", set())]
+            pool["arms_bi"] += [_ex("Сгибания с рюкзаком", set())]
+            pool["arms_tri"] += [_ex("Отжимания узкие", set()), _ex("Отжимания на стуле", set())]
+            pool["legs_iso"] += [_ex("Икры стоя", set()), _ex("Статика в выпаде", set())]
+        else:
+            pool["squat"] += [
+                _ex("Гоблет-присед", {"home:dumb"}),
+                _ex("Болгарские выпады (гантели)", {"home:dumb"}),
+                _ex("Приседания", set()),
+                _ex("Выпады", set()),
+            ]
+            pool["hinge"] += [
+                _ex("Румынская тяга (гантели)", {"home:dumb"}),
+                _ex("Ягодичный мост", set()),
+                _ex("Наклоны (доброе утро)", set()),
+            ]
+            pool["hpush"] += [
+                _ex("Жим гантелей лёжа (если есть скамья)", {"home:dumb", "home:bench"}),
+                _ex("Отжимания", set()),
+                _ex("Отжимания с упором ног", set()),
+            ]
+            pool["vpush"] += [
+                _ex("Жим гантелей вверх", {"home:dumb"}),
+                _ex("Пайк-отжимания", set()),
+            ]
+            pool["pull_v"] += [
+                _ex("Подтягивания", {"home:bar"}),
+                _ex("Подтягивания с резинкой", {"home:bar", "home:band"}),
+            ]
+            pool["pull_h"] += [
+                _ex("Тяга гантели одной рукой", {"home:dumb"}),
+                _ex("Тяга резинки к поясу", {"home:band"}),
+            ]
+            pool["delts"] += [
+                _ex("Разведения в стороны (гантели)", {"home:dumb"}),
+                _ex("Face pull резинкой", {"home:band"}),
+                _ex("Разведения в наклоне (гантели)", {"home:dumb"}),
+            ]
+            pool["arms_bi"] += [
+                _ex("Сгибания гантелей", {"home:dumb"}),
+                _ex("Сгибания резинкой", {"home:band"}),
+                _ex("Молотки", {"home:dumb"}),
+            ]
+            pool["arms_tri"] += [
+                _ex("Французский жим гантелью", {"home:dumb"}),
+                _ex("Отжимания узкие", set()),
+                _ex("Брусья", {"home:dip"}),
+            ]
+            pool["legs_iso"] += [
+                _ex("Икры стоя", set()),
+                _ex("Статика в выпаде", set()),
+            ]
 
-    pool["pull_h"] = (["Тяга гантели одной рукой", "Тяга двух гантелей в наклоне"] if has_dumb else [])
-    if has_bands:
-        pool["pull_h"].append("Тяга резинки к поясу")
-
-    if not pool["pull_v"]:
-        pool["pull_v"] = ["Супермен (спина)", "Лодочка"]
-    if not pool["pull_h"]:
-        pool["pull_h"] = ["Лодочка", "Тяга полотенца (изометрия)"]
-
-    pool["delts"] = (["Разведения в стороны", "Разведения в наклоне (задняя дельта)"]
-                     if has_dumb else (["Face pull резинкой"] if has_bands else ["Y-T-W подъёмы"]))
-    pool["arms_bi"] = (["Сгибания гантелей", "Молотки"]
-                       if has_dumb else (["Сгибания с резинкой"] if has_bands else ["Сгибания с рюкзаком"]))
-    pool["arms_tri"] = (["Французский жим гантелью", "Отжимания узкие"]
-                        if has_dumb else ["Отжимания узкие", "Отжимания на стуле"])
-    pool["legs_iso"] = ["Икры стоя", "Статические выпады"]
-
-    _ = home_light
-    return pool
+    # ФИЛЬТР: оставляем только разрешённые (по выбранным снарядам)
+    out: Dict[str, List[Exercise]] = {}
+    for k, lst in pool.items():
+        out[k] = [x for x in lst if _is_allowed(x, equip)]
+    return out
 
 
-def _pick(pool_list, rnd: random.Random, k: int = 1):
-    if not pool_list:
-        return []
-    if k <= 1:
-        return [rnd.choice(pool_list)]
-    items = pool_list[:]
-    rnd.shuffle(items)
-    return items[:k]
+def _choose_split(freq: int, lvl: str, is_gym: bool) -> str:
+    f = int(freq or 3)
+    if lvl == "novice":
+        return "fullbody_3" if f <= 3 else ("upper_lower_4" if f == 4 else "ppl_5")
+    if f == 3:
+        return "fullbody_3"
+    if f == 4:
+        return "upper_lower_4"
+    return "ppl_5" if is_gym else "upper_lower_4"
 
 
 def _volume_by_goal(goal: str, lvl: str):
     g = (goal or "").lower()
     if "суш" in g:
-        return {"rir": "RIR 2–3 чаще, отказ редко", "sets_main": (2, 4), "sets_iso": (2, 3)}
+        return {"rir": "Держи 1–3 повтора в запасе (отказ редко)", "sets_main": (2, 4), "sets_iso": (2, 3)}
     if "мас" in g:
-        return {"rir": "RIR 1–2 чаще, отказ редко", "sets_main": (3, 5), "sets_iso": (2, 4)}
-    return {"rir": "RIR 1–3, по самочувствию", "sets_main": (3, 4), "sets_iso": (2, 3)}
+        return {"rir": "Чаще 1–2 повтора в запасе (отказ редко)", "sets_main": (3, 5), "sets_iso": (2, 4)}
+    return {"rir": "1–3 повтора в запасе (по самочувствию)", "sets_main": (3, 4), "sets_iso": (2, 3)}
 
 
 def _rep_ranges(lvl: str, equip_level: Optional[str] = None):
-    home_light = (equip_level == "home:light")
-
+    # Лёгкие веса дома → больше повторов
+    home_light = (equip_level == "home:10")
     if lvl == "novice":
-        base = {"main": "6–10", "iso": "10–15", "core": "12–20"}
+        base = {"main": "8–12", "iso": "12–20", "core": "15–25"}
     elif lvl == "mid":
-        base = {"main": "5–10", "iso": "10–20", "core": "12–20"}
+        base = {"main": "6–10", "iso": "10–18", "core": "12–20"}
     else:
-        base = {"main": "4–10", "iso": "12–20", "core": "12–25"}
+        base = {"main": "4–10", "iso": "10–18", "core": "12–20"}
 
     if home_light:
-        base["main"] = "10–15"
+        base["main"] = "12–20"
         base["iso"] = "15–25"
-        base["core"] = "15–30"
+        base["core"] = "20–30"
     return base
 
 
-def _plan_header(goal: str, place: str, exp: str, freq: int):
-    lvl = exp_level(exp)
-    pl = (place or "").lower()
-    is_gym = ("зал" in pl) or (pl == "gym")
-    where = "ЗАЛ" if is_gym else "ДОМ"
-    return lvl, is_gym, f"🏋️ ТРЕНИРОВКИ ({where}) — {freq}×/нед"
+def _pick_name(items: List[Exercise], rnd: random.Random) -> str:
+    if not items:
+        return ""
+    return rnd.choice(items)["name"]
 
 
 def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
                           equip: Optional[Set[str]] = None, equip_level: Optional[str] = None,
                           user_id: int = 0) -> str:
-    lvl, is_gym, header = _plan_header(goal, place, exp, freq)
-    f = int(freq or 3)
+    lvl = exp_level(exp)
+    pl = (place or "").lower()
+    is_gym = ("зал" in pl) or (pl == "gym")
+    header = f"🏋️ ТРЕНИРОВКИ ({'ЗАЛ' if is_gym else 'ДОМ'}) — {int(freq)}×/нед"
+
+    equip = equip or set()
+
+    # страховка: если "нет ничего" — оставляем только это
+    if "home:none" in equip:
+        equip = {"home:none"}
+
+    pool = _pool_for(is_gym, equip)
+    vol = _volume_by_goal(goal, lvl)
+    reps = _rep_ranges(lvl, equip_level)
 
     seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
     rnd = random.Random(seed)
 
-    split = _choose_split(f, lvl, is_gym)
-    equip = equip or set()
-    pool = _exercise_pool(is_gym, equip, equip_level)
-    vol = _volume_by_goal(goal, lvl)
-    reps = _rep_ranges(lvl, equip_level)
+    split = _choose_split(int(freq or 3), lvl, is_gym)
 
     main_min, main_max = vol["sets_main"]
     iso_min, iso_max = vol["sets_iso"]
-    if lvl == "novice":
-        main_max = max(main_min, main_max - 1)
 
     def sets_main():
         return rnd.randint(main_min, main_max)
@@ -530,45 +565,67 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
     def sets_iso():
         return rnd.randint(iso_min, iso_max)
 
-    def day(title: str, items: list[str]) -> str:
+    def main_block(key: str) -> str:
+        name = _pick_name(pool.get(key, []), rnd)
+        if not name:
+            return ""  # позже заменим
+        return f"{name} — {sets_main()}×{reps['main']}"
+
+    def iso_block(key: str) -> str:
+        name = _pick_name(pool.get(key, []), rnd)
+        if not name:
+            return ""
+        return f"{name} — {sets_iso()}×{reps['iso']}"
+
+    def core_block() -> str:
+        name = _pick_name(pool.get("core", []), rnd)
+        return f"{name} — {sets_iso()}×{reps['core']}"
+
+    def fix_missing(items: List[str]) -> List[str]:
+        # Если какая-то категория пустая (например, нет вертикальной тяги),
+        # заменяем на доступную альтернативу из pull_h / упражнения без снарядов
+        fixed = []
+        for it in items:
+            if it:
+                fixed.append(it)
+                continue
+
+            # приоритет замен
+            alt = (
+                main_block("pull_h") or
+                main_block("hpush") or
+                main_block("squat") or
+                core_block()
+            )
+            fixed.append(alt if alt else "Планка — 3×30–60 сек")
+        return fixed
+
+    def day(title: str, items: List[str]) -> str:
+        items = [x for x in items if x]  # сначала убираем пустое
+        items = fix_missing(items)
         return title + "\n" + "\n".join([f"• {x}" for x in items])
 
-    def main_block(key: str):
-        ex = _pick(pool[key], rnd, 1)[0]
-        return f"{ex} — {sets_main()}×{reps['main']}"
+    days: List[str] = []
 
-    def iso_block(key: str):
-        ex = _pick(pool[key], rnd, 1)[0]
-        return f"{ex} — {sets_iso()}×{reps['iso']}"
-
-    def core_block():
-        ex = _pick(pool["core"], rnd, 1)[0]
-        return f"{ex} — {sets_iso()}×{reps['core']}"
-
-    days = []
-
-    if split.startswith("fullbody"):
+    if split == "fullbody_3":
         for i in range(1, 4):
             items = [
                 main_block("squat"),
                 main_block("hpush"),
-                main_block("pull_v"),
+                main_block("pull_h") or main_block("pull_v"),
                 main_block("hinge"),
                 iso_block("delts"),
+                iso_block("arms_bi"),
+                iso_block("arms_tri"),
                 core_block(),
             ]
-            if rnd.random() < 0.6:
-                items.append(iso_block("arms_bi"))
-            if rnd.random() < 0.6:
-                items.append(iso_block("arms_tri"))
             days.append(day(f"День {i} — Full Body", items))
 
     elif split == "upper_lower_4":
         upper1 = [
             main_block("hpush"),
-            main_block("pull_h"),
+            main_block("pull_h") or main_block("pull_v"),
             main_block("vpush"),
-            main_block("pull_v"),
             iso_block("delts"),
             iso_block("arms_bi"),
             iso_block("arms_tri"),
@@ -577,14 +634,12 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
             main_block("squat"),
             main_block("hinge"),
             iso_block("legs_iso"),
-            iso_block("legs_iso"),
             core_block(),
         ]
         upper2 = [
             main_block("vpush"),
-            main_block("pull_v"),
+            main_block("pull_v") or main_block("pull_h"),
             main_block("hpush"),
-            main_block("pull_h"),
             iso_block("delts"),
             iso_block("arms_bi"),
             iso_block("arms_tri"),
@@ -602,34 +657,33 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
             day("День 4 — Низ", lower2),
         ]
 
-    elif split == "ppl_5":
+    else:  # ppl_5
         push = [
             main_block("hpush"),
             main_block("vpush"),
             iso_block("delts"),
             iso_block("arms_tri"),
-            iso_block("arms_tri"),
+            core_block(),
         ]
         pull = [
-            main_block("pull_v"),
+            main_block("pull_v") or main_block("pull_h"),
             main_block("pull_h"),
             iso_block("delts"),
             iso_block("arms_bi"),
-            iso_block("arms_bi"),
+            core_block(),
         ]
         legs = [
             main_block("squat"),
             main_block("hinge"),
             iso_block("legs_iso"),
-            iso_block("legs_iso"),
             core_block(),
         ]
         upper = [
             main_block("hpush"),
-            main_block("pull_h"),
+            main_block("pull_h") or main_block("pull_v"),
             main_block("vpush"),
-            main_block("pull_v"),
             iso_block("delts"),
+            core_block(),
         ]
         arms = [
             iso_block("arms_bi"),
@@ -647,53 +701,16 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
             day("День 5 — ARMS/DELTS", arms),
         ]
 
-    else:
-        upper1 = [
-            main_block("pull_v"),
-            main_block("hpush"),
-            main_block("pull_h"),
-            main_block("vpush"),
-            iso_block("delts"),
-        ]
-        lower1 = [
-            main_block("squat"),
-            main_block("hinge"),
-            iso_block("legs_iso"),
-            core_block(),
-        ]
-        upper2 = [
-            main_block("hpush"),
-            main_block("pull_h"),
-            main_block("vpush"),
-            main_block("pull_v"),
-            iso_block("delts"),
-        ]
-        arms = [
-            iso_block("arms_bi"),
-            iso_block("arms_tri"),
-            iso_block("arms_bi"),
-            iso_block("arms_tri"),
-            core_block(),
-        ]
-        days = [
-            day("День 1 — Верх", upper1),
-            day("День 2 — Низ", lower1),
-            day("День 3 — Верх", upper2),
-            day("День 4 — Руки/Кор", arms),
-        ]
-
     g = (goal or "").lower()
     cardio_note = ""
     if "суш" in g:
-        cardio_note = "• Сушка: шаги 8–12k/день или 2–3 лёгких кардио по 20–30 мин.\n"
+        cardio_note = "• Сушка: шаги 8–12k/день или 2–3 лёгких кардио по 20–30 минут.\n"
     elif "мас" in g:
-        cardio_note = "• Масса: кардио умеренно (1–2× по 15–25 мин), чтобы не мешало восстановлению.\n"
+        cardio_note = "• Масса: кардио умеренно (1–2× по 15–25 минут), чтобы не мешало восстановлению.\n"
 
-    equip_note = ""
-    if equip:
-        equip_note = "Оборудование: " + ", ".join(sorted(equip)) + "\n"
+    equip_note = "Оборудование: " + (", ".join(sorted(equip)) if equip else "—") + "\n"
     if equip_level:
-        equip_note += f"Уровень нагрузки: {equip_level}\n"
+        equip_note += f"Ориентир по весам: {equip_level}\n"
 
     return (
         f"{header}\n\n"
@@ -703,17 +720,18 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
         "Паузы: 90–180 сек базовые, 60–90 сек изоляция\n"
         f"{cardio_note}\n"
         + "\n\n".join(days) +
-        "\n\n📌 Прогрессия (самое важное):\n"
-        "1) Сначала доводи подходы до верхней границы повторов\n"
-        "2) Потом добавляй вес (+2.5–5%) и снова работай в диапазоне\n"
-        "3) Если техника ломается — вес не повышай\n"
-        "4) Если усталость копится 7–10 дней — сделай неделю легче (-20–30% подходов)\n"
+        "\n\n📌 Прогрессия (очень просто):\n"
+        "1) В упражнении добейся верхней границы повторов\n"
+        "2) Добавь вес (обычно +2.5–5%) и снова работай в диапазоне\n"
+        "3) Если техника ломается — вес рано повышать\n"
+        "4) Если усталость копится — 1 лёгкая неделя (-20–30% подходов)\n"
     )
 
 
 # =========================
-# ПИТАНИЕ
+# ПИТАНИЕ (ИЗМЕНЕНО: без “добивки 300г риса”, распределяем по дню)
 # =========================
+# Важно: крупы/макароны указаны В СУХОМ ВИДЕ (как на упаковке).
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
     "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
@@ -740,7 +758,7 @@ def _nutr_of(item_key: str, grams: float):
     k = grams / 100.0
     return {"kcal": it["kcal"] * k, "p": it["p"] * k, "f": it["f"] * k, "c": it["c"] * k}
 
-def _sum_nutr(items: list[tuple[str, float]]):
+def _sum_nutr(items: List[Tuple[str, float]]):
     tot = {"kcal": 0.0, "p": 0.0, "f": 0.0, "c": 0.0}
     for key, g in items:
         n = _nutr_of(key, g)
@@ -751,23 +769,35 @@ def _sum_nutr(items: list[tuple[str, float]]):
 def _fmt_tot(t):
     return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
 
+def _clip(x: float, a: float, b: float) -> float:
+    return max(a, min(b, x))
+
+def _round_to(x: float, step: int) -> float:
+    return round(x / step) * step
+
 def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
+    """
+    ИЗМЕНЕНО:
+    - НЕТ отдельной "добивки"
+    - План распределяется по дням и корректируется малыми шагами (разумные граммы),
+      чтобы было реально есть.
+    """
     day_templates = [
-        [
+        [  # День 1
             ["oats", "yogurt", "banana"],
-            ["nuts", "yogurt"],
+            ["yogurt", "nuts"],
             ["rice", "chicken", "veg", "oil"],
             ["curd_0_5"],
             ["banana", "yogurt"],
         ],
-        [
+        [  # День 2
             ["oats", "eggs", "banana"],
             ["yogurt"],
             ["buckwheat", "turkey", "veg", "oil"],
             ["curd_0_5", "nuts"],
             ["banana"],
         ],
-        [
+        [  # День 3
             ["oats", "yogurt"],
             ["eggs", "veg"],
             ["pasta", "fish", "veg", "oil"],
@@ -776,110 +806,175 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
         ],
     ]
 
+    # БАЗОВЫЕ порции (разумные)
     base = {
-        "oats": 80, "yogurt": 300, "banana": 120,
+        "oats": 70, "yogurt": 300, "banana": 120,
         "rice": 90, "buckwheat": 90, "pasta": 90,
-        "chicken": 220, "turkey": 220, "fish": 250,
-        "veg": 300, "curd_0_5": 300,
-        "eggs": 180,
-        "oil": 12, "nuts": 20,
+        "chicken": 220, "turkey": 220, "fish": 260,
+        "veg": 300, "curd_0_5": 250,
+        "eggs": 180,     # ~3 яйца
+        "oil": 10, "nuts": 20,
     }
 
     target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
     out = []
 
-    def add_protein(items, need_p):
-        while need_p > 8:
-            items.append(("chicken", 50.0))
-            need_p -= _nutr_of("chicken", 50.0)["p"]
-        return items
+    # Ограничения по корректировкам за раз (чтобы не улетало в 300г сухого риса)
+    STEPS = {
+        "protein": [("chicken", 50), ("turkey", 50), ("fish", 70), ("curd_0_5", 100), ("yogurt", 200)],
+        "carbs":   [("oats", 20), ("rice", 20), ("buckwheat", 20), ("pasta", 20), ("banana", 100), ("potato", 200)],
+        "fat":     [("oil", 5), ("nuts", 10), ("eggs", 60)],
+    }
+    CAPS = {
+        # максимум добавки к базовой порции за день (суммарно)
+        "oats": 60, "rice": 80, "buckwheat": 80, "pasta": 80,
+        "banana": 200, "potato": 400,
+        "oil": 15, "nuts": 20,
+        "chicken": 150, "turkey": 150, "fish": 200, "curd_0_5": 200, "yogurt": 400,
+        "eggs": 120,
+        "veg": 200,
+    }
 
-    def add_fat(items, need_f):
-        while need_f > 4:
-            items.append(("oil", 5.0))
-            need_f -= _nutr_of("oil", 5.0)["f"]
-        return items
-
-    def add_carbs(items, need_c):
-        while need_c > 12:
-            items.append(("rice", 20.0))
-            need_c -= _nutr_of("rice", 20.0)["c"]
-        return items
-
-    for day_i in range(3):
-        tpl = day_templates[day_i][:meals]
-
-        day_items_by_meal: list[list[tuple[str, float]]] = []
-        day_items_flat: list[tuple[str, float]] = []
-
-        for keys in tpl:
+    def make_day_items(template_keys: List[List[str]]) -> List[List[Tuple[str, float]]]:
+        by_meal: List[List[Tuple[str, float]]] = []
+        for keys in template_keys:
             meal_items = []
             for k in keys:
                 g = float(base.get(k, 100))
                 meal_items.append((k, g))
-            day_items_by_meal.append(meal_items)
-            day_items_flat.extend(meal_items)
+            by_meal.append(meal_items)
+        return by_meal
 
-        tot = _sum_nutr(day_items_flat)
+    def flatten(by_meal: List[List[Tuple[str, float]]]) -> List[Tuple[str, float]]:
+        flat: List[Tuple[str, float]] = []
+        for m in by_meal:
+            flat.extend(m)
+        return flat
 
-        need_p = target["p"] - tot["p"]
-        if need_p > 0:
-            day_items_flat = add_protein(day_items_flat, need_p)
-        tot = _sum_nutr(day_items_flat)
+    def regroup(by_meal: List[List[Tuple[str, float]]]) -> Dict[str, float]:
+        g: Dict[str, float] = {}
+        for k, w in flatten(by_meal):
+            g[k] = g.get(k, 0.0) + w
+        return g
 
-        need_f = target["f"] - tot["f"]
-        if need_f > 0:
-            day_items_flat = add_fat(day_items_flat, need_f)
-        tot = _sum_nutr(day_items_flat)
+    def apply_scale(by_meal: List[List[Tuple[str, float]]], scale: float):
+        for mi in range(len(by_meal)):
+            for ii in range(len(by_meal[mi])):
+                k, g = by_meal[mi][ii]
+                # овощи не масштабируем сильно (пусть остаются)
+                if k == "veg":
+                    continue
+                newg = _round_to(g * scale, 10 if k in ("chicken", "turkey", "fish", "curd_0_5", "yogurt") else 5)
+                by_meal[mi][ii] = (k, float(max(newg, 5)))
 
-        need_c = target["c"] - tot["c"]
-        if need_c > 0:
-            day_items_flat = add_carbs(day_items_flat, need_c)
-        tot = _sum_nutr(day_items_flat)
+    def add_to_meal(by_meal, item_key: str, add_g: float):
+        # добавляем в наиболее логичный приём
+        pref_meal_index = 0
+        if item_key in ("rice", "buckwheat", "pasta", "potato", "chicken", "turkey", "fish", "oil", "veg"):
+            pref_meal_index = min(2, len(by_meal) - 1)  # обед/ужин
+        elif item_key in ("curd_0_5",):
+            pref_meal_index = min(3, len(by_meal) - 1)
+        elif item_key in ("nuts",):
+            pref_meal_index = min(1, len(by_meal) - 1)
 
-        delta_kcal = target["kcal"] - tot["kcal"]
-        step_g = 20.0
-        if abs(delta_kcal) > 140:
-            if delta_kcal > 0:
-                day_items_flat.append(("rice", step_g))
-            else:
-                for idx in range(len(day_items_flat) - 1, -1, -1):
-                    k, g = day_items_flat[idx]
-                    if k in ("rice", "oats", "pasta", "buckwheat") and g >= step_g + 10:
-                        day_items_flat[idx] = (k, g - step_g)
-                        break
-        tot = _sum_nutr(day_items_flat)
+        # если есть такой продукт в приёме — увеличиваем, иначе добавляем
+        for i in range(len(by_meal[pref_meal_index])):
+            k, g = by_meal[pref_meal_index][i]
+            if k == item_key:
+                by_meal[pref_meal_index][i] = (k, g + add_g)
+                return
+        by_meal[pref_meal_index].append((item_key, add_g))
 
-        grouped = {}
-        for k, g in day_items_flat:
-            grouped[k] = grouped.get(k, 0.0) + g
+    def can_add(item_key: str, base_group: Dict[str, float], current_group: Dict[str, float], add_g: float) -> bool:
+        base_g = base_group.get(item_key, 0.0)
+        cur_g = current_group.get(item_key, 0.0)
+        added = max(cur_g - base_g, 0.0)
+        cap = CAPS.get(item_key, 0.0)
+        return (added + add_g) <= cap if cap > 0 else True
 
-        base_flat = []
-        for meal_items in day_items_by_meal:
-            base_flat.extend(meal_items)
-        base_grouped = {}
-        for k, g in base_flat:
-            base_grouped[k] = base_grouped.get(k, 0.0) + g
+    for day_i in range(3):
+        tpl = day_templates[day_i][:meals]
+        by_meal = make_day_items(tpl)
 
-        extras = []
-        for k, g in grouped.items():
-            extra = g - base_grouped.get(k, 0.0)
-            if extra > 0.1:
-                extras.append((k, extra))
+        base_group = regroup(by_meal)
+        base_tot = _sum_nutr(flatten(by_meal))
+
+        # 1) Мягко масштабируем по калориям (чтобы “в целом” попасть)
+        if base_tot["kcal"] > 0:
+            scale = _clip(target["kcal"] / base_tot["kcal"], 0.80, 1.25)
+            apply_scale(by_meal, scale)
+
+        # 2) Точная подстройка малыми шагами
+        # Работаем по приоритету: белок -> жиры -> углеводы -> калории
+        for _ in range(120):
+            cur_flat = flatten(by_meal)
+            cur = _sum_nutr(cur_flat)
+            cur_group = regroup(by_meal)
+
+            dp = target["p"] - cur["p"]
+            df = target["f"] - cur["f"]
+            dc = target["c"] - cur["c"]
+            dk = target["kcal"] - cur["kcal"]
+
+            # цель достигнута “достаточно”
+            if abs(dp) < 10 and abs(df) < 8 and abs(dc) < 25 and abs(dk) < 180:
+                break
+
+            def try_add(kind: str, need: float) -> bool:
+                if need <= 0:
+                    return False
+                for item_key, step in STEPS[kind]:
+                    if can_add(item_key, base_group, cur_group, step):
+                        add_to_meal(by_meal, item_key, float(step))
+                        return True
+                return False
+
+            # белок
+            if dp > 0 and try_add("protein", dp):
+                continue
+            # жиры
+            if df > 0 and try_add("fat", df):
+                continue
+            # углеводы
+            if dc > 0 and try_add("carbs", dc):
+                continue
+
+            # если по макро уже примерно ок, но не хватает калорий — добираем мягко углями/жирами
+            if dk > 0:
+                if try_add("carbs", dk / 4):
+                    continue
+                if try_add("fat", dk / 9):
+                    continue
+
+            # если перебор по калориям — слегка “подрежем” крупы/масло
+            if dk < -150:
+                # уменьшаем где можно
+                for key in ("oil", "rice", "buckwheat", "pasta", "oats", "nuts"):
+                    # найдём этот продукт и уменьшим чуть-чуть
+                    for mi in range(len(by_meal)):
+                        for ii in range(len(by_meal[mi])):
+                            k, g = by_meal[mi][ii]
+                            if k == key:
+                                dec = 5 if key in ("oil",) else (10 if key in ("nuts",) else 20)
+                                # не уходим ниже 0.6 от базовой порции, если она была
+                                min_g = base.get(k, 0) * 0.6 if base.get(k) else 0
+                                newg = max(g - dec, min_g)
+                                if newg < g:
+                                    by_meal[mi][ii] = (k, newg)
+                                    break
+
+        # Формируем текст (без “добивки”)
+        cur_flat = flatten(by_meal)
+        tot = _sum_nutr(cur_flat)
 
         day_text = [f"📅 День {day_i + 1}", ""]
-        for mi, meal_items in enumerate(day_items_by_meal, start=1):
+        for mi, meal_items in enumerate(by_meal, start=1):
             meal_tot = _sum_nutr(meal_items)
             day_text.append(f"Приём {mi}  ({_fmt_tot(meal_tot)})")
             for k, g in meal_items:
-                day_text.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
-            day_text.append("")
-
-        if extras:
-            extra_tot = _sum_nutr(extras)
-            day_text.append(f"➕ Добор под цель  ({_fmt_tot(extra_tot)})")
-            for k, g in extras:
-                day_text.append(f"• {FOOD_DB[k]['name']} — +{int(round(g))} г")
+                # красивые округления
+                gg = int(round(g)) if g >= 10 else round(g, 1)
+                day_text.append(f"• {FOOD_DB[k]['name']} — {gg} г")
             day_text.append("")
 
         day_text.append(f"✅ Итог дня: {_fmt_tot(tot)}")
@@ -895,16 +990,16 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
     p, f, c = calc_macros(calories, weight, goal)
 
     tips = (
-        "Как держать прогресс правильно:\n"
-        "• Смотри не один день, а среднее за 7 дней (тренд)\n"
-        "• Взвешивайся утром после туалета, до еды\n"
-        "• Если вес стоит 10–14 дней:\n"
+        "Как реально держать прогресс:\n"
+        "• Смотри среднее за 7 дней (а не один день)\n"
+        "• Взвешивание: утром после туалета, до еды\n"
+        "• Если 10–14 дней нет движения:\n"
         "  — масса: +150–200 ккал\n"
         "  — сушка: -150–200 ккал\n"
-        "• Белок держи стабильно, калории проще крутить углеводами\n"
+        "• Белок держим стабильно, калории проще крутить углеводами/жирами\n"
         "\n"
         "⚠️ Важно:\n"
-        "• Крупы/макароны в плане указаны в СУХОМ виде.\n"
+        "• Крупы/макароны в плане — в СУХОМ виде.\n"
         "• Масло/орехи/соусы считаем всегда.\n"
     )
 
@@ -916,12 +1011,12 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
         f"Калории: ~{calories} ккал/день\n"
         f"БЖУ (ориентир): Белки {p}г / Жиры {f}г / Углеводы {c}г\n"
         f"Приёмов пищи: {meals}\n\n"
-        "Правила:\n"
-        "1) Сначала попади в калории и белок\n"
-        "2) Ешь шаблоны 5–7 дней — так проще не ошибаться\n"
-        "3) Масло/орехи/соусы учитывай всегда\n\n"
+        "Как пользоваться:\n"
+        "1) Ешь по шаблону 5–7 дней — так проще попадать в норму\n"
+        "2) Если голодно/сытно — меняй в первую очередь углеводы (крупы/фрукты)\n"
+        "3) Белок старайся не ронять\n\n"
         + three_days +
-        "\n\n🔁 Замены:\n"
+        "\n\n🔁 Замены (чтобы было проще жить):\n"
         "• курица ↔ индейка ↔ рыба\n"
         "• рис ↔ гречка ↔ макароны\n"
         "• творог ↔ йогурт/кефир\n\n"
@@ -930,125 +1025,141 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
 
 
 # =========================
-# FAQ
+# FAQ (ИЗМЕНЕНО: проще и понятнее)
 # =========================
 def faq_text(topic: str) -> str:
     if topic == "pay":
         return (
-            "💳 Оплата и доступ — как это работает\n\n"
-            "Как оплатить (пошагово):\n"
-            "1) Нажми «💳 Оплата / Доступ»\n"
-            "2) Выбери тариф (1м / 3м / навсегда)\n"
-            "3) Переведи ровно сумму тарифа на карту\n"
-            "4) В комментарии к переводу укажи код, который покажет бот\n"
-            "5) Нажми «✅ Я оплатил» → введи сумму → последние 4 цифры карты → пришли чек фото\n\n"
-            "Почему подтверждение вручную:\n"
-            "— это перевод на карту (без платёжного API), поэтому админ сверяет чек.\n\n"
-            "Если доступ не открылся за 5–15 минут:\n"
-            "— зайди в «🆘 Поддержка» и пришли: дату/сумму/тариф/чек."
+            "💳 Оплата и доступ (как это работает)\n\n"
+            "Как оплатить:\n"
+            "1) Открой «💳 Оплата / Доступ»\n"
+            "2) Выбери тариф\n"
+            "3) Переведи сумму на карту\n"
+            "4) Нажми «✅ Я оплатил»\n"
+            "5) Отправь СКРИН/ФОТО чека — и всё\n\n"
+            "Дальше:\n"
+            "— я проверяю оплату как админ и включаю доступ.\n\n"
+            "Если долго нет ответа:\n"
+            "— напиши в «🆘 Поддержка» и приложи чек ещё раз."
         )
+
     if topic == "plan":
         return (
-            "🧠 Как строится план (почему он индивидуальный)\n\n"
+            "🧠 Как строится план\n\n"
             "План зависит от:\n"
             "• цель (масса/сушка/форма)\n"
             "• где тренируешься (дом/зал)\n"
-            "• опыт (0 / 1–2 / 2+)\n"
-            "• сколько раз в неделю реально удобно\n"
-            "• оборудование (что реально есть под рукой)\n\n"
-            "Что меняется:\n"
-            "— Новичок: простая база, техника, без отказа\n"
-            "— 1–2 года: больше недельный объём, распределение нагрузок\n"
-            "— 2+ года: больше специализация (PPL/акценты), но без тупого «убивания»\n"
+            "• опыт (новичок / средний / опытный)\n"
+            "• сколько тренировок в неделю ты реально можешь\n"
+            "• какое оборудование ты выбрал (важно!)\n\n"
+            "Главное:\n"
+            "— я НЕ добавляю упражнения со снарядами, которых ты не выбрал.\n"
+            "— если чего-то не хватает (например, нет вертикальной тяги), я компенсирую другими упражнениями."
         )
+
     if topic == "progress":
         return (
-            "🏋️ Объём, прогрессия и отказ — максимально просто\n\n"
-            "Прогрессия = ты реально становишься сильнее.\n"
+            "🏋️ Прогресс и подходы (простыми словами)\n\n"
+            "Что такое прогресс:\n"
+            "— сегодня ты сделал больше повторов/веса, чем раньше.\n\n"
             "Как прогрессировать:\n"
-            "1) Сначала добавь повторы до верхней границы диапазона\n"
-            "2) Потом добавь вес (+2.5–5%) и снова работай в диапазоне\n\n"
+            "1) Доведи повторы до верхней границы диапазона\n"
+            "2) Потом добавь вес (+2.5–5%)\n"
+            "3) Снова работай в диапазоне\n\n"
             "Про отказ:\n"
-            "— Новичку почти не нужен\n"
-            "— Опытному можно дозировано (чаще изоляция, в конце)\n\n"
-            "Ориентир: чаще держи 1–2 повтора «в запасе» (RIR 1–2)."
+            "— в большинстве случаев лучше оставлять 1–2 повтора в запасе.\n"
+            "Отказ чаще уместен в изоляции, и не всегда."
         )
+
     if topic == "nutrition":
         return (
-            "🍽 Калории и БЖУ — понятная логика\n\n"
-            "Калории — это сколько энергии ты съел за день.\n"
-            "БЖУ — из чего эти калории: белки/жиры/углеводы.\n\n"
-            "Что важнее всего:\n"
-            "1) Белок каждый день\n"
-            "2) Калории под цель\n\n"
+            "🍽 Калории и БЖУ\n\n"
+            "Если кратко:\n"
+            "• Калории = сколько энергии ты съел за день\n"
+            "• Белок = материал для мышц\n"
+            "• Жиры = гормоны/здоровье\n"
+            "• Углеводы = энергия для тренировок\n\n"
+            "Что реально важно:\n"
+            "1) Попасть в калории под цель\n"
+            "2) Держать белок каждый день\n\n"
             "Если 10–14 дней нет движения:\n"
             "— масса: +150–200 ккал\n"
             "— сушка: -150–200 ккал"
         )
+
     if topic == "count":
         return (
-            "📌 Как правильно считать калории (без ошибок)\n\n"
-            "Главное:\n"
-            "✅ Считаем то, что реально съел → в граммах → по этикетке/приложению.\n\n"
-            "1) Крупы/макароны — лучше в СУХОМ виде.\n"
-            "2) Самая частая ошибка: не считают масло/соусы/перекусы.\n"
-            "3) Контроль веса: 3–4 раза/нед утром → смотри среднее за неделю."
+            "📌 Как считать калории без ошибок\n\n"
+            "Правило №1:\n"
+            "— считаем граммы, а не «на глаз».\n\n"
+            "Самые частые ошибки:\n"
+            "• не считают масло/соусы/орехи\n"
+            "• путают сухой/готовый вес круп\n\n"
+            "Как делать правильно:\n"
+            "1) Крупы/макароны — взвешивать в СУХОМ виде\n"
+            "2) Мясо/рыбу — лучше в сыром виде (или всегда одинаково)\n"
+            "3) Вес тела смотри по среднему за неделю"
         )
+
     if topic == "stuck":
         return (
-            "⚠️ Если нет результата — почти всегда причина тут\n\n"
-            "1) Ошибки в калориях (масло/соусы/перекусы)\n"
-            "2) Нет прогрессии в тренировках\n"
-            "3) Сон и восстановление просели\n\n"
-            "Что делать:\n"
-            "— 7–10 дней учёта\n"
-            "— смотри среднее за неделю\n"
-            "— корректируй калории на 150–200"
+            "⚠️ Если нет результата\n\n"
+            "90% причин — одна из этих:\n"
+            "1) Не попадаешь в калории (ошибки в учёте)\n"
+            "2) Нет прогрессии в упражнениях\n"
+            "3) Плохой сон/восстановление\n\n"
+            "Что сделать:\n"
+            "• 7 дней честного учёта\n"
+            "• посмотри средний вес за неделю\n"
+            "• скорректируй калории на 150–200"
         )
+
     if topic == "recovery":
         return (
             "😴 Сон и восстановление\n\n"
-            "Минимум: 7 часов. Идеально: 7.5–9.\n"
-            "Если силовые падают/вечно устал:\n"
-            "1) убери отказ на неделю\n"
-            "2) снизь объём на 20–30%\n"
-            "3) питание держи стабильным"
+            "Ориентир:\n"
+            "• 7–9 часов сна\n\n"
+            "Если ты постоянно разбит и силовые падают:\n"
+            "1) Убери отказ на неделю\n"
+            "2) Снизь объём на 20–30%\n"
+            "3) Оставь питание стабильным"
         )
+
     if topic == "safety":
         return (
-            "🦵 Боль и техника — как отличить «норм» от «опасно»\n\n"
+            "🦵 Боль и техника\n\n"
             "Нормально:\n"
-            "— жжение в мышцах\n"
-            "— умеренная крепатура\n\n"
-            "Плохо (стоп):\n"
-            "— резкая боль в суставе\n"
-            "— онемение/прострел\n"
-            "— боль усиливается от тренировки к тренировке\n\n"
-            "Что сделать:\n"
-            "1) снизить вес/амплитуду\n"
-            "2) заменить упражнение\n"
-            "3) проверить технику (лучше видео)"
+            "• жжение в мышцах\n"
+            "• умеренная крепатура\n\n"
+            "Опасно (лучше остановиться):\n"
+            "• резкая боль в суставе\n"
+            "• прострел/онемение\n"
+            "• боль усиливается от тренировки к тренировке\n\n"
+            "Что делать:\n"
+            "— снизь вес, упрости упражнение, проверь технику."
         )
+
     if topic == "diary":
         return (
-            "📓 Дневник и замеры — чтобы видеть прогресс\n\n"
+            "📓 Дневник и замеры\n\n"
             "Зачем дневник:\n"
-            "— видишь рост силовых/повторов\n"
-            "— понимаешь, когда повышать нагрузку\n\n"
-            "Как часто:\n"
-            "• вес: 3–4 раза/нед утром\n"
-            "• талия: 1–2 раза/нед\n"
-            "• рука/грудь/бедро: раз в 2 недели"
+            "— ты видишь прогресс и понимаешь, когда добавлять вес.\n\n"
+            "Как часто замеры:\n"
+            "• вес: 3–4 раза в неделю утром\n"
+            "• талия: 1–2 раза в неделю\n"
+            "• остальные обхваты: раз в 2 недели"
         )
+
     if topic == "refund":
         return (
-            "🔄 Ошибки / спорные случаи / возврат\n\n"
+            "🔄 Ошибки/спорные случаи\n\n"
             "Если оплатил, но доступ не открылся:\n"
-            "1) проверь, что отправил чек фото\n"
-            "2) проверь сумму и код в комментарии\n"
-            "3) напиши в «🆘 Поддержка» и приложи чек\n\n"
-            "Оплата на карту → подтверждение вручную."
+            "1) Проверь, что отправил чек\n"
+            "2) Подожди немного (проверка вручную)\n"
+            "3) Если долго — напиши в «🆘 Поддержка» и приложи чек\n\n"
+            "Оплата на карту → проверка вручную."
         )
+
     return "Выбери тему."
 
 
@@ -1178,6 +1289,7 @@ async def init_db():
         )
         """)
 
+        # Миграция
         async with conn.execute("PRAGMA table_info(users)") as cur:
             cols = {r[1] for r in await cur.fetchall()}
         if "equip" not in cols:
@@ -1429,7 +1541,7 @@ async def cmd_start(message: Message):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await message.answer(
         "Привет! Я составлю тебе:\n"
-        "• тренировки под цель и опыт (с учётом оборудования)\n"
+        "• тренировки под цель и опыт (строго по твоему оборудованию)\n"
         "• питание (ккал/БЖУ) + 3 дня примеров\n"
         "• дневник тренировок\n"
         "• замеры прогресса\n\n"
@@ -1459,7 +1571,7 @@ async def open_profile(message: Message, state: FSMContext):
         f"Вес: {u.get('weight') or '—'}\n"
         f"Где тренируешься: {u.get('place') or '—'}\n"
         f"Оборудование: {u.get('equip') or '—'}\n"
-        f"Уровень нагрузки: {u.get('equip_level') or '—'}\n"
+        f"Ориентир по весам: {u.get('equip_level') or '—'}\n"
         f"Опыт: {u.get('exp') or '—'}\n"
         f"Частота: {u.get('freq') or '—'}\n"
         f"Приёмов пищи: {u.get('meals') or '—'}\n\n"
@@ -1560,8 +1672,7 @@ async def cb_equip_toggle(callback: CallbackQuery, state: FSMContext):
         await update_user(callback.from_user.id, equip=equip_str)
 
         await callback.message.answer(
-            "Ок. Теперь второй вопрос:\n"
-            "Какой уровень весов/нагрузки доступен?",
+            "Ок. Теперь выбери ориентир по весам (чтобы адекватно подобрать диапазоны):",
             reply_markup=equip_level_kb(place)
         )
         await state.set_state(ProfileFlow.equip_level)
@@ -1584,7 +1695,7 @@ async def cb_equip_toggle(callback: CallbackQuery, state: FSMContext):
 
 
 async def cb_equip_level(callback: CallbackQuery, state: FSMContext):
-    lvl = callback.data.split(":", 1)[1]  # "home:light" и т.д.
+    lvl = callback.data.split(":", 1)[1]  # "home:10" etc
     await update_user(callback.from_user.id, equip_level=lvl)
 
     await callback.message.answer("Опыт? Напиши: 0 / 1-2 года / 2+ года")
@@ -1596,21 +1707,15 @@ async def profile_exp(message: Message, state: FSMContext):
     exp = (message.text or "").strip()
     await update_user(message.from_user.id, exp=exp)
 
-    lvl = exp_level(exp)
-    if lvl == "novice":
-        await update_user(message.from_user.id, freq=3)
-        await message.answer("Сколько приёмов пищи в день удобно? Напиши: 3 / 4 / 5")
-        await state.set_state(ProfileFlow.meals)
-        return
-
-    await message.answer("Сколько тренировок в неделю удобно? Напиши: 3 / 4 / 5")
+    # ИЗМЕНЕНО: теперь частоту выбирают ВСЕ
+    await message.answer("Сколько тренировок в неделю удобно? Напиши: 2 / 3 / 4 / 5")
     await state.set_state(ProfileFlow.freq)
 
 
 async def profile_freq(message: Message, state: FSMContext):
     t = re.sub(r"[^\d]", "", message.text or "")
-    if t not in ("3", "4", "5"):
-        await message.answer("Напиши просто цифру: 3 или 4 или 5")
+    if t not in ("2", "3", "4", "5"):
+        await message.answer("Напиши просто цифру: 2 / 3 / 4 / 5")
         return
     await update_user(message.from_user.id, freq=int(t))
     await message.answer("Сколько приёмов пищи в день удобно? Напиши: 3 / 4 / 5")
@@ -1648,11 +1753,8 @@ async def open_payment(message: Message, state: FSMContext):
     text = (
         "💳 Оплата / Доступ\n\n"
         f"{access_status_str(a)}\n\n"
-        "Выбери тариф:\n"
-        f"• 1 месяц — {TARIFFS['t1']['price']}₽\n"
-        f"• 3 месяца — {TARIFFS['t3']['price']}₽\n"
-        f"• навсегда — {TARIFFS['life']['price']}₽\n\n"
-        "После выбора я покажу реквизиты и код для комментария."
+        "Выбери тариф, я покажу реквизиты.\n"
+        "После перевода нажми «✅ Я оплатил» и отправь скрин/фото чека."
     )
     await message.answer(text, reply_markup=pay_tariff_kb())
     await state.set_state(PaymentFlow.choose_tariff)
@@ -1675,9 +1777,9 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext):
         f"• Банк: {BANK_NAME}\n"
         f"• Карта: {CARD_NUMBER}\n"
         f"• Получатель: {CARD_HOLDER}\n\n"
-        "⚠️ В комментарии к переводу укажи код:\n"
+        "⚠️ Если есть комментарий к переводу — укажи код:\n"
         f"{code}\n\n"
-        "После оплаты нажми «✅ Я оплатил» и отправь чек/скрин (как фото)."
+        "После оплаты нажми «✅ Я оплатил» и отправь чек (скрин/фото)."
     )
     await callback.message.answer(text, reply_markup=pay_inline_kb())
     await callback.answer()
@@ -1699,36 +1801,14 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
         return
 
     if await has_recent_pending_payment(callback.from_user.id):
-        await callback.message.answer("⏳ У тебя уже есть активная заявка (до 2 часов).")
+        await callback.message.answer("⏳ У тебя уже есть заявка на проверке (до 2 часов).")
         await callback.answer()
         return
 
-    await callback.message.answer(
-        f"Введи сумму, которую перевёл.\n"
-        f"Ожидаемая сумма для тарифа «{TARIFFS[tariff]['title']}»: {TARIFFS[tariff]['price']}₽"
-    )
-    await state.set_state(PaymentFlow.waiting_amount)
-    await callback.answer()
-
-
-async def pay_amount(message: Message, state: FSMContext):
-    txt = re.sub(r"[^\d]", "", message.text or "")
-    if not txt:
-        await message.answer("Сумму числом, например 1150")
-        return
-    await state.update_data(amount=int(txt))
-    await message.answer("Введи последние 4 цифры карты отправителя (или 0000):")
-    await state.set_state(PaymentFlow.waiting_last4)
-
-
-async def pay_last4(message: Message, state: FSMContext):
-    txt = re.sub(r"[^\d]", "", message.text or "")
-    if len(txt) != 4:
-        await message.answer("Нужно ровно 4 цифры. Например 1234 (или 0000)")
-        return
-    await state.update_data(last4=txt)
-    await message.answer("Отправь чек/скрин оплаты как фото:")
+    # ИЗМЕНЕНО: просим только чек
+    await callback.message.answer("Отправь скрин/фото чека оплаты (как фото).")
     await state.set_state(PaymentFlow.waiting_receipt)
+    await callback.answer()
 
 
 async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
@@ -1743,13 +1823,15 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
         return
 
-    amount = int(data.get("amount", 0))
-    last4 = data.get("last4", "0000")
     receipt_file_id = message.photo[-1].file_id
     code = gen_order_code(message.from_user.id)
 
+    # ИЗМЕНЕНО: amount берём из тарифа, last4 не нужен
+    amount = int(TARIFFS[tariff]["price"])
+    last4 = ""
+
     payment_id = await create_payment(message.from_user.id, tariff, amount, last4, code, receipt_file_id)
-    await message.answer("✅ Заявка отправлена. Как подтвержу — доступ откроется.")
+    await message.answer("✅ Чек отправлен. Я проверю оплату и открою доступ.", reply_markup=main_menu_kb())
 
     u = await get_user(message.from_user.id)
     uname = f"@{u.get('username')}" if u.get("username") else "(без юзернейма)"
@@ -1761,7 +1843,6 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         f"user_id: {message.from_user.id}\n"
         f"tariff: {tariff} ({TARIFFS[tariff]['title']})\n"
         f"amount: {amount}\n"
-        f"last4: {last4}\n"
         f"code: {code}\n"
     )
     if ADMIN_ID != 0:
@@ -1816,7 +1897,7 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
         await set_payment_status(pid, "rejected")
         await bot.send_message(
             chat_id=user_id,
-            text="❌ Оплата отклонена. Проверь сумму/чек/комментарий и попробуй снова: 💳 Оплата / Доступ"
+            text="❌ Оплата отклонена. Проверь перевод/чек и попробуй снова: 💳 Оплата / Доступ"
         )
         await callback.answer("Отклонено ❌")
 
@@ -2105,8 +2186,7 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_freq, ProfileFlow.freq)
     dp.message.register(profile_meals, ProfileFlow.meals)
 
-    dp.message.register(pay_amount, PaymentFlow.waiting_amount)
-    dp.message.register(pay_last4, PaymentFlow.waiting_last4)
+    # ИЗМЕНЕНО: платеж — только чек
     dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
 
     dp.message.register(diary_choose_day, DiaryFlow.choose_day)
