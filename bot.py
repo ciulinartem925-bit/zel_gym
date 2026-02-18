@@ -56,7 +56,6 @@ class ProfileFlow(StatesGroup):
     weight = State()
     place = State()
 
-    # НОВОЕ: опросы по оборудованию
     equip_select = State()   # мультиселект оборудования
     equip_level = State()    # уровень доступных весов/нагрузки
 
@@ -65,9 +64,10 @@ class ProfileFlow(StatesGroup):
     meals = State()
 
 
-# ✅ ОПЛАТА: ОСТАВЛЯЕМ ТОЛЬКО ЧЕК
 class PaymentFlow(StatesGroup):
     choose_tariff = State()
+    waiting_amount = State()
+    waiting_last4 = State()
     waiting_receipt = State()
 
 
@@ -310,14 +310,6 @@ def calc_macros(calories: int, weight_kg: float, goal: str):
     return protein, fat, carbs
 
 
-def suggest_meals_count(calories: int) -> int:
-    if calories >= 3200:
-        return 5
-    if calories >= 2600:
-        return 4
-    return 3
-
-
 def parse_equip(equip_str: Optional[str]) -> Set[str]:
     if not equip_str:
         return set()
@@ -339,10 +331,6 @@ def _choose_split(freq: int, lvl: str, is_gym: bool) -> str:
 
 
 def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
-    """
-    Возвращает пул упражнений с фильтром по доступному оборудованию.
-    equip хранит коды типа: 'home:bar', 'gym:barbell'...
-    """
     def has(code: str) -> bool:
         return code in equip
 
@@ -374,7 +362,6 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
             "core": ["Скручивания", "Подъёмы ног", "Планка"],
         }
 
-        # squat/legs
         if has_barbell:
             pool["squat"].append("Присед со штангой")
         if has_legpress:
@@ -384,17 +371,14 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
         if not pool["squat"]:
             pool["squat"] = ["Жим ногами", "Гакк-присед", "Присед в Смите"]
 
-        # hinge
         if has_barbell:
             pool["hinge"].append("Румынская тяга (штанга)")
         pool["hinge"] += ["Гиперэкстензии с весом", "Румынская тяга (гантели)"]
 
-        # push
         pool["hpush"] = ["Жим лёжа", "Жим гантелей лёжа", "Жим в тренажёре"]
         pool["vpush"] = (["Жим штанги стоя", "Жим гантелей сидя", "Жим в Смите"]
                          if (has_barbell or has_smith) else ["Жим гантелей сидя", "Жим в тренажёре"])
 
-        # pull
         if has_pullup:
             pool["pull_v"] += ["Подтягивания", "Подтягивания в гравитроне"]
         if has_cable:
@@ -403,7 +387,6 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
         pool["pull_h"] += (["Тяга гантели одной рукой", "Тяга штанги в наклоне"]
                            if has_barbell else ["Тяга гантели одной рукой", "Тяга в тренажёре"])
 
-        # delts/arms/iso
         pool["delts"] = (["Разведения в стороны", "Face pull", "Задняя дельта (пек-дек)"]
                          if has_cable else ["Разведения в стороны", "Задняя дельта (пек-дек)"])
         pool["arms_bi"] = (["Сгибания гантелей", "Сгибания на блоке", "Сгибания штанги"]
@@ -413,7 +396,6 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
         pool["legs_iso"] = ["Сгибание ног", "Разгибание ног", "Икры стоя/сидя"]
         return pool
 
-    # ===== HOME =====
     pool = {
         "squat": [],
         "hinge": [],
@@ -428,7 +410,6 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
         "core": ["Планка", "Скручивания", "Подъём ног лёжа"],
     }
 
-    # Если вообще ничего — калистеника
     if "home:none" in equip:
         pool["squat"] = ["Приседания", "Болгарские выпады", "Выпады"]
         pool["hinge"] = ["Ягодичный мост", "Наклоны без веса", "Доброе утро (без веса)"]
@@ -442,19 +423,16 @@ def _exercise_pool(is_gym: bool, equip: Set[str], equip_level: Optional[str]):
         pool["legs_iso"] = ["Икры стоя", "Статика в выпаде"]
         return pool
 
-    # squat/hinge
     pool["squat"] = (["Гоблет-присед", "Болгарские выпады", "Присед с гантелями"]
                      if has_dumb else ["Болгарские выпады", "Приседания", "Выпады"])
     pool["hinge"] = (["Румынская тяга с гантелями", "Ягодичный мост", "Наклоны с гантелями"]
                      if has_dumb else ["Ягодичный мост", "Наклоны без веса"])
 
-    # push
     pool["hpush"] = (["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа"]
                      if has_dumb else ["Отжимания", "Отжимания узкие", "Отжимания с упором ног"])
     pool["vpush"] = (["Жим гантелей вверх", "Пайк-отжимания"]
                      if has_dumb else ["Пайк-отжимания", "Отжимания в стойке у стены (лёгк.)"])
 
-    # pull
     if has_pullup:
         pool["pull_v"] = (["Подтягивания", "Подтягивания негативы", "Подтягивания с резинкой"]
                           if has_bands else ["Подтягивания", "Негативы"])
@@ -736,7 +714,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int,
 # =========================
 # ПИТАНИЕ
 # =========================
-# Важно: крупы/макароны указаны В СУХОМ ВИДЕ (как на упаковке).
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
     "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
@@ -774,32 +751,23 @@ def _sum_nutr(items: list[tuple[str, float]]):
 def _fmt_tot(t):
     return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
 
-
-# ✅ НОВАЯ ВЕРСИЯ: без огромных добивок крупами + чекбоксы ☐
 def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
-    """
-    Версия "удобно закрывать день":
-    - добор делаем маленькими порциями (банан/йогурт/орехи/масло/картошка/немного крупы)
-    - жесткий лимит на добавку сухих круп, чтобы не было +300г риса
-    - добавлены чекбоксы ☐ для удобства
-    """
-
     day_templates = [
-        [  # День 1
+        [
             ["oats", "yogurt", "banana"],
-            ["yogurt", "nuts"],
+            ["nuts", "yogurt"],
             ["rice", "chicken", "veg", "oil"],
             ["curd_0_5"],
             ["banana", "yogurt"],
         ],
-        [  # День 2
+        [
             ["oats", "eggs", "banana"],
             ["yogurt"],
             ["buckwheat", "turkey", "veg", "oil"],
             ["curd_0_5", "nuts"],
             ["banana"],
         ],
-        [  # День 3
+        [
             ["oats", "yogurt"],
             ["eggs", "veg"],
             ["pasta", "fish", "veg", "oil"],
@@ -808,159 +776,91 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
         ],
     ]
 
-    # более умеренные базовые порции (чтобы не раздувало добором)
     base = {
-        "oats": 60, "yogurt": 250, "banana": 120,
-        "rice": 70, "buckwheat": 70, "pasta": 70,
-        "potato": 250,
-        "chicken": 200, "turkey": 200, "fish": 230,
-        "veg": 350, "curd_0_5": 250,
-        "eggs": 180,       # ~3 яйца
-        "oil": 10, "nuts": 15,
+        "oats": 80, "yogurt": 300, "banana": 120,
+        "rice": 90, "buckwheat": 90, "pasta": 90,
+        "chicken": 220, "turkey": 220, "fish": 250,
+        "veg": 300, "curd_0_5": 300,
+        "eggs": 180,
+        "oil": 12, "nuts": 20,
     }
 
     target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
     out = []
 
-    # лимиты, чтобы не улетать в огромные граммы
-    MAX_EXTRA_GRAINS_DRY = 60.0   # суммарно за день добавки сухих круп (рис/овсянка/гречка/паста)
-    MAX_EXTRA_OIL = 12.0          # добавка масла сверх базы
-    MAX_EXTRA_NUTS = 25.0
-
-    def clamp_add(grouped: dict, key: str, add_g: float, max_extra: float):
-        """добавить граммы, но не превысить лимит добавки по ключу"""
-        cur = grouped.get(key, 0.0)
-        base_g = base.get(key, 0.0)
-        extra_now = max(cur - base_g, 0.0)
-        can = max(0.0, max_extra - extra_now)
-        real = min(add_g, can)
-        grouped[key] = cur + real
-        return real
-
-    def build_grouped_from_meals(day_items_by_meal):
-        grouped = {}
-        for meal in day_items_by_meal:
-            for k, g in meal:
-                grouped[k] = grouped.get(k, 0.0) + g
-        return grouped
-
-    def grouped_to_flat(grouped: dict):
-        return [(k, g) for k, g in grouped.items() if g > 0.1]
-
-    def sum_grouped(grouped: dict):
-        return _sum_nutr(grouped_to_flat(grouped))
-
-    # “маленькие доборы”
-    def add_protein(grouped: dict, need_p: float):
-        # лучше чуть-чуть мяса/творога, чем огромная крупа
-        while need_p > 12:
-            grouped["chicken"] = grouped.get("chicken", base["chicken"]) + 50.0
+    def add_protein(items, need_p):
+        while need_p > 8:
+            items.append(("chicken", 50.0))
             need_p -= _nutr_of("chicken", 50.0)["p"]
-        while need_p > 6:
-            grouped["curd_0_5"] = grouped.get("curd_0_5", base["curd_0_5"]) + 100.0
-            need_p -= _nutr_of("curd_0_5", 100.0)["p"]
+        return items
 
-    def add_fat(grouped: dict, need_f: float):
-        # орехи/масло малыми шагами
-        while need_f > 5:
-            added = clamp_add(grouped, "nuts", 10.0, MAX_EXTRA_NUTS)
-            if added < 0.1:
-                break
-            need_f -= _nutr_of("nuts", added)["f"]
+    def add_fat(items, need_f):
+        while need_f > 4:
+            items.append(("oil", 5.0))
+            need_f -= _nutr_of("oil", 5.0)["f"]
+        return items
 
-        while need_f > 3:
-            added = clamp_add(grouped, "oil", 3.0, MAX_EXTRA_OIL)
-            if added < 0.1:
-                break
-            need_f -= _nutr_of("oil", added)["f"]
-
-    def add_carbs(grouped: dict, need_c: float):
-        # сначала “удобные” угли
-        while need_c > 18:
-            grouped["banana"] = grouped.get("banana", base["banana"]) + 80.0
-            need_c -= _nutr_of("banana", 80.0)["c"]
-
-        while need_c > 18:
-            grouped["potato"] = grouped.get("potato", 0.0) + 250.0
-            need_c -= _nutr_of("potato", 250.0)["c"]
-
-        # и только потом немного сухой крупы, но с лимитом
-        grain_keys = ("rice", "buckwheat", "pasta", "oats")
-        grains_added = 0.0
-        for gk in grain_keys:
-            cur = grouped.get(gk, 0.0)
-            base_g = base.get(gk, 0.0)
-            grains_added += max(cur - base_g, 0.0)
-
-        while need_c > 15 and grains_added < MAX_EXTRA_GRAINS_DRY:
-            # добавляем небольшими порциями 20г
-            added = 20.0
-            can = MAX_EXTRA_GRAINS_DRY - grains_added
-            added = min(added, can)
-            if added < 0.1:
-                break
-            grouped["rice"] = grouped.get("rice", base["rice"]) + added
-            grains_added += added
-            need_c -= _nutr_of("rice", added)["c"]
-
-    def reduce_if_over(grouped: dict):
-        tot = sum_grouped(grouped)
-        # если сильно перелетели — режем “сухие угли” и банан
-        delta = tot["kcal"] - target["kcal"]
-        if delta <= 160:
-            return
-
-        # режем по 20г сухие крупы / по 80г банан
-        for _ in range(20):
-            tot = sum_grouped(grouped)
-            delta = tot["kcal"] - target["kcal"]
-            if delta <= 120:
-                break
-
-            for k in ("rice", "buckwheat", "pasta", "oats"):
-                if grouped.get(k, 0.0) > base.get(k, 0.0) + 20:
-                    grouped[k] -= 20.0
-                    break
-            else:
-                if grouped.get("banana", 0.0) > base.get("banana", 0.0) + 80:
-                    grouped["banana"] -= 80.0
-                else:
-                    break
+    def add_carbs(items, need_c):
+        while need_c > 12:
+            items.append(("rice", 20.0))
+            need_c -= _nutr_of("rice", 20.0)["c"]
+        return items
 
     for day_i in range(3):
         tpl = day_templates[day_i][:meals]
 
         day_items_by_meal: list[list[tuple[str, float]]] = []
+        day_items_flat: list[tuple[str, float]] = []
+
         for keys in tpl:
             meal_items = []
             for k in keys:
                 g = float(base.get(k, 100))
                 meal_items.append((k, g))
             day_items_by_meal.append(meal_items)
+            day_items_flat.extend(meal_items)
 
-        grouped = build_grouped_from_meals(day_items_by_meal)
-        tot = sum_grouped(grouped)
+        tot = _sum_nutr(day_items_flat)
 
         need_p = target["p"] - tot["p"]
         if need_p > 0:
-            add_protein(grouped, need_p)
-        tot = sum_grouped(grouped)
+            day_items_flat = add_protein(day_items_flat, need_p)
+        tot = _sum_nutr(day_items_flat)
 
         need_f = target["f"] - tot["f"]
         if need_f > 0:
-            add_fat(grouped, need_f)
-        tot = sum_grouped(grouped)
+            day_items_flat = add_fat(day_items_flat, need_f)
+        tot = _sum_nutr(day_items_flat)
 
         need_c = target["c"] - tot["c"]
         if need_c > 0:
-            add_carbs(grouped, need_c)
+            day_items_flat = add_carbs(day_items_flat, need_c)
+        tot = _sum_nutr(day_items_flat)
 
-        # если перелетели — подрежем
-        reduce_if_over(grouped)
-        tot = sum_grouped(grouped)
+        delta_kcal = target["kcal"] - tot["kcal"]
+        step_g = 20.0
+        if abs(delta_kcal) > 140:
+            if delta_kcal > 0:
+                day_items_flat.append(("rice", step_g))
+            else:
+                for idx in range(len(day_items_flat) - 1, -1, -1):
+                    k, g = day_items_flat[idx]
+                    if k in ("rice", "oats", "pasta", "buckwheat") and g >= step_g + 10:
+                        day_items_flat[idx] = (k, g - step_g)
+                        break
+        tot = _sum_nutr(day_items_flat)
 
-        # покажем “добор” отдельным блоком (но он теперь маленький)
-        base_grouped = build_grouped_from_meals(day_items_by_meal)
+        grouped = {}
+        for k, g in day_items_flat:
+            grouped[k] = grouped.get(k, 0.0) + g
+
+        base_flat = []
+        for meal_items in day_items_by_meal:
+            base_flat.extend(meal_items)
+        base_grouped = {}
+        for k, g in base_flat:
+            base_grouped[k] = base_grouped.get(k, 0.0) + g
+
         extras = []
         for k, g in grouped.items():
             extra = g - base_grouped.get(k, 0.0)
@@ -972,14 +872,14 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
             meal_tot = _sum_nutr(meal_items)
             day_text.append(f"Приём {mi}  ({_fmt_tot(meal_tot)})")
             for k, g in meal_items:
-                day_text.append(f"☐ {FOOD_DB[k]['name']} — {int(round(g))} г")
+                day_text.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
             day_text.append("")
 
         if extras:
             extra_tot = _sum_nutr(extras)
-            day_text.append(f"➕ Добор (если не добрал по калориям/БЖУ)  ({_fmt_tot(extra_tot)})")
+            day_text.append(f"➕ Добор под цель  ({_fmt_tot(extra_tot)})")
             for k, g in extras:
-                day_text.append(f"☐ {FOOD_DB[k]['name']} — +{int(round(g))} г")
+                day_text.append(f"• {FOOD_DB[k]['name']} — +{int(round(g))} г")
             day_text.append("")
 
         day_text.append(f"✅ Итог дня: {_fmt_tot(tot)}")
@@ -1016,14 +916,14 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
         f"Калории: ~{calories} ккал/день\n"
         f"БЖУ (ориентир): Белки {p}г / Жиры {f}г / Углеводы {c}г\n"
         f"Приёмов пищи: {meals}\n\n"
-        "Как пользоваться, чтобы было удобно:\n"
-        "1) Ставь галочки ☐ по ходу дня (в голове или копируй себе и отмечай)\n"
-        "2) Если не добрал — добирай из блока «➕ Добор» (он маленький и удобный)\n"
-        "3) Сначала попади в калории и белок — это 80% результата\n\n"
+        "Правила:\n"
+        "1) Сначала попади в калории и белок\n"
+        "2) Ешь шаблоны 5–7 дней — так проще не ошибаться\n"
+        "3) Масло/орехи/соусы учитывай всегда\n\n"
         + three_days +
         "\n\n🔁 Замены:\n"
         "• курица ↔ индейка ↔ рыба\n"
-        "• рис ↔ гречка ↔ макароны ↔ картошка\n"
+        "• рис ↔ гречка ↔ макароны\n"
         "• творог ↔ йогурт/кефир\n\n"
         + tips
     )
@@ -1039,15 +939,14 @@ def faq_text(topic: str) -> str:
             "Как оплатить (пошагово):\n"
             "1) Нажми «💳 Оплата / Доступ»\n"
             "2) Выбери тариф (1м / 3м / навсегда)\n"
-            "3) Переведи сумму тарифа на карту\n"
-            "4) Нажми «✅ Я оплатил»\n"
-            "5) Пришли скрин/фото чека как фото\n\n"
+            "3) Переведи ровно сумму тарифа на карту\n"
+            "4) В комментарии к переводу укажи код, который покажет бот\n"
+            "5) Нажми «✅ Я оплатил» → введи сумму → последние 4 цифры карты → пришли чек фото\n\n"
             "Почему подтверждение вручную:\n"
             "— это перевод на карту (без платёжного API), поэтому админ сверяет чек.\n\n"
             "Если доступ не открылся за 5–15 минут:\n"
-            "— зайди в «🆘 Поддержка» и пришли чек + дату/тариф."
+            "— зайди в «🆘 Поддержка» и пришли: дату/сумму/тариф/чек."
         )
-
     if topic == "plan":
         return (
             "🧠 Как строится план (почему он индивидуальный)\n\n"
@@ -1062,7 +961,6 @@ def faq_text(topic: str) -> str:
             "— 1–2 года: больше недельный объём, распределение нагрузок\n"
             "— 2+ года: больше специализация (PPL/акценты), но без тупого «убивания»\n"
         )
-
     if topic == "progress":
         return (
             "🏋️ Объём, прогрессия и отказ — максимально просто\n\n"
@@ -1075,7 +973,6 @@ def faq_text(topic: str) -> str:
             "— Опытному можно дозировано (чаще изоляция, в конце)\n\n"
             "Ориентир: чаще держи 1–2 повтора «в запасе» (RIR 1–2)."
         )
-
     if topic == "nutrition":
         return (
             "🍽 Калории и БЖУ — понятная логика\n\n"
@@ -1088,7 +985,6 @@ def faq_text(topic: str) -> str:
             "— масса: +150–200 ккал\n"
             "— сушка: -150–200 ккал"
         )
-
     if topic == "count":
         return (
             "📌 Как правильно считать калории (без ошибок)\n\n"
@@ -1098,7 +994,6 @@ def faq_text(topic: str) -> str:
             "2) Самая частая ошибка: не считают масло/соусы/перекусы.\n"
             "3) Контроль веса: 3–4 раза/нед утром → смотри среднее за неделю."
         )
-
     if topic == "stuck":
         return (
             "⚠️ Если нет результата — почти всегда причина тут\n\n"
@@ -1110,7 +1005,6 @@ def faq_text(topic: str) -> str:
             "— смотри среднее за неделю\n"
             "— корректируй калории на 150–200"
         )
-
     if topic == "recovery":
         return (
             "😴 Сон и восстановление\n\n"
@@ -1120,7 +1014,6 @@ def faq_text(topic: str) -> str:
             "2) снизь объём на 20–30%\n"
             "3) питание держи стабильным"
         )
-
     if topic == "safety":
         return (
             "🦵 Боль и техника — как отличить «норм» от «опасно»\n\n"
@@ -1136,7 +1029,6 @@ def faq_text(topic: str) -> str:
             "2) заменить упражнение\n"
             "3) проверить технику (лучше видео)"
         )
-
     if topic == "diary":
         return (
             "📓 Дневник и замеры — чтобы видеть прогресс\n\n"
@@ -1148,16 +1040,15 @@ def faq_text(topic: str) -> str:
             "• талия: 1–2 раза/нед\n"
             "• рука/грудь/бедро: раз в 2 недели"
         )
-
     if topic == "refund":
         return (
             "🔄 Ошибки / спорные случаи / возврат\n\n"
             "Если оплатил, но доступ не открылся:\n"
             "1) проверь, что отправил чек фото\n"
-            "2) напиши в «🆘 Поддержка» и приложи чек\n\n"
+            "2) проверь сумму и код в комментарии\n"
+            "3) напиши в «🆘 Поддержка» и приложи чек\n\n"
             "Оплата на карту → подтверждение вручную."
         )
-
     return "Выбери тему."
 
 
@@ -1287,7 +1178,6 @@ async def init_db():
         )
         """)
 
-        # ===== МИГРАЦИЯ: добавляем колонки, если база уже была создана раньше =====
         async with conn.execute("PRAGMA table_info(users)") as cur:
             cols = {r[1] for r in await cur.fetchall()}
         if "equip" not in cols:
@@ -1678,7 +1568,7 @@ async def cb_equip_toggle(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
-    code = data  # "home:bar" / "gym:barbell"
+    code = data
     if code.endswith(":none"):
         equip_set = {code}
     else:
@@ -1694,7 +1584,7 @@ async def cb_equip_toggle(callback: CallbackQuery, state: FSMContext):
 
 
 async def cb_equip_level(callback: CallbackQuery, state: FSMContext):
-    lvl = callback.data.split(":", 1)[1]  # "home:light" etc
+    lvl = callback.data.split(":", 1)[1]  # "home:light" и т.д.
     await update_user(callback.from_user.id, equip_level=lvl)
 
     await callback.message.answer("Опыт? Напиши: 0 / 1-2 года / 2+ года")
@@ -1762,7 +1652,7 @@ async def open_payment(message: Message, state: FSMContext):
         f"• 1 месяц — {TARIFFS['t1']['price']}₽\n"
         f"• 3 месяца — {TARIFFS['t3']['price']}₽\n"
         f"• навсегда — {TARIFFS['life']['price']}₽\n\n"
-        "После выбора я покажу реквизиты."
+        "После выбора я покажу реквизиты и код для комментария."
     )
     await message.answer(text, reply_markup=pay_tariff_kb())
     await state.set_state(PaymentFlow.choose_tariff)
@@ -1775,6 +1665,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext):
         return
 
     await state.update_data(tariff=tariff_code)
+    code = gen_order_code(callback.from_user.id)
 
     text = (
         "💳 Оплата доступа\n\n"
@@ -1784,13 +1675,14 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext):
         f"• Банк: {BANK_NAME}\n"
         f"• Карта: {CARD_NUMBER}\n"
         f"• Получатель: {CARD_HOLDER}\n\n"
+        "⚠️ В комментарии к переводу укажи код:\n"
+        f"{code}\n\n"
         "После оплаты нажми «✅ Я оплатил» и отправь чек/скрин (как фото)."
     )
     await callback.message.answer(text, reply_markup=pay_inline_kb())
     await callback.answer()
 
 
-# ✅ ОПЛАТА: после “Я оплатил” просим только фото чека
 async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
     await ensure_user(callback.from_user.id, callback.from_user.username or "")
 
@@ -1811,9 +1703,32 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
-    await callback.message.answer("Ок ✅ Теперь отправь скрин/фото чека оплаты (как фото).")
-    await state.set_state(PaymentFlow.waiting_receipt)
+    await callback.message.answer(
+        f"Введи сумму, которую перевёл.\n"
+        f"Ожидаемая сумма для тарифа «{TARIFFS[tariff]['title']}»: {TARIFFS[tariff]['price']}₽"
+    )
+    await state.set_state(PaymentFlow.waiting_amount)
     await callback.answer()
+
+
+async def pay_amount(message: Message, state: FSMContext):
+    txt = re.sub(r"[^\d]", "", message.text or "")
+    if not txt:
+        await message.answer("Сумму числом, например 1150")
+        return
+    await state.update_data(amount=int(txt))
+    await message.answer("Введи последние 4 цифры карты отправителя (или 0000):")
+    await state.set_state(PaymentFlow.waiting_last4)
+
+
+async def pay_last4(message: Message, state: FSMContext):
+    txt = re.sub(r"[^\d]", "", message.text or "")
+    if len(txt) != 4:
+        await message.answer("Нужно ровно 4 цифры. Например 1234 (или 0000)")
+        return
+    await state.update_data(last4=txt)
+    await message.answer("Отправь чек/скрин оплаты как фото:")
+    await state.set_state(PaymentFlow.waiting_receipt)
 
 
 async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
@@ -1828,20 +1743,12 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
         return
 
+    amount = int(data.get("amount", 0))
+    last4 = data.get("last4", "0000")
     receipt_file_id = message.photo[-1].file_id
-
-    # сумма для админа = ожидаемая по тарифу (мы не спрашиваем у пользователя)
-    expected_amount = int(TARIFFS[tariff]["price"])
     code = gen_order_code(message.from_user.id)
 
-    payment_id = await create_payment(
-        user_id=message.from_user.id,
-        tariff=tariff,
-        amount=expected_amount,
-        last4="",  # больше не используем
-        code=code,
-        receipt_file_id=receipt_file_id
-    )
+    payment_id = await create_payment(message.from_user.id, tariff, amount, last4, code, receipt_file_id)
     await message.answer("✅ Заявка отправлена. Как подтвержу — доступ откроется.")
 
     u = await get_user(message.from_user.id)
@@ -1853,15 +1760,17 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         f"user: {uname}\n"
         f"user_id: {message.from_user.id}\n"
         f"tariff: {tariff} ({TARIFFS[tariff]['title']})\n"
-        f"expected_amount: {expected_amount}\n"
+        f"amount: {amount}\n"
+        f"last4: {last4}\n"
         f"code: {code}\n"
     )
-    await bot.send_photo(
-        chat_id=ADMIN_ID,
-        photo=receipt_file_id,
-        caption=caption,
-        reply_markup=admin_review_kb(payment_id)
-    )
+    if ADMIN_ID != 0:
+        await bot.send_photo(
+            chat_id=ADMIN_ID,
+            photo=receipt_file_id,
+            caption=caption,
+            reply_markup=admin_review_kb(payment_id)
+        )
     await state.clear()
 
 
@@ -1907,7 +1816,7 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
         await set_payment_status(pid, "rejected")
         await bot.send_message(
             chat_id=user_id,
-            text="❌ Оплата отклонена. Проверь чек и попробуй снова: 💳 Оплата / Доступ"
+            text="❌ Оплата отклонена. Проверь сумму/чек/комментарий и попробуй снова: 💳 Оплата / Доступ"
         )
         await callback.answer("Отклонено ❌")
 
@@ -2148,10 +2057,11 @@ async def forward_to_admin(message: Message, bot: Bot):
         "📓 Дневник тренировок", "📏 Замеры", "⚙️ Профиль", "❓ FAQ / Частые вопросы", "🆘 Поддержка"
     }:
         return
-    await bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"📩 Поддержка от @{message.from_user.username or 'no_username'} (id={message.from_user.id}):\n\n{message.text}"
-    )
+    if ADMIN_ID != 0:
+        await bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"📩 Поддержка от @{message.from_user.username or 'no_username'} (id={message.from_user.id}):\n\n{message.text}"
+        )
 
 
 # =========================
@@ -2173,7 +2083,6 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
     dp.callback_query.register(cb_place, F.data.startswith("place:"))
 
-    # оборудование
     dp.callback_query.register(cb_equip_toggle, F.data.startswith("eq:"))
     dp.callback_query.register(cb_equip_level, F.data.startswith("eql:"))
 
@@ -2196,7 +2105,8 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_freq, ProfileFlow.freq)
     dp.message.register(profile_meals, ProfileFlow.meals)
 
-    # ✅ ОПЛАТА: только чек
+    dp.message.register(pay_amount, PaymentFlow.waiting_amount)
+    dp.message.register(pay_last4, PaymentFlow.waiting_last4)
     dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
 
     dp.message.register(diary_choose_day, DiaryFlow.choose_day)
