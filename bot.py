@@ -60,8 +60,6 @@ class ProfileFlow(StatesGroup):
 
 class PaymentFlow(StatesGroup):
     choose_tariff = State()
-    waiting_amount = State()
-    waiting_last4 = State()
     waiting_receipt = State()
 
 
@@ -241,7 +239,7 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
 def calc_macros(calories: int, weight_kg: float, goal: str):
     g = (goal or "").lower()
     protein = int(round(weight_kg * (2.2 if "суш" in g else 1.8)))
-    fat = int(round(weight_kg * 0.8))  # минимум
+    fat = int(round(weight_kg * 0.8))
     carbs_kcal = max(calories - (protein * 4 + fat * 9), 0)
     carbs = int(round(carbs_kcal / 4))
     return protein, fat, carbs
@@ -266,11 +264,6 @@ def _pick(rnd: random.Random, items: list[str]) -> str:
 
 
 def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: int = 0) -> str:
-    """
-    Обновлено:
-    - Каждая тренировка = 3 базовых + 3–4 изоляции
-    - Максимально доступные упражнения, без экзотики
-    """
     pl = (place or "").lower()
     is_gym = ("зал" in pl) or (pl == "gym")
     where = "ЗАЛ" if is_gym else "ДОМ"
@@ -365,20 +358,16 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
 
 
 # =========================
-# ПИТАНИЕ (однотипное, простое, без "добивки 300г сухого риса")
+# ПИТАНИЕ (однотипное, простое)
 # =========================
-# Важно: крупы/макароны указаны В СУХОМ ВИДЕ.
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
     "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
     "veg":       {"name": "Овощи (микс)",         "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
-
     "chicken":   {"name": "Куриная грудка",       "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
     "eggs":      {"name": "Яйца",                 "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
-
     "curd_0_5":  {"name": "Творог 0–5%",          "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
     "banana":    {"name": "Банан",                "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
-
     "oil":       {"name": "Оливковое масло",      "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
 }
 
@@ -400,15 +389,6 @@ def _fmt_tot(t):
 
 
 def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carbs_g: int):
-    """
-    Однотипный шаблон на день:
-    - Приём 1: овсянка + яйца
-    - Приём 2: рис + курица + овощи + масло
-    - Приём 3: рис + курица + овощи
-    - Приём 4 (если нужно): творог
-    - Приём 5 (если нужно): банан
-    Подстройка граммовок маленькими шагами и распределённо.
-    """
     meals = max(3, min(int(meals or 3), 5))
 
     oats_g = 70.0
@@ -535,7 +515,7 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
         "2) План повторяй 5–7 дней — так меньше ошибок\n"
         "3) Если не идёт прогресс 10–14 дней — крути калории на 150–200\n\n"
         + three_days +
-        "\n\n🔁 Простые замены (без усложнений):\n"
+        "\n\n🔁 Простые замены:\n"
         "• курица ↔ индейка ↔ рыба\n"
         "• рис ↔ гречка ↔ макароны\n"
         "• творог ↔ йогурт/кефир\n\n"
@@ -552,60 +532,46 @@ def faq_text(topic: str) -> str:
             "💳 Оплата и доступ — как это работает\n\n"
             "Как оплатить (по шагам):\n"
             "1) Нажми «💳 Оплата / Доступ»\n"
-            "2) Выбери тариф (1м / 3м / навсегда)\n"
+            "2) Выбери тариф\n"
             "3) Переведи сумму на карту\n"
-            "4) В комментарии укажи код, который покажет бот\n"
-            "5) Нажми «✅ Я оплатил» и отправь данные/чек\n\n"
+            "4) Нажми «✅ Я оплатил»\n"
+            "5) Отправь СКРИН/ФОТО ЧЕКА (и всё)\n\n"
             "Почему подтверждение вручную:\n"
-            "— это перевод на карту, без платёжного сервиса, поэтому админ сверяет чек.\n\n"
-            "Если доступ не открылся за 5–15 минут:\n"
-            "— зайди в «🆘 Поддержка» и пришли: дату/сумму/тариф/чек."
+            "— это перевод на карту, поэтому админ сверяет чек.\n\n"
+            "Если доступ не открылся:\n"
+            "— зайди в «🆘 Поддержка» и приложи чек."
         )
 
     if topic == "plan":
         return (
             "🧠 Как строится план\n\n"
-            "План НЕ универсальный — он подстраивается под тебя.\n\n"
-            "Что влияет на тренировки:\n"
+            "План подстраивается под тебя:\n"
             "• цель (масса/сушка/форма)\n"
-            "• где тренируешься (дом/зал)\n"
+            "• дом/зал\n"
             "• опыт\n"
-            "• сколько раз в неделю удобно\n\n"
-            "Как устроена каждая тренировка:\n"
-            "1) 3 базовых упражнения (это основа силы и мышц)\n"
-            "2) 3–4 изоляции (добиваем мышцы безопасно и понятно)\n\n"
-            "Почему так проще:\n"
-            "— меньше хаоса, тренировки понятные, прогресс отслеживать легко."
+            "• частота тренировок\n\n"
+            "Каждая тренировка:\n"
+            "1) 3 базовых упражнения\n"
+            "2) 3–4 изоляции\n\n"
+            "Так проще соблюдать и отслеживать прогресс."
         )
 
     if topic == "progress":
         return (
-            "🏋️ Объём, прогрессия и отказ — простыми словами\n\n"
-            "Прогрессия = ты делаешь больше работы со временем.\n"
-            "Это может быть:\n"
-            "• +1–2 повтора при том же весе\n"
-            "• +2.5–5% веса при тех же повторах\n"
-            "• чуть больше подходов (но не каждую неделю)\n\n"
-            "Как прогрессировать правильно:\n"
-            "1) Сначала добейся верхней границы повторов\n"
-            "2) Потом прибавь вес и снова работай в диапазоне\n\n"
-            "Про отказ:\n"
-            "— постоянно в отказ = быстрее устанешь и начнёшь откатываться\n"
+            "🏋️ Прогрессия и отказ\n\n"
+            "Прогрессия = со временем больше работы:\n"
+            "• +1–2 повтора\n"
+            "• или +2.5–5% веса\n\n"
+            "Отказ каждый раз не нужен.\n"
             "Лучше оставлять 1–2 повтора в запасе (RIR 1–2)."
         )
 
     if topic == "nutrition":
         return (
-            "🍽 Калории и БЖУ — чтобы не путаться\n\n"
-            "Калории — сколько энергии ты съел за день.\n"
-            "БЖУ — из чего эта энергия: белки/жиры/углеводы.\n\n"
-            "Что реально важно:\n"
-            "1) Попасть в КАЛОРИИ (под цель)\n"
-            "2) Закрыть БЕЛОК (ежедневно)\n\n"
-            "Почему план однотипный:\n"
-            "— меньше готовки\n"
-            "— меньше ошибок\n"
-            "— проще держать режим\n\n"
+            "🍽 Калории и БЖУ\n\n"
+            "Важно:\n"
+            "1) попасть в калории\n"
+            "2) закрыть белок\n\n"
             "Если 10–14 дней нет движения:\n"
             "— масса: +150–200 ккал\n"
             "— сушка: -150–200 ккал"
@@ -613,85 +579,60 @@ def faq_text(topic: str) -> str:
 
     if topic == "count":
         return (
-            "📌 Как считать калории без ошибок\n\n"
-            "Самые частые ошибки:\n"
-            "1) Не считают масло/соусы/перекусы (а там часто 200–500 ккал в день)\n"
-            "2) Путают сухой/готовый вес круп\n"
-            "3) Считают «на глаз» вместо граммов\n\n"
-            "Как делать правильно:\n"
-            "• Взвешивай продукты в граммах\n"
-            "• Крупы/рис удобнее считать сухими\n"
-            "• Масло считать всегда\n\n"
-            "Контроль прогресса:\n"
-            "• вес 3–4 раза/нед утром → смотри среднее за неделю"
+            "📌 Как считать калории\n\n"
+            "Частые ошибки:\n"
+            "• не считают масло/соусы\n"
+            "• путают сухой/готовый вес круп\n"
+            "• считают на глаз\n\n"
+            "Правильно:\n"
+            "• взвешивать продукты\n"
+            "• масло считать всегда"
         )
 
     if topic == "stuck":
         return (
-            "⚠️ Если нет результата — что делать\n\n"
-            "Сначала проверь базу (это 90% случаев):\n"
-            "1) Калории реально совпадают? (особенно масло/перекусы)\n"
-            "2) Есть прогрессия в тренировках?\n"
-            "3) Сон хотя бы 7 часов?\n\n"
-            "Алгоритм:\n"
-            "• 7–10 дней честного учёта\n"
-            "• смотри среднее за неделю\n"
-            "• корректируй калории на 150–200\n\n"
-            "Важно: не меняй всё сразу. Меняй один параметр → смотри 10–14 дней."
+            "⚠️ Нет результата\n\n"
+            "Проверь базу:\n"
+            "1) калории реально совпадают (масло/перекусы)\n"
+            "2) есть прогрессия\n"
+            "3) сон 7+ часов\n\n"
+            "Меняй один параметр и смотри 10–14 дней."
         )
 
     if topic == "recovery":
         return (
             "😴 Сон и восстановление\n\n"
-            "Если сон плохой — прогресс почти всегда тормозит.\n\n"
-            "Минимум: 7 часов.\n"
-            "Идеально: 7.5–9.\n\n"
-            "Если силовые падают и постоянная усталость:\n"
-            "1) убери отказ на неделю\n"
-            "2) снизь объём на 20–30%\n"
-            "3) держи питание стабильным\n"
-            "4) добавь 1 день отдыха"
+            "Минимум 7 часов.\n"
+            "Если усталость копится:\n"
+            "• неделю полегче (-20–30% объёма)\n"
+            "• меньше отказа"
         )
 
     if topic == "safety":
         return (
-            "🦵 Боль и техника — как понять, что ок\n\n"
-            "Нормально:\n"
-            "• жжение в мышцах\n"
-            "• умеренная крепатура\n\n"
-            "Плохо (лучше остановиться):\n"
+            "🦵 Боль и техника\n\n"
+            "Плохо:\n"
             "• резкая боль в суставе\n"
-            "• прострел/онемение\n"
-            "• боль усиливается от тренировки к тренировке\n\n"
+            "• прострел/онемение\n\n"
             "Что делать:\n"
-            "1) снизить вес и сделать технично\n"
-            "2) сократить амплитуду\n"
-            "3) заменить упражнение\n"
-            "4) если не проходит — лучше к врачу/реабилитологу"
+            "• снизь вес\n"
+            "• замени упражнение\n"
+            "• если не проходит — к врачу/реабилитологу"
         )
 
     if topic == "diary":
         return (
-            "📓 Дневник и замеры — как использовать\n\n"
-            "Зачем дневник:\n"
-            "• видно рост по весам/повторам\n"
-            "• понятно, когда повышать нагрузку\n"
-            "• легче не стоять на месте\n\n"
-            "Замеры (чтобы видеть изменения тела):\n"
-            "• вес: 3–4 раза/нед утром\n"
-            "• талия: 1–2 раза/нед\n"
-            "• рука/грудь/бедро: раз в 2 недели\n\n"
-            "Смысл: смотри не один день, а тренд."
+            "📓 Дневник и замеры\n\n"
+            "Вес: 3–4 раза/нед утром → смотри среднее.\n"
+            "Талия: 1–2 раза/нед.\n"
+            "Остальные: раз в 2 недели."
         )
 
     if topic == "refund":
         return (
-            "🔄 Ошибки / спорные случаи / возврат\n\n"
-            "Если оплатил, но доступ не открылся:\n"
-            "1) проверь, что отправил чек фото\n"
-            "2) проверь сумму и код в комментарии\n"
-            "3) напиши в «🆘 Поддержка» и приложи чек\n\n"
-            "Оплата на карту → подтверждение вручную."
+            "🔄 Ошибки/спорные случаи\n\n"
+            "Если оплатил и доступ не открылся:\n"
+            "• пришли чек в поддержку."
         )
 
     return "Выбери тему."
@@ -701,7 +642,7 @@ def faq_match(q: str) -> str:
     t = (q or "").lower()
     if any(k in t for k in ["оплат", "доступ", "чек", "карта", "перевод", "тариф"]):
         return faq_text("pay")
-    if any(k in t for k in ["считать", "подсчет", "подсчёт", "взвеш", "этикет", "калории считать"]):
+    if any(k in t for k in ["считать", "подсчет", "подсчёт", "взвеш", "этикет"]):
         return faq_text("count")
     if any(k in t for k in ["план", "программ", "сплит", "тренировк"]):
         return faq_text("plan")
@@ -1056,15 +997,16 @@ async def get_last_measures(user_id: int, mtype: str, limit: int = 8):
 
 
 # =========================
-# ПРОФИЛЬ — МАСТЕР (один экран, edit_text, шкала прогресса)
+# ПРОФИЛЬ (сохранённый + красивый прогресс)
 # =========================
-PROFILE_STEPS_TOTAL = 8  # goal, sex, age, height, weight, place, exp, freq
+PROFILE_STEPS_TOTAL = 8
 
-def _progress_bar(step: int, total: int = PROFILE_STEPS_TOTAL) -> str:
+def _loading_bar(step: int, total: int = PROFILE_STEPS_TOTAL, width: int = 10) -> str:
     step = max(1, min(step, total))
-    filled = int(round((step / total) * 10))
-    filled = max(1, min(filled, 10))
-    return f"Шаг {step}/{total}  " + ("█" * filled) + ("░" * (10 - filled))
+    filled = int(round((step / total) * width))
+    filled = max(1, min(filled, width))
+    bar = "■" * filled + "□" * (width - filled)
+    return f"Загрузка: [{bar}]  {step}/{total}"
 
 async def _edit_or_send(msg: Message, text: str, reply_markup=None):
     try:
@@ -1081,12 +1023,13 @@ def sex_inline_kb():
     ])
 
 def age_inline_kb():
+    # ✅ Добавили 12–17, ❌ убрали 56+
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="18–25", callback_data="age:18-25"),
-         InlineKeyboardButton(text="26–35", callback_data="age:26-35")],
-        [InlineKeyboardButton(text="36–45", callback_data="age:36-45"),
-         InlineKeyboardButton(text="46–55", callback_data="age:46-55")],
-        [InlineKeyboardButton(text="56+", callback_data="age:56+")],
+        [InlineKeyboardButton(text="12–17", callback_data="age:12-17"),
+         InlineKeyboardButton(text="18–25", callback_data="age:18-25")],
+        [InlineKeyboardButton(text="26–35", callback_data="age:26-35"),
+         InlineKeyboardButton(text="36–45", callback_data="age:36-45")],
+        [InlineKeyboardButton(text="46–55", callback_data="age:46-55")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:sex"),
          InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
     ])
@@ -1132,6 +1075,12 @@ def freq_inline_kb():
          InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
     ])
 
+def profile_view_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Изменить профиль", callback_data="prof_edit")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
 def _range_mid_int(s: str, default_mid: int) -> int:
     s = (s or "").strip()
     if s.endswith("+"):
@@ -1156,15 +1105,51 @@ def _range_mid_float(s: str, default_mid: float) -> float:
             return float((a + b) / 2)
     return float(default_mid)
 
+def _profile_complete(u: dict) -> bool:
+    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq"]
+    return all(u.get(k) for k in need)
+
+def _format_profile(u: dict) -> str:
+    return (
+        "⚙️ Твой профиль (сохранён)\n\n"
+        f"🎯 Цель: {u.get('goal','—')}\n"
+        f"👤 Пол: {u.get('sex','—')}\n"
+        f"🎂 Возраст: {u.get('age','—')}\n"
+        f"📏 Рост: {u.get('height','—')} см\n"
+        f"⚖️ Вес: {u.get('weight','—')} кг\n"
+        f"🏠/🏋️ Где: {u.get('place','—')}\n"
+        f"📚 Опыт: {u.get('exp','—')}\n"
+        f"📅 Частота: {u.get('freq','—')}×/нед\n"
+    )
+
 async def open_profile(message: Message, state: FSMContext):
+    await ensure_user(message.from_user.id, message.from_user.username or "")
     u = await get_user(message.from_user.id)
+
+    # ✅ Если профиль уже заполнен — показываем его, а не заставляем проходить заново
+    if _profile_complete(u):
+        await state.clear()
+        await message.answer(_format_profile(u), reply_markup=profile_view_kb())
+        return
+
     header = (
         "⚙️ Профиль — заполним быстро (кнопками)\n"
-        f"{_progress_bar(1)}\n\n"
+        f"{_loading_bar(1)}\n\n"
         "Выбери цель:"
     )
     await message.answer(header, reply_markup=goal_inline_kb())
     await state.set_state(ProfileFlow.goal)
+
+async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
+    # Начинаем мастер заново (значения в БД останутся, но будут перезаписаны новыми)
+    text = (
+        "⚙️ Профиль — заполним быстро (кнопками)\n"
+        f"{_loading_bar(1)}\n\n"
+        "Выбери цель:"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=goal_inline_kb())
+    await state.set_state(ProfileFlow.goal)
+    await callback.answer()
 
 async def cb_goal(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[1]
@@ -1173,7 +1158,7 @@ async def cb_goal(callback: CallbackQuery, state: FSMContext):
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(2)}\n\n"
+        f"{_loading_bar(2)}\n\n"
         "👤 Выбери пол:"
     )
     await _edit_or_send(callback.message, text, reply_markup=sex_inline_kb())
@@ -1187,7 +1172,7 @@ async def cb_sex(callback: CallbackQuery, state: FSMContext):
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(3)}\n\n"
+        f"{_loading_bar(3)}\n\n"
         "🎂 Выбери возраст:"
     )
     await _edit_or_send(callback.message, text, reply_markup=age_inline_kb())
@@ -1196,12 +1181,12 @@ async def cb_sex(callback: CallbackQuery, state: FSMContext):
 
 async def cb_age(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[1]
-    age = _range_mid_int(v, default_mid=60 if v == "56+" else 22)
+    age = _range_mid_int(v, default_mid=15 if v == "12-17" else 22)
     await update_user(callback.from_user.id, age=age)
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(4)}\n\n"
+        f"{_loading_bar(4)}\n\n"
         "📏 Выбери рост:"
     )
     await _edit_or_send(callback.message, text, reply_markup=height_inline_kb())
@@ -1215,7 +1200,7 @@ async def cb_height(callback: CallbackQuery, state: FSMContext):
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(5)}\n\n"
+        f"{_loading_bar(5)}\n\n"
         "⚖️ Выбери вес:"
     )
     await _edit_or_send(callback.message, text, reply_markup=weight_inline_kb())
@@ -1229,7 +1214,7 @@ async def cb_weight(callback: CallbackQuery, state: FSMContext):
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(6)}\n\n"
+        f"{_loading_bar(6)}\n\n"
         "🏠/🏋️ Где тренируешься?"
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -1249,7 +1234,7 @@ async def cb_place(callback: CallbackQuery, state: FSMContext):
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(7)}\n\n"
+        f"{_loading_bar(7)}\n\n"
         "📚 Выбери опыт тренировок:"
     )
     await _edit_or_send(callback.message, text, reply_markup=exp_inline_kb())
@@ -1265,29 +1250,16 @@ async def cb_exp(callback: CallbackQuery, state: FSMContext):
     lvl = exp_level(exp)
     if lvl == "novice":
         await update_user(callback.from_user.id, freq=3)
-        text = (
-            "✅ Профиль заполнен!\n"
-            f"{_progress_bar(PROFILE_STEPS_TOTAL)}\n\n"
-            "Для новичка поставил частоту: 3×/нед.\n\n"
-            "Дальше по шагам:\n"
-            "1) 💳 Оплата / Доступ\n"
-            "2) 🧠 Собрать мой план"
-        )
-        await _edit_or_send(
-            callback.message,
-            text,
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Оплата / Доступ", callback_data="go_pay")],
-                [InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
-            ])
-        )
+        u = await get_user(callback.from_user.id)
+        text = "✅ Профиль заполнен!\n\n" + _format_profile(u)
+        await _edit_or_send(callback.message, text, reply_markup=profile_view_kb())
         await state.clear()
         await callback.answer()
         return
 
     text = (
         "⚙️ Профиль\n"
-        f"{_progress_bar(8)}\n\n"
+        f"{_loading_bar(8)}\n\n"
         "📅 Сколько тренировок в неделю удобно?"
     )
     await _edit_or_send(callback.message, text, reply_markup=freq_inline_kb())
@@ -1301,49 +1273,37 @@ async def cb_freq(callback: CallbackQuery, state: FSMContext):
         return
     await update_user(callback.from_user.id, freq=int(v))
 
-    text = (
-        "✅ Профиль заполнен!\n"
-        f"{_progress_bar(PROFILE_STEPS_TOTAL)}\n\n"
-        "Дальше по шагам:\n"
-        "1) 💳 Оплата / Доступ\n"
-        "2) 🧠 Собрать мой план"
-    )
-    await _edit_or_send(
-        callback.message,
-        text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💳 Оплата / Доступ", callback_data="go_pay")],
-            [InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
-        ])
-    )
+    u = await get_user(callback.from_user.id)
+    text = "✅ Профиль заполнен!\n\n" + _format_profile(u)
+    await _edit_or_send(callback.message, text, reply_markup=profile_view_kb())
     await state.clear()
     await callback.answer()
 
 async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
-    target = callback.data.split(":")[1]  # goal/sex/age/height/weight/place/exp
+    target = callback.data.split(":")[1]
 
     if target == "goal":
-        text = "⚙️ Профиль — заполним быстро (кнопками)\n" + _progress_bar(1) + "\n\nВыбери цель:"
+        text = "⚙️ Профиль — заполним быстро (кнопками)\n" + _loading_bar(1) + "\n\nВыбери цель:"
         await _edit_or_send(callback.message, text, reply_markup=goal_inline_kb())
         await state.set_state(ProfileFlow.goal)
     elif target == "sex":
-        text = "⚙️ Профиль\n" + _progress_bar(2) + "\n\n👤 Выбери пол:"
+        text = "⚙️ Профиль\n" + _loading_bar(2) + "\n\n👤 Выбери пол:"
         await _edit_or_send(callback.message, text, reply_markup=sex_inline_kb())
         await state.set_state(ProfileFlow.sex)
     elif target == "age":
-        text = "⚙️ Профиль\n" + _progress_bar(3) + "\n\n🎂 Выбери возраст:"
+        text = "⚙️ Профиль\n" + _loading_bar(3) + "\n\n🎂 Выбери возраст:"
         await _edit_or_send(callback.message, text, reply_markup=age_inline_kb())
         await state.set_state(ProfileFlow.age)
     elif target == "height":
-        text = "⚙️ Профиль\n" + _progress_bar(4) + "\n\n📏 Выбери рост:"
+        text = "⚙️ Профиль\n" + _loading_bar(4) + "\n\n📏 Выбери рост:"
         await _edit_or_send(callback.message, text, reply_markup=height_inline_kb())
         await state.set_state(ProfileFlow.height)
     elif target == "weight":
-        text = "⚙️ Профиль\n" + _progress_bar(5) + "\n\n⚖️ Выбери вес:"
+        text = "⚙️ Профиль\n" + _loading_bar(5) + "\n\n⚖️ Выбери вес:"
         await _edit_or_send(callback.message, text, reply_markup=weight_inline_kb())
         await state.set_state(ProfileFlow.weight)
     elif target == "place":
-        text = "⚙️ Профиль\n" + _progress_bar(6) + "\n\n🏠/🏋️ Где тренируешься?"
+        text = "⚙️ Профиль\n" + _loading_bar(6) + "\n\n🏠/🏋️ Где тренируешься?"
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🏠 Дом", callback_data="place:home"),
              InlineKeyboardButton(text="🏋️ Зал", callback_data="place:gym")],
@@ -1353,7 +1313,7 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await _edit_or_send(callback.message, text, reply_markup=kb)
         await state.set_state(ProfileFlow.place)
     elif target == "exp":
-        text = "⚙️ Профиль\n" + _progress_bar(7) + "\n\n📚 Выбери опыт тренировок:"
+        text = "⚙️ Профиль\n" + _loading_bar(7) + "\n\n📚 Выбери опыт тренировок:"
         await _edit_or_send(callback.message, text, reply_markup=exp_inline_kb())
         await state.set_state(ProfileFlow.exp)
 
@@ -1410,7 +1370,7 @@ async def open_payment(message: Message, state: FSMContext):
         f"• 1 месяц — {TARIFFS['t1']['price']}₽\n"
         f"• 3 месяца — {TARIFFS['t3']['price']}₽\n"
         f"• навсегда — {TARIFFS['life']['price']}₽\n\n"
-        "После выбора я покажу реквизиты и код для комментария."
+        "После оплаты проверка — только по СКРИНУ ЧЕКА."
     )
     await message.answer(text, reply_markup=pay_tariff_kb())
     await state.set_state(PaymentFlow.choose_tariff)
@@ -1439,7 +1399,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext):
         f"• Получатель: {CARD_HOLDER}\n\n"
         "⚠️ В комментарии к переводу укажи код:\n"
         f"{code}\n\n"
-        "После оплаты нажми «✅ Я оплатил» и отправь чек/скрин (как фото)."
+        "После оплаты нажми «✅ Я оплатил» и отправь СКРИН ЧЕКА (и всё)."
     )
     await callback.message.answer(text, reply_markup=pay_inline_kb())
     await callback.answer()
@@ -1465,35 +1425,13 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
-    await callback.message.answer(
-        f"Введи сумму, которую перевёл.\n"
-        f"Ожидаемая сумма для тарифа «{TARIFFS[tariff]['title']}»: {TARIFFS[tariff]['price']}₽"
-    )
-    await state.set_state(PaymentFlow.waiting_amount)
+    await callback.message.answer("Отправь скрин/фото чека оплаты (как фото):")
+    await state.set_state(PaymentFlow.waiting_receipt)
     await callback.answer()
 
 
-async def pay_amount(message: Message, state: FSMContext):
-    txt = re.sub(r"[^\d]", "", message.text or "")
-    if not txt:
-        await message.answer("Сумму числом, например 1150")
-        return
-    await state.update_data(amount=int(txt))
-    await message.answer("Введи последние 4 цифры карты отправителя (или 0000):")
-    await state.set_state(PaymentFlow.waiting_last4)
-
-
-async def pay_last4(message: Message, state: FSMContext):
-    txt = re.sub(r"[^\d]", "", message.text or "")
-    if len(txt) != 4:
-        await message.answer("Нужно ровно 4 цифры. Например 1234 (или 0000)")
-        return
-    await state.update_data(last4=txt)
-    await message.answer("Отправь чек/скрин оплаты как фото:")
-    await state.set_state(PaymentFlow.waiting_receipt)
-
-
 async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
+    # ✅ Проверка: только скрин/фото чека
     if not message.photo:
         await message.answer("Нужно фото/скрин чека. Отправь как фото.")
         return
@@ -1505,10 +1443,12 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
         return
 
-    amount = int(data.get("amount", 0))
-    last4 = data.get("last4", "0000")
     receipt_file_id = message.photo[-1].file_id
     code = gen_order_code(message.from_user.id)
+
+    # amount/last4 больше не собираем — ставим ожидаемую сумму и пустые последние цифры
+    amount = int(TARIFFS[tariff]["price"])
+    last4 = ""
 
     payment_id = await create_payment(message.from_user.id, tariff, amount, last4, code, receipt_file_id)
     await message.answer("✅ Заявка отправлена. Как подтвержу — доступ откроется.")
@@ -1522,8 +1462,7 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         f"user: {uname}\n"
         f"user_id: {message.from_user.id}\n"
         f"tariff: {tariff} ({TARIFFS[tariff]['title']})\n"
-        f"amount: {amount}\n"
-        f"last4: {last4}\n"
+        f"expected_amount: {amount}\n"
         f"code: {code}\n"
     )
     await bot.send_photo(
@@ -1577,7 +1516,7 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
         await set_payment_status(pid, "rejected")
         await bot.send_message(
             chat_id=user_id,
-            text="❌ Оплата отклонена. Проверь сумму/чек/комментарий и попробуй снова: 💳 Оплата / Доступ"
+            text="❌ Оплата отклонена. Проверь чек и попробуй снова: 💳 Оплата / Доступ"
         )
         await callback.answer("Отклонено ❌")
 
@@ -1590,8 +1529,7 @@ async def build_plan(message: Message):
         return
 
     u = await get_user(message.from_user.id)
-    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq"]
-    if any(not u.get(k) for k in need):
+    if not _profile_complete(u):
         await message.answer("⚠️ Не хватает данных профиля. Заполни: ⚙️ Профиль")
         return
 
@@ -1691,7 +1629,7 @@ async def diary_enter_sets(message: Message, state: FSMContext):
     ex, sets_str = [x.strip() for x in txt.split(":", 1)]
     parts = [p.strip() for p in sets_str.split(",") if p.strip()]
     if not ex or not parts:
-        await message.answer("Заполни и название, и подходы. Пример: Жим: 60x8, 60x8")
+        await message.answer("Пример: Жим: 60x8, 60x8")
         return
 
     data = await state.get_data()
@@ -1837,7 +1775,8 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_faq, F.text == "❓ FAQ / Частые вопросы")
     dp.message.register(open_support, F.text == "🆘 Поддержка")
 
-    # Профиль-мастер (кнопки + редактирование одного сообщения)
+    # Профиль
+    dp.callback_query.register(cb_profile_edit, F.data == "prof_edit")
     dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
     dp.callback_query.register(cb_sex, F.data.startswith("sex:"))
     dp.callback_query.register(cb_age, F.data.startswith("age:"))
@@ -1867,9 +1806,7 @@ def setup_handlers(dp: Dispatcher):
     # Системные
     dp.callback_query.register(cb_go_menu, F.data == "go_menu")
 
-    # Оплата FSM
-    dp.message.register(pay_amount, PaymentFlow.waiting_amount)
-    dp.message.register(pay_last4, PaymentFlow.waiting_last4)
+    # Оплата FSM (только чек)
     dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
 
     # Дневник FSM
@@ -1950,4 +1887,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
