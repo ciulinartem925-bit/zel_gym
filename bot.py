@@ -7,6 +7,8 @@ import random
 import re
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
+import os
+from aiogram.types import FSInputFile
 
 import aiosqlite
 from aiogram import Bot, Dispatcher, F
@@ -24,6 +26,27 @@ from aiogram.fsm.context import FSMContext
 # =========================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PASTE_NEW_TOKEN_HERE")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+
+IMAGES_DIR = "images"
+
+EXERCISES = {
+    "rdl": {
+        "title": "🏋️ Русская тяга",
+        "image": "rdl.png",
+        "text": (
+            "Техника выполнения:\n"
+            "1) Спина ровная, лопатки сведены.\n"
+            "2) Колени слегка согнуты.\n"
+            "3) Отводи таз назад.\n"
+            "4) Штанга идёт вдоль ног.\n"
+            "5) Опускай до растяжения бёдер.\n"
+            "6) Вверх — за счёт ягодиц.\n\n"
+            "Ошибки:\n"
+            "— округлять спину\n"
+            "— приседать вместо наклона"
+        )
+    }
+}
 
 BANK_NAME = os.getenv("BANK_NAME", "Сбербанк")
 CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
@@ -1279,6 +1302,29 @@ async def build_plans_for_user(user_id: int):
 # =========================
 # ХЕНДЛЕРЫ: /start и навигация
 # =========================
+async def send_exercise(message: Message, key: str):
+    ex = EXERCISES.get(key)
+    if not ex:
+        await message.answer("Упражнение не найдено.")
+        return
+
+    image_path = os.path.join(IMAGES_DIR, ex["image"])
+    if not os.path.exists(image_path):
+        await message.answer(
+            f"Фото не найдено: {image_path}\n"
+            f"Проверь, что файл лежит в папке {IMAGES_DIR} и имя совпадает."
+        )
+        return
+
+    photo = FSInputFile(image_path)
+    caption = f"{ex['title']}\n\n{ex['text']}"
+    await message.answer_photo(photo=photo, caption=caption)
+
+@dp.callback_query(F.data == "ex_rdl")
+async def rdl_callback(callback: CallbackQuery):
+    await send_exercise(callback.message, "rdl")
+    await callback.answer()
+
 async def cmd_start(message: Message, bot: Bot, state: FSMContext):
     await state.clear()
     await ensure_user(message.from_user.id, message.from_user.username or "")
@@ -2011,3 +2057,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
