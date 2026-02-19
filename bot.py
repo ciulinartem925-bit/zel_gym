@@ -15,7 +15,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, CallbackQuery,
     ReplyKeyboardMarkup, KeyboardButton,
-    InlineKeyboardMarkup, InlineKeyboardButton
+    InlineKeyboardMarkup, InlineKeyboardButton,
+    FSInputFile,  # ✅ ДОБАВЛЕНО
 )
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
@@ -88,6 +89,83 @@ class PostFlow(StatesGroup):
 
 
 # =========================
+# ✅ ТЕХНИКИ ВЫПОЛНЕНИЯ (картинка + текст)
+# =========================
+TECH = {
+    "squat": {
+        "title": "Присед",
+        "img": "media/tech/squat.jpg",
+        "text": (
+            "📚 Присед (база)\n\n"
+            "Настройка:\n"
+            "1) Стопы на ширине плеч (можно чуть шире), носки чуть наружу.\n"
+            "2) Корпус «жёсткий»: вдох животом, напряги пресс.\n\n"
+            "Движение:\n"
+            "1) Сначала таз назад чуть-чуть, потом колени вперёд.\n"
+            "2) Колени идут по направлению носков (не заваливай внутрь).\n"
+            "3) Опускайся до комфортной глубины без округления поясницы.\n"
+            "4) Вставай через середину стопы (не на носки).\n\n"
+            "Ошибки:\n"
+            "• округляется спина\n"
+            "• колени заваливаются внутрь\n"
+            "• пятки отрываются"
+        )
+    },
+    "bench": {"title": "Жим лёжа", "img": "media/tech/bench.jpg",
+              "text": "📚 Жим лёжа\n\nКоротко: лопатки сведены, локти ~45°, штанга на низ груди. Без отрыва таза."},
+    "row": {"title": "Тяга (гребля)", "img": "media/tech/row.jpg",
+            "text": "📚 Тяга (гребля)\n\nКоротко: спина стабильна, тяни локтём назад, лопатка работает, без рывков."},
+    "latpulldown": {"title": "Верхний блок", "img": "media/tech/latpulldown.jpg",
+                    "text": "📚 Верхний блок\n\nКоротко: тяни к верху груди, плечи вниз, корпус не раскачивай."},
+    "pullup": {"title": "Подтягивания", "img": "media/tech/pullup.jpg",
+               "text": "📚 Подтягивания\n\nКоротко: сначала лопатки вниз, потом тяни локти к рёбрам. Без раскачки."},
+    "rdl": {"title": "Румынская тяга", "img": "media/tech/rdl.jpg",
+            "text": "📚 Румынская тяга\n\nКоротко: таз назад, спина ровная, гриф близко к ногам, колени чуть согнуты."},
+    "ohp": {"title": "Жим вверх", "img": "media/tech/ohp.jpg",
+            "text": "📚 Жим вверх\n\nКоротко: пресс напряжён, не прогибайся, штанга по линии лица, локти под грифом."},
+    "lateralraise": {"title": "Разведения в стороны", "img": "media/tech/lateralraise.jpg",
+                     "text": "📚 Разведения в стороны\n\nКоротко: локоть чуть выше кисти, без рывков, плечи вниз."},
+    "biceps": {"title": "Бицепс сгибания", "img": "media/tech/biceps.jpg",
+               "text": "📚 Бицепс сгибания\n\nКоротко: локти фиксируй, корпус не качай, движение контролируй."},
+    "triceps": {"title": "Трицепс на блоке", "img": "media/tech/triceps.jpg",
+                "text": "📚 Трицепс на блоке\n\nКоротко: локти прижаты, разгибай до конца без читинга."},
+    "legpress": {"title": "Жим ногами", "img": "media/tech/legpress.jpg",
+                 "text": "📚 Жим ногами\n\nКоротко: колени по носкам, пятки не отрывай, поясницу не отрывай от спинки."},
+}
+
+
+def tech_kb():
+    rows = [
+        [InlineKeyboardButton(text=TECH["squat"]["title"], callback_data="tech:squat"),
+         InlineKeyboardButton(text=TECH["bench"]["title"], callback_data="tech:bench")],
+
+        [InlineKeyboardButton(text=TECH["row"]["title"], callback_data="tech:row"),
+         InlineKeyboardButton(text=TECH["latpulldown"]["title"], callback_data="tech:latpulldown")],
+
+        [InlineKeyboardButton(text=TECH["pullup"]["title"], callback_data="tech:pullup"),
+         InlineKeyboardButton(text=TECH["ohp"]["title"], callback_data="tech:ohp")],
+
+        [InlineKeyboardButton(text=TECH["rdl"]["title"], callback_data="tech:rdl"),
+         InlineKeyboardButton(text=TECH["lateralraise"]["title"], callback_data="tech:lateralraise")],
+
+        [InlineKeyboardButton(text=TECH["biceps"]["title"], callback_data="tech:biceps"),
+         InlineKeyboardButton(text=TECH["triceps"]["title"], callback_data="tech:triceps")],
+
+        [InlineKeyboardButton(text=TECH["legpress"]["title"], callback_data="tech:legpress")],
+
+        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def tech_back_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="tech:list")],
+        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+    ])
+
+
+# =========================
 # UI: КНОПКИ
 # =========================
 def main_menu_kb():
@@ -97,6 +175,7 @@ def main_menu_kb():
             [KeyboardButton(text="🏋️ Мои тренировки"), KeyboardButton(text="🍽 Мой план питания")],
             [KeyboardButton(text="📓 Дневник тренировок"), KeyboardButton(text="📏 Замеры")],
             [KeyboardButton(text="⚙️ Профиль"), KeyboardButton(text="❓ FAQ / Частые вопросы")],
+            [KeyboardButton(text="📚 Техники выполнения")],  # ✅ ДОБАВЛЕНО
             [KeyboardButton(text="🆘 Поддержка")],
         ],
         resize_keyboard=True
@@ -269,7 +348,7 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
 def calc_macros(calories: int, weight_kg: float, goal: str):
     g = (goal or "").lower()
     protein = int(round(weight_kg * (2.2 if "суш" in g else 1.8)))
-    fat = int(round(weight_kg * 0.8))  # минимум
+    fat = int(round(weight_kg * 0.8))
     carbs_kcal = max(calories - (protein * 4 + fat * 9), 0)
     carbs = int(round(carbs_kcal / 4))
     return protein, fat, carbs
@@ -307,7 +386,6 @@ async def set_last_bot_msg_id(user_id: int, msg_id: int):
 
 
 async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_markup=None):
-    """Удаляет прошлое сообщение БОТА (если было) и отправляет новое."""
     last_id = await get_last_bot_msg_id(user_id)
     if last_id:
         try:
@@ -319,14 +397,49 @@ async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_mark
 
 
 async def clean_edit(message: Message, user_id: int, text: str, reply_markup=None):
-    """Пытается отредактировать сообщение (если можно), иначе отправляет чисто новым."""
     try:
         await message.edit_text(text, reply_markup=reply_markup)
         await set_last_bot_msg_id(user_id, message.message_id)
     except Exception:
-        # если edit невозможен (или это не сообщение бота) — просто clean_send через bot нельзя здесь,
-        # поэтому fallback: обычный answer (чуть грязнее, но работает)
         await message.answer(text, reply_markup=reply_markup)
+
+
+# =========================
+# ✅ ТЕХНИКИ: ХЕНДЛЕРЫ
+# =========================
+async def open_techniques(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("📚 Техники выполнения — выбери упражнение:", reply_markup=tech_kb())
+
+
+async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.answer("📚 Техники выполнения — выбери упражнение:", reply_markup=tech_kb())
+    await callback.answer()
+
+
+async def cb_tech_show(callback: CallbackQuery, bot: Bot):
+    key = callback.data.split("tech:", 1)[1]
+    item = TECH.get(key)
+    if not item:
+        await callback.answer("Не нашёл упражнение", show_alert=True)
+        return
+
+    text = item["text"]
+    img_path = item["img"]
+
+    caption = text[:1024]
+    rest = text[1024:].strip()
+
+    if os.path.exists(img_path):
+        photo = FSInputFile(img_path)
+        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=tech_back_kb())
+        if rest:
+            await callback.message.answer(rest, reply_markup=tech_back_kb())
+    else:
+        await callback.message.answer(text, reply_markup=tech_back_kb())
+
+    await callback.answer()
 
 
 # =========================
@@ -824,7 +937,6 @@ async def init_db():
         )
         """)
 
-        # ✅ НОВОЕ: bot_state (последнее сообщение бота для чистки)
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS bot_state (
             user_id INTEGER PRIMARY KEY,
@@ -832,7 +944,6 @@ async def init_db():
         )
         """)
 
-        # ✅ НОВОЕ: posts + post_sends
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1095,7 +1206,6 @@ async def get_last_measures(user_id: int, mtype: str, limit: int = 8):
     return rows or []
 
 
-# ✅ НОВОЕ: DB ПОСТОВ
 async def create_post_draft(admin_id: int, media_type: str, media_file_id: Optional[str], text: Optional[str]) -> int:
     now = datetime.utcnow().isoformat()
     async with db() as conn:
@@ -1697,7 +1807,8 @@ async def forward_to_admin(message: Message, bot: Bot):
         return
     if message.text in {
         "🧠 Собрать мой план", "💳 Оплата / Доступ", "🏋️ Мои тренировки", "🍽 Мой план питания",
-        "📓 Дневник тренировок", "📏 Замеры", "⚙️ Профиль", "❓ FAQ / Частые вопросы", "🆘 Поддержка"
+        "📓 Дневник тренировок", "📏 Замеры", "⚙️ Профиль", "❓ FAQ / Частые вопросы", "🆘 Поддержка",
+        "📚 Техники выполнения"
     }:
         return
     await bot.send_message(
@@ -1778,7 +1889,6 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
     chat_id = message.chat.id
     uid = message.from_user.id
 
-    # аккуратнее с длиной caption (telegram лимит)
     caption = (preview_title + (text or "")).strip()
     if len(caption) > 1024:
         caption = caption[:1020] + "…"
@@ -1828,7 +1938,6 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
     ok = 0
     fail = 0
 
-    # лимит caption
     caption = (post.get("text") or "").strip()
     if len(caption) > 1024:
         caption = caption[:1020] + "…"
@@ -1877,6 +1986,9 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_faq, F.text == "❓ FAQ / Частые вопросы")
     dp.message.register(open_support, F.text == "🆘 Поддержка")
 
+    # ✅ ТЕХНИКИ (кнопка в меню)
+    dp.message.register(open_techniques, F.text == "📚 Техники выполнения")
+
     dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
     dp.callback_query.register(cb_place, F.data.startswith("place:"))
 
@@ -1890,6 +2002,10 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_measure_type, F.data.startswith("mtype:"))
     dp.callback_query.register(cb_faq, F.data.startswith("faq:"))
     dp.callback_query.register(cb_go_menu, F.data == "go_menu")
+
+    # ✅ ТЕХНИКИ (callback)
+    dp.callback_query.register(cb_tech_list, F.data == "tech:list")
+    dp.callback_query.register(cb_tech_show, F.data.startswith("tech:"))
 
     dp.message.register(profile_sex, ProfileFlow.sex)
     dp.message.register(profile_age, ProfileFlow.age)
@@ -1909,7 +2025,6 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(measure_value, MeasureFlow.enter_value)
     dp.message.register(faq_ask, FAQFlow.ask)
 
-    # ✅ НОВОЕ: ПОСТЫ
     dp.message.register(cmd_posts, Command("posts"))
     dp.callback_query.register(cb_post_new, F.data == "post:new")
     dp.callback_query.register(cb_post_cancel, F.data == "post:cancel")
