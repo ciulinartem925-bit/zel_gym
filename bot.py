@@ -14,7 +14,6 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, CallbackQuery,
-    ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
     FSInputFile,
 )
@@ -47,22 +46,12 @@ logger = logging.getLogger("trainer_bot")
 
 
 # =========================
-# FSM СТЕЙТЫ
+# FSM
 # =========================
-class ProfileFlow(StatesGroup):
-    goal = State()
-    sex = State()
-    age = State()
-    height = State()
-    weight = State()
-    place = State()
-    exp = State()
-    freq = State()
-
-
-# ✅ УПРОЩЕНО: после "Я оплатил" просим ТОЛЬКО чек
 class PaymentFlow(StatesGroup):
     choose_tariff = State()
+    waiting_amount = State()
+    waiting_last4 = State()
     waiting_receipt = State()
 
 
@@ -81,10 +70,20 @@ class FAQFlow(StatesGroup):
     ask = State()
 
 
-# ✅ ПОСТЫ (админ) + рассылка
 class PostFlow(StatesGroup):
     waiting_content = State()
     waiting_confirm = State()
+
+
+class ProfileWizard(StatesGroup):
+    goal = State()
+    sex = State()
+    age = State()
+    height = State()
+    weight = State()
+    place = State()
+    exp = State()
+    freq = State()
 
 
 # =========================
@@ -152,7 +151,8 @@ def tech_kb():
 
         [InlineKeyboardButton(text=TECH["legpress"]["title"], callback_data="tech:legpress")],
 
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="menu:workouts")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -160,40 +160,61 @@ def tech_kb():
 def tech_back_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="tech:list")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
 
 # =========================
-# UI: КНОПКИ
+# UI: МЕНЮ (сообщение + кнопки)
 # =========================
-def main_menu_kb():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🧠 Собрать мой план"), KeyboardButton(text="💳 Оплата / Доступ")],
-            [KeyboardButton(text="🏋️ Мои тренировки"), KeyboardButton(text="🍽 Мой план питания")],
-            [KeyboardButton(text="📓 Дневник тренировок"), KeyboardButton(text="📏 Замеры")],
-            [KeyboardButton(text="⚙️ Профиль"), KeyboardButton(text="❓ FAQ / Частые вопросы")],
-            [KeyboardButton(text="📚 Техники выполнения")],
-            [KeyboardButton(text="🆘 Поддержка")],
-        ],
-        resize_keyboard=True
-    )
+def menu_main_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏋️ Мои тренировки", callback_data="menu:workouts")],
+        [InlineKeyboardButton(text="🍽 Моё питание", callback_data="menu:nutrition")],
+        [InlineKeyboardButton(text="📏 Замеры", callback_data="menu:measures")],
+        [InlineKeyboardButton(text="📓 Дневник", callback_data="menu:diary")],
+        [InlineKeyboardButton(text="⚙️ Панель управления", callback_data="menu:control")],
+    ])
 
 
+def menu_control_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Оплата", callback_data="ctrl:pay")],
+        [InlineKeyboardButton(text="⚙️ Профиль", callback_data="ctrl:profile")],
+        [InlineKeyboardButton(text="🆘 Поддержка", callback_data="ctrl:support")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="menu:main")],
+    ])
+
+
+def workouts_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📚 Техники выполнения упражнений", callback_data="tech:list")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+
+
+def simple_back_to_menu_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+
+
+# =========================
+# Оплата: кнопки
+# =========================
 def pay_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
         [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
         [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
 
 def pay_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Я оплатил", callback_data="pay_i_paid")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
 
@@ -204,69 +225,95 @@ def admin_review_kb(payment_id: int):
     ])
 
 
-def goal_inline_kb():
+# =========================
+# Профиль: «приятное заполнение» + шкала
+# =========================
+TOTAL_PROFILE_STEPS = 8
+
+def _bar(step: int, total: int = TOTAL_PROFILE_STEPS) -> str:
+    step = max(0, min(step, total))
+    done = "⬛" * step
+    left = "⬜" * (total - step)
+    # прямоугольник из квадратиков
+    return f"▭{done}{left}▭"
+
+def _profile_header(step: int) -> str:
+    return f"🧩 Заполнение профиля {step}/{TOTAL_PROFILE_STEPS}\n{_bar(step)}\n"
+
+def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💪 Масса", callback_data="goal:mass")],
-        [InlineKeyboardButton(text="🔥 Сушка", callback_data="goal:cut")],
-        [InlineKeyboardButton(text="🧩 Форма", callback_data="goal:fit")],
+        [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
+         InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
+        [InlineKeyboardButton(text="🧩 Форма", callback_data="p:goal:fit")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-
-def place_inline_kb():
+def kb_sex():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏠 Дом", callback_data="place:home")],
-        [InlineKeyboardButton(text="🏋️ Зал", callback_data="place:gym")],
+        [InlineKeyboardButton(text="👨 Мужчина", callback_data="p:sex:m"),
+         InlineKeyboardButton(text="👩 Женщина", callback_data="p:sex:f")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:goal")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-
-def measures_inline_kb():
+def kb_age():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚖️ Вес (кг)", callback_data="mtype:weight")],
-        [InlineKeyboardButton(text="📏 Талия (см)", callback_data="mtype:waist")],
-        [InlineKeyboardButton(text="💪 Рука (см)", callback_data="mtype:arm")],
-        [InlineKeyboardButton(text="胸 Грудь (см)", callback_data="mtype:chest")],
-        [InlineKeyboardButton(text="🦵 Бедро (см)", callback_data="mtype:thigh")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="18–25", callback_data="p:age:21"),
+         InlineKeyboardButton(text="26–35", callback_data="p:age:30")],
+        [InlineKeyboardButton(text="36–45", callback_data="p:age:40"),
+         InlineKeyboardButton(text="46–55", callback_data="p:age:50")],
+        [InlineKeyboardButton(text="56+", callback_data="p:age:60")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:sex")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-
-def diary_inline_kb():
+def kb_height():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Записать тренировку", callback_data="d:new")],
-        [InlineKeyboardButton(text="📜 История (последние 10)", callback_data="d:history")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="150–160", callback_data="p:h:155"),
+         InlineKeyboardButton(text="161–170", callback_data="p:h:166")],
+        [InlineKeyboardButton(text="171–180", callback_data="p:h:176"),
+         InlineKeyboardButton(text="181–190", callback_data="p:h:186")],
+        [InlineKeyboardButton(text="191+", callback_data="p:h:195")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:age")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-
-def faq_inline_kb():
+def kb_weight():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Оплата и доступ", callback_data="faq:pay")],
-        [InlineKeyboardButton(text="🧠 Как строится план", callback_data="faq:plan")],
-        [InlineKeyboardButton(text="🏋️ Объём/прогресс/отказ", callback_data="faq:progress")],
-        [InlineKeyboardButton(text="🍽 Калории/БЖУ", callback_data="faq:nutrition")],
-        [InlineKeyboardButton(text="📌 Как считать калории", callback_data="faq:count")],
-        [InlineKeyboardButton(text="⚠️ Если нет результата", callback_data="faq:stuck")],
-        [InlineKeyboardButton(text="😴 Сон/восстановление", callback_data="faq:recovery")],
-        [InlineKeyboardButton(text="🦵 Боль/техника", callback_data="faq:safety")],
-        [InlineKeyboardButton(text="📓 Дневник/замеры", callback_data="faq:diary")],
-        [InlineKeyboardButton(text="🔄 Ошибки/возврат", callback_data="faq:refund")],
-        [InlineKeyboardButton(text="✍️ Задать вопрос", callback_data="faq:ask")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="30–50", callback_data="p:w:45"),
+         InlineKeyboardButton(text="50–60", callback_data="p:w:55")],
+        [InlineKeyboardButton(text="60–80", callback_data="p:w:70"),
+         InlineKeyboardButton(text="80–100", callback_data="p:w:90")],
+        [InlineKeyboardButton(text="100–120", callback_data="p:w:110"),
+         InlineKeyboardButton(text="120+", callback_data="p:w:125")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:height")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-
-# ✅ АДМИН-ПОСТЫ
-def admin_posts_kb():
+def kb_place():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Создать пост", callback_data="post:new")],
-        [InlineKeyboardButton(text="🔙 В меню", callback_data="go_menu")],
+        [InlineKeyboardButton(text="🏠 Дом", callback_data="p:place:home"),
+         InlineKeyboardButton(text="🏋️ Зал", callback_data="p:place:gym")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:weight")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
-
-def post_confirm_kb(post_id: int):
+def kb_exp():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")],
+        [InlineKeyboardButton(text="0 (новичок)", callback_data="p:exp:0")],
+        [InlineKeyboardButton(text="1–2 года", callback_data="p:exp:mid"),
+         InlineKeyboardButton(text="2+ года", callback_data="p:exp:adv")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:place")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+
+def kb_freq():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="3×/нед", callback_data="p:freq:3"),
+         InlineKeyboardButton(text="4×/нед", callback_data="p:freq:4")],
+        [InlineKeyboardButton(text="5×/нед", callback_data="p:freq:5")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:exp")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
     ])
 
 
@@ -278,26 +325,8 @@ def gen_order_code(user_id: int) -> str:
     return f"TG{str(user_id)[-3:]}{rnd}"
 
 
-async def safe_send(message: Message, text: str, reply_markup=None):
-    if not text:
-        return
-    t = text.strip()
-    chunks = []
-    while len(t) > TG_SAFE_MSG_LEN:
-        cut = t.rfind("\n", 0, TG_SAFE_MSG_LEN)
-        if cut == -1:
-            cut = TG_SAFE_MSG_LEN
-        chunks.append(t[:cut].strip())
-        t = t[cut:].strip()
-    if t:
-        chunks.append(t)
-
-    for i, ch in enumerate(chunks):
-        await message.answer(ch, reply_markup=reply_markup if i == len(chunks) - 1 else None)
-
-
 def locked_text() -> str:
-    return "🔒 Раздел доступен после оплаты.\nОткрой: 💳 Оплата / Доступ"
+    return "🔒 Раздел доступен после оплаты.\nОткрой: ⚙️ Панель управления → 💳 Оплата"
 
 
 def exp_level(exp: str) -> str:
@@ -311,7 +340,7 @@ def exp_level(exp: str) -> str:
 
 def _activity_factor(freq: int, place: str) -> float:
     pl = (place or "").lower()
-    is_gym = ("зал" in pl) or (pl == "gym")
+    is_gym = ("зал" in pl) or (pl == "gym") or ("gym" in pl)
     f = int(freq or 3)
 
     if f <= 2:
@@ -361,7 +390,27 @@ def suggest_meals_count(calories: int) -> int:
     return 3
 
 
-# ✅ Анти-спам: запоминаем последнее сообщение бота и удаляем перед новым
+async def safe_send(message: Message, text: str, reply_markup=None):
+    if not text:
+        return
+    t = text.strip()
+    chunks = []
+    while len(t) > TG_SAFE_MSG_LEN:
+        cut = t.rfind("\n", 0, TG_SAFE_MSG_LEN)
+        if cut == -1:
+            cut = TG_SAFE_MSG_LEN
+        chunks.append(t[:cut].strip())
+        t = t[cut:].strip()
+    if t:
+        chunks.append(t)
+
+    for i, ch in enumerate(chunks):
+        await message.answer(ch, reply_markup=reply_markup if i == len(chunks) - 1 else None)
+
+
+# =========================
+# ✅ АНТИ-ЗАСОРЕНИЕ ЧАТА: храним последнее сообщение бота и заменяем его
+# =========================
 async def get_last_bot_msg_id(user_id: int) -> Optional[int]:
     async with db() as conn:
         async with conn.execute("SELECT last_bot_msg_id FROM bot_state WHERE user_id=?", (user_id,)) as cur:
@@ -393,456 +442,20 @@ async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_mark
             pass
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     await set_last_bot_msg_id(user_id, m.message_id)
+    return m.message_id
+
+
+async def clean_edit(callback: CallbackQuery, user_id: int, text: str, reply_markup=None):
+    try:
+        await callback.message.edit_text(text, reply_markup=reply_markup)
+        await set_last_bot_msg_id(user_id, callback.message.message_id)
+    except Exception:
+        # если не удалось редактировать (например, старое сообщение) — отправим новое «чисто»
+        await clean_send(callback.bot, callback.message.chat.id, user_id, text, reply_markup=reply_markup)
 
 
 # =========================
-# ✅ ТЕХНИКИ: ХЕНДЛЕРЫ
-# =========================
-async def open_techniques(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("📚 Техники выполнения — выбери упражнение:", reply_markup=tech_kb())
-
-
-async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.answer("📚 Техники выполнения — выбери упражнение:", reply_markup=tech_kb())
-    await callback.answer()
-
-
-async def cb_tech_show(callback: CallbackQuery):
-    key = callback.data.split("tech:", 1)[1]
-    item = TECH.get(key)
-    if not item:
-        await callback.answer("Не нашёл упражнение", show_alert=True)
-        return
-
-    text = item["text"]
-    img_path = item["img"]
-
-    caption = text[:1024]
-    rest = text[1024:].strip()
-
-    if os.path.exists(img_path):
-        photo = FSInputFile(img_path)
-        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=tech_back_kb())
-        if rest:
-            await safe_send(callback.message, rest, reply_markup=tech_back_kb())
-    else:
-        await safe_send(
-            callback.message,
-            f"⚠️ Картинка не найдена по пути:\n{img_path}\n\n{text}",
-            reply_markup=tech_back_kb()
-        )
-
-    await callback.answer()
-
-
-# =========================
-# ТРЕНИРОВКИ (БАЗА + ИЗОЛЯЦИЯ)
-# =========================
-def _pick(rnd: random.Random, items: List[str]) -> str:
-    items = [x for x in items if x]
-    if not items:
-        return "—"
-    return rnd.choice(items)
-
-
-def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: int = 0) -> str:
-    pl = (place or "").lower()
-    is_gym = ("зал" in pl) or (pl == "gym")
-    where = "ЗАЛ" if is_gym else "ДОМ"
-
-    lvl = exp_level(exp)
-    seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
-    rnd = random.Random(seed)
-
-    if is_gym:
-        push_base = ["Жим лёжа (штанга)", "Жим гантелей лёжа", "Жим в тренажёре", "Отжимания"]
-        pull_base = ["Тяга горизонтального блока", "Тяга гантели одной рукой", "Верхний блок", "Подтягивания (если можешь)"]
-        legs_base = ["Присед со штангой", "Жим ногами", "Гоблет-присед", "Румынская тяга (лёгкая)"]
-
-        shoulders_iso = ["Разведения в стороны (гантели)", "Face pull (канат)"]
-        bi_iso = ["Сгибания гантелей", "Сгибания на блоке"]
-        tri_iso = ["Разгибания на блоке", "Французский жим (лёгко)", "Отжимания узкие"]
-        legs_iso = ["Икры стоя/сидя", "Разгибания ног", "Сгибания ног"]
-        core = ["Планка", "Скручивания", "Подъёмы ног"]
-    else:
-        push_base = ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа (если есть скамья/пол)"]
-        pull_base = ["Подтягивания (если есть турник)", "Тяга гантели одной рукой", "Тяга резинки к поясу (если есть резинка)"]
-        legs_base = ["Приседания", "Болгарские выпады", "Ягодичный мост", "Гоблет-присед (гантель)"]
-
-        shoulders_iso = ["Разведения в стороны (гантели)", "Разведения в наклоне (задняя дельта)"]
-        bi_iso = ["Сгибания гантелей", "Молотки"]
-        tri_iso = ["Отжимания узкие", "Французский жим гантелью"]
-        legs_iso = ["Икры стоя", "Статические выпады"]
-        core = ["Планка", "Скручивания", "Подъём ног лёжа"]
-
-    reps_base = "6–10" if lvl != "novice" else "8–12"
-    reps_iso = "10–15"
-    base_sets = "3–4" if lvl != "novice" else "3"
-    iso_sets = "3"
-
-    f = int(freq or 3)
-    f = max(3, min(f, 5))
-
-    g = (goal or "").lower()
-    if "суш" in g:
-        note = "Сушка: держи 1–2 повтора в запасе (RIR 1–2), отказ редко.\n"
-    elif "мас" in g:
-        note = "Масса: прогрессируй по повторам/весу, отказ редко, техника важнее.\n"
-    else:
-        note = "Форма: прогрессируй плавно, без постоянного отказа.\n"
-
-    days = []
-    for d in range(f):
-        push = _pick(rnd, push_base)
-        pull = _pick(rnd, pull_base)
-        legs = _pick(rnd, legs_base)
-
-        sh = _pick(rnd, shoulders_iso)
-        bi = _pick(rnd, bi_iso)
-        tri = _pick(rnd, tri_iso)
-        lg = _pick(rnd, legs_iso)
-        cr = _pick(rnd, core)
-
-        iso_lines = [
-            f"• {sh} — {iso_sets}×{reps_iso}",
-            f"• {bi} — {iso_sets}×{reps_iso}",
-            f"• {tri} — {iso_sets}×{reps_iso}",
-        ]
-        if f >= 4:
-            iso_lines.append(f"• {lg} — {iso_sets}×{reps_iso}")
-        if f >= 5:
-            iso_lines.append(f"• {cr} — {iso_sets}×12–20")
-
-        day_text = (
-            f"День {d+1}\n"
-            f"БАЗА:\n"
-            f"• {push} — {base_sets}×{reps_base}\n"
-            f"• {pull} — {base_sets}×{reps_base}\n"
-            f"• {legs} — {base_sets}×{reps_base}\n\n"
-            f"ИЗОЛЯЦИЯ:\n" + "\n".join(iso_lines) +
-            "\n\n"
-        )
-        days.append(day_text)
-
-    return (
-        f"🏋️ ТРЕНИРОВКИ ({where}) — {f}×/нед\n\n"
-        f"Цель: {goal}\n"
-        f"{note}\n"
-        "📌 Прогрессия (самое важное):\n"
-        "1) Доводи подходы до верхней границы повторов\n"
-        "2) Потом добавляй вес (+2.5–5%) и снова работай в диапазоне\n"
-        "3) Если техника ломается — вес не повышай\n"
-        "4) Если усталость копится 7–10 дней — сделай неделю легче (-20–30% объёма)\n\n"
-        + "\n".join(days)
-    )
-
-
-# =========================
-# ПИТАНИЕ (однотипное, простое)
-# =========================
-FOOD_DB = {
-    "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
-    "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
-    "veg":       {"name": "Овощи (микс)",         "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
-
-    "chicken":   {"name": "Куриная грудка",       "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
-    "eggs":      {"name": "Яйца",                 "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
-
-    "curd_0_5":  {"name": "Творог 0–5%",          "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
-    "banana":    {"name": "Банан",                "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
-
-    "oil":       {"name": "Оливковое масло",      "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
-}
-
-
-def _nutr_of(item_key: str, grams: float):
-    it = FOOD_DB[item_key]
-    k = grams / 100.0
-    return {"kcal": it["kcal"] * k, "p": it["p"] * k, "f": it["f"] * k, "c": it["c"] * k}
-
-
-def _sum_nutr(items: List[Tuple[str, float]]):
-    tot = {"kcal": 0.0, "p": 0.0, "f": 0.0, "c": 0.0}
-    for key, g in items:
-        n = _nutr_of(key, g)
-        for kk in tot:
-            tot[kk] += n[kk]
-    return tot
-
-
-def _fmt_tot(t):
-    return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
-
-
-def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carbs_g: int):
-    meals = max(3, min(int(meals or 3), 5))
-
-    oats_g = 70.0
-    eggs_g = 180.0
-    rice_g_1 = 90.0
-    rice_g_2 = 90.0
-    chicken_g_1 = 200.0
-    chicken_g_2 = 200.0
-    veg_g_1 = 250.0
-    veg_g_2 = 250.0
-    oil_g = 10.0
-    curd_g = 250.0
-    banana_g = 120.0
-
-    day_meals: List[List[Tuple[str, float]]] = []
-    day_meals.append([("oats", oats_g), ("eggs", eggs_g)])
-    day_meals.append([("rice", rice_g_1), ("chicken", chicken_g_1), ("veg", veg_g_1), ("oil", oil_g)])
-    day_meals.append([("rice", rice_g_2), ("chicken", chicken_g_2), ("veg", veg_g_2)])
-
-    if meals >= 4:
-        day_meals.append([("curd_0_5", curd_g)])
-    if meals >= 5:
-        day_meals.append([("banana", banana_g)])
-
-    def totals():
-        flat = [x for m in day_meals for x in m]
-        return _sum_nutr(flat)
-
-    def add_rice(step=10.0):
-        day_meals[1] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[1]]
-        day_meals[2] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[2]]
-
-    def add_oats(step=10.0):
-        day_meals[0] = [(k, (g + step if k == "oats" else g)) for (k, g) in day_meals[0]]
-
-    def add_oil(step=3.0):
-        day_meals[1] = [(k, (g + step if k == "oil" else g)) for (k, g) in day_meals[1]]
-
-    def add_chicken(step=50.0):
-        day_meals[1] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[1]]
-        day_meals[2] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[2]]
-
-    target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
-
-    for _ in range(10):
-        t = totals()
-        if t["p"] + 8 >= target["p"]:
-            break
-        add_chicken(50.0)
-
-    for _ in range(16):
-        t = totals()
-        if t["kcal"] + 80 >= target["kcal"]:
-            break
-        if t["c"] + 15 < target["c"]:
-            add_rice(10.0)
-        else:
-            add_oats(10.0)
-
-    for _ in range(12):
-        t = totals()
-        if t["f"] + 3 >= target["f"]:
-            break
-        add_oil(3.0)
-
-    return day_meals, totals()
-
-
-def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
-    out = []
-    for day_i in range(1, 4):
-        day_meals, tot = _build_day_items(meals, calories, protein_g, fat_g, carbs_g)
-
-        lines = [f"📅 День {day_i}", ""]
-        for mi, m in enumerate(day_meals, start=1):
-            mt = _sum_nutr(m)
-            lines.append(f"Приём {mi}  ({_fmt_tot(mt)})")
-            for k, g in m:
-                if k == "eggs":
-                    est = max(1, int(round(g / 60.0)))
-                    lines.append(f"• {FOOD_DB[k]['name']} — ~{est} шт (≈{int(round(g))} г)")
-                else:
-                    lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
-            lines.append("")
-
-        lines.append(f"✅ Итог дня: {_fmt_tot(tot)}")
-        lines.append(f"🎯 Цель:    {int(calories)} ккал | Б {int(protein_g)}г Ж {int(fat_g)}г У {int(carbs_g)}г")
-        lines.append("")
-        out.append("\n".join(lines))
-
-    return "\n\n".join(out)
-
-
-def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: float, exp: str, freq: int = 3, place: str = "дом") -> str:
-    calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
-    p, f, c = calc_macros(calories, weight, goal)
-    meals = suggest_meals_count(calories)
-
-    tips = (
-        "Как держать прогресс правильно:\n"
-        "• Смотри не один день, а среднее за 7 дней (тренд)\n"
-        "• Взвешивайся утром после туалета, до еды\n"
-        "• Если вес стоит 10–14 дней:\n"
-        "  — масса: +150–200 ккал\n"
-        "  — сушка: -150–200 ккал\n"
-        "• Белок держи стабильно, калории проще крутить углеводами/жирами\n"
-        "\n"
-        "⚠️ Важно:\n"
-        "• Крупы в плане указаны в СУХОМ виде.\n"
-        "• Масло считаем всегда (это самая частая ошибка).\n"
-        "• План однотипный — так проще соблюдать и не путаться.\n"
-    )
-
-    three_days = build_3day_meal_plan(calories, p, f, c, meals)
-
-    return (
-        "🍽 МОЙ ПЛАН ПИТАНИЯ (3 дня)\n\n"
-        f"Цель: {goal}\n"
-        f"Калории: ~{calories} ккал/день\n"
-        f"БЖУ (ориентир): Белки {p}г / Жиры {f}г / Углеводы {c}г\n"
-        f"Приёмов пищи: {meals}\n\n"
-        "Правила (коротко и по делу):\n"
-        "1) Попади в калории и белок — это главное\n"
-        "2) План повторяй 5–7 дней — так меньше ошибок\n"
-        "3) Если не идёт прогресс 10–14 дней — крути калории на 150–200\n\n"
-        + three_days +
-        "\n\n🔁 Простые замены (без усложнений):\n"
-        "• курица ↔ индейка ↔ рыба\n"
-        "• рис ↔ гречка ↔ макароны\n"
-        "• творог ↔ йогурт/кефир\n\n"
-        + tips
-    )
-
-
-# =========================
-# FAQ (объёмнее и понятнее)
-# =========================
-def faq_text(topic: str) -> str:
-    if topic == "pay":
-        return (
-            "💳 Оплата и доступ — как это работает\n\n"
-            "Как оплатить (по шагам):\n"
-            "1) Нажми «💳 Оплата / Доступ»\n"
-            "2) Выбери тариф (1м / 3м / навсегда)\n"
-            "3) Переведи сумму на карту\n"
-            "4) В комментарии укажи код, который покажет бот\n"
-            "5) Нажми «✅ Я оплатил» и отправь чек (скрин как фото)\n\n"
-            "Почему подтверждение вручную:\n"
-            "— это перевод на карту, без платёжного сервиса, поэтому админ сверяет чек.\n\n"
-            "Если доступ не открылся за 5–15 минут:\n"
-            "— зайди в «🆘 Поддержка» и пришли: тариф + чек."
-        )
-    if topic == "plan":
-        return (
-            "🧠 Как строится план\n\n"
-            "План подстраивается под тебя по:\n"
-            "• цели (масса/сушка/форма)\n"
-            "• месту (дом/зал)\n"
-            "• опыту\n"
-            "• частоте\n\n"
-            "Каждая тренировка:\n"
-            "1) 3 базовых упражнения\n"
-            "2) 3–4 изоляции\n\n"
-            "Так проще соблюдать и прогрессировать."
-        )
-    if topic == "progress":
-        return (
-            "🏋️ Объём, прогрессия и отказ\n\n"
-            "Прогрессия:\n"
-            "• +1–2 повтора\n"
-            "• или +2.5–5% веса\n\n"
-            "Отказ постоянно = быстрее устанешь.\n"
-            "Лучше держать 1–2 повтора в запасе (RIR 1–2)."
-        )
-    if topic == "nutrition":
-        return (
-            "🍽 Калории и БЖУ\n\n"
-            "Главное:\n"
-            "1) попасть в калории\n"
-            "2) закрыть белок\n\n"
-            "Если 10–14 дней нет движения:\n"
-            "— масса: +150–200 ккал\n"
-            "— сушка: -150–200 ккал"
-        )
-    if topic == "count":
-        return (
-            "📌 Как считать калории\n\n"
-            "Ошибки:\n"
-            "• не считают масло/соусы\n"
-            "• путают сухой/готовый вес круп\n"
-            "• считают на глаз\n\n"
-            "Как правильно:\n"
-            "• взвешивать продукты\n"
-            "• крупы считать сухими\n"
-            "• масло считать всегда"
-        )
-    if topic == "stuck":
-        return (
-            "⚠️ Если нет результата\n\n"
-            "Проверь:\n"
-            "1) калории реально совпадают?\n"
-            "2) есть прогрессия?\n"
-            "3) сон 7+ часов?\n\n"
-            "Меняй один параметр и смотри 10–14 дней."
-        )
-    if topic == "recovery":
-        return (
-            "😴 Сон и восстановление\n\n"
-            "Минимум 7 часов.\n"
-            "Если усталость копится:\n"
-            "• убери отказ\n"
-            "• снизь объём на 20–30% на неделю"
-        )
-    if topic == "safety":
-        return (
-            "🦵 Боль и техника\n\n"
-            "Нормально: жжение/крепатура.\n"
-            "Плохо: резкая боль в суставе/онемение.\n"
-            "Если не проходит — лучше к врачу/реабилитологу."
-        )
-    if topic == "diary":
-        return (
-            "📓 Дневник и замеры\n\n"
-            "Дневник нужен, чтобы видеть прогресс.\n"
-            "Замеры:\n"
-            "• вес 3–4 раза/нед\n"
-            "• талия 1–2 раза/нед\n"
-            "• остальные раз в 2 недели"
-        )
-    if topic == "refund":
-        return (
-            "🔄 Ошибки/спорные случаи\n\n"
-            "Если оплатил, но доступа нет:\n"
-            "• пришли чек в поддержку.\n"
-            "Оплата на карту → подтверждение вручную."
-        )
-    return "Выбери тему."
-
-
-def faq_match(q: str) -> str:
-    t = (q or "").lower()
-    if any(k in t for k in ["оплат", "доступ", "чек", "карта", "перевод", "тариф"]):
-        return faq_text("pay")
-    if any(k in t for k in ["считать", "подсчет", "подсчёт", "взвеш", "этикет", "калории считать"]):
-        return faq_text("count")
-    if any(k in t for k in ["план", "программ", "сплит", "тренировк"]):
-        return faq_text("plan")
-    if any(k in t for k in ["прогресс", "силов", "отказ", "объем", "объём", "подход"]):
-        return faq_text("progress")
-    if any(k in t for k in ["ккал", "калор", "бжу", "белок", "жир", "углевод", "питани"]):
-        return faq_text("nutrition")
-    if any(k in t for k in ["не раст", "стоит", "нет результата", "плато"]):
-        return faq_text("stuck")
-    if any(k in t for k in ["сон", "восстанов", "устал", "перетрен"]):
-        return faq_text("recovery")
-    if any(k in t for k in ["боль", "травм", "плечо", "колено", "локоть", "спина"]):
-        return faq_text("safety")
-    if any(k in t for k in ["дневник", "замер", "талия"]):
-        return faq_text("diary")
-    if any(k in t for k in ["возврат", "ошибка", "не работает", "баг"]):
-        return faq_text("refund")
-    return "Не понял вопрос. Напиши: оплата / план / питание / прогресс / сон / боль / как считать калории."
-
-
-# =========================
-# DB (стабильные подключения)
+# DB
 # =========================
 @asynccontextmanager
 async def db():
@@ -883,7 +496,6 @@ async def init_db():
             paid_at TEXT
         )
         """)
-        # Оставляем amount/last4 (совместимость), но в логике мы их больше не спрашиваем.
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -939,12 +551,14 @@ async def init_db():
             created_at TEXT
         )
         """)
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS bot_state (
             user_id INTEGER PRIMARY KEY,
             last_bot_msg_id INTEGER
         )
         """)
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -966,6 +580,7 @@ async def init_db():
             created_at TEXT
         )
         """)
+
         await conn.commit()
 
 
@@ -1246,146 +861,497 @@ async def get_all_user_ids():
 
 
 # =========================
-# ХЕНДЛЕРЫ
+# ТРЕНИРОВКИ (база + изоляция)
 # =========================
-async def cmd_start(message: Message):
-    await ensure_user(message.from_user.id, message.from_user.username or "")
-    await message.answer(
-        "Привет! Я составлю тебе:\n"
-        "• тренировки под цель и опыт\n"
-        "• питание (ккал/БЖУ) + 3 дня примеров\n"
-        "• дневник тренировок\n"
-        "• замеры прогресса\n"
-        "• техники выполнения с картинками\n\n"
-        "Порядок:\n"
-        "1) ⚙️ Профиль\n"
-        "2) 💳 Оплата / Доступ\n"
-        "3) 🧠 Собрать мой план",
-        reply_markup=main_menu_kb()
-    )
+def _pick(rnd: random.Random, items: List[str]) -> str:
+    items = [x for x in items if x]
+    if not items:
+        return "—"
+    return rnd.choice(items)
 
 
-async def cb_go_menu(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.answer("Ок 👇", reply_markup=main_menu_kb())
-    await callback.answer()
-
-
-# ---- Профиль ----
-async def open_profile(message: Message, state: FSMContext):
-    u = await get_user(message.from_user.id)
-    await message.answer(
-        "⚙️ Профиль\n\n"
-        f"Цель: {u.get('goal') or '—'}\n"
-        f"Пол: {u.get('sex') or '—'}\n"
-        f"Возраст: {u.get('age') or '—'}\n"
-        f"Рост: {u.get('height') or '—'}\n"
-        f"Вес: {u.get('weight') or '—'}\n"
-        f"Где тренируешься: {u.get('place') or '—'}\n"
-        f"Опыт: {u.get('exp') or '—'}\n"
-        f"Частота: {u.get('freq') or '—'}\n\n"
-        "Выбери цель:",
-        reply_markup=goal_inline_kb()
-    )
-    await state.set_state(ProfileFlow.goal)
-
-
-async def cb_goal(callback: CallbackQuery, state: FSMContext):
-    v = callback.data.split(":")[1]
-    goal = {"mass": "масса", "cut": "сушка", "fit": "форма"}.get(v, v)
-    await update_user(callback.from_user.id, goal=goal)
-    await callback.message.answer("Пол? Напиши: м или ж")
-    await state.set_state(ProfileFlow.sex)
-    await callback.answer()
-
-
-async def profile_sex(message: Message, state: FSMContext):
-    t = (message.text or "").strip().lower()
-    if t not in ("м", "ж", "муж", "жен", "мужской", "женский"):
-        await message.answer("Напиши просто: м или ж")
-        return
-    sex = "м" if t.startswith("м") else "ж"
-    await update_user(message.from_user.id, sex=sex)
-    await message.answer("Возраст (числом), например 19:")
-    await state.set_state(ProfileFlow.age)
-
-
-async def profile_age(message: Message, state: FSMContext):
-    if not (message.text or "").isdigit():
-        await message.answer("Возраст нужен числом, например 19")
-        return
-    age = int(message.text)
-    if age < 10 or age > 90:
-        await message.answer("Возраст странный. Введи ещё раз.")
-        return
-    await update_user(message.from_user.id, age=age)
-    await message.answer("Рост (см), например 175:")
-    await state.set_state(ProfileFlow.height)
-
-
-async def profile_height(message: Message, state: FSMContext):
-    if not (message.text or "").isdigit():
-        await message.answer("Рост числом в см, например 175")
-        return
-    h = int(message.text)
-    if h < 120 or h > 230:
-        await message.answer("Рост странный. Введи ещё раз.")
-        return
-    await update_user(message.from_user.id, height=h)
-    await message.answer("Вес (кг), например 72 или 72.5:")
-    await state.set_state(ProfileFlow.weight)
-
-
-async def profile_weight(message: Message, state: FSMContext):
-    txt = (message.text or "").strip().replace(",", ".")
-    try:
-        w = float(txt)
-    except Exception:
-        await message.answer("Вес числом, например 72 или 72.5")
-        return
-    if w < 30 or w > 250:
-        await message.answer("Вес странный. Введи ещё раз.")
-        return
-    await update_user(message.from_user.id, weight=w)
-    await message.answer("Где тренируешься? Выбери:", reply_markup=place_inline_kb())
-    await state.set_state(ProfileFlow.place)
-
-
-async def cb_place(callback: CallbackQuery, state: FSMContext):
-    v = callback.data.split(":")[1]
-    place = "дом" if v == "home" else "зал"
-    await update_user(callback.from_user.id, place=place)
-    await callback.message.answer("Опыт? Напиши: 0 / 1-2 года / 2+ года")
-    await state.set_state(ProfileFlow.exp)
-    await callback.answer()
-
-
-async def profile_exp(message: Message, state: FSMContext):
-    exp = (message.text or "").strip()
-    await update_user(message.from_user.id, exp=exp)
+def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: int = 0) -> str:
+    pl = (place or "").lower()
+    is_gym = ("зал" in pl) or (pl == "gym") or ("gym" in pl)
+    where = "ЗАЛ" if is_gym else "ДОМ"
 
     lvl = exp_level(exp)
-    if lvl == "novice":
-        await update_user(message.from_user.id, freq=3)
-        await message.answer("✅ Профиль заполнен (для новичка будет 3×/нед).", reply_markup=main_menu_kb())
-        await state.clear()
-        return
+    seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
+    rnd = random.Random(seed)
 
-    await message.answer("Сколько тренировок в неделю удобно? Напиши: 3 / 4 / 5")
-    await state.set_state(ProfileFlow.freq)
+    if is_gym:
+        push_base = ["Жим лёжа (штанга)", "Жим гантелей лёжа", "Жим в тренажёре", "Отжимания"]
+        pull_base = ["Тяга горизонтального блока", "Тяга гантели одной рукой", "Верхний блок", "Подтягивания (если можешь)"]
+        legs_base = ["Присед со штангой", "Жим ногами", "Гоблет-присед", "Румынская тяга (лёгкая)"]
+
+        shoulders_iso = ["Разведения в стороны (гантели)", "Face pull (канат)"]
+        bi_iso = ["Сгибания гантелей", "Сгибания на блоке"]
+        tri_iso = ["Разгибания на блоке", "Французский жим (лёгко)", "Отжимания узкие"]
+        legs_iso = ["Икры стоя/сидя", "Разгибания ног", "Сгибания ног"]
+        core = ["Планка", "Скручивания", "Подъёмы ног"]
+    else:
+        push_base = ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа (если есть скамья/пол)"]
+        pull_base = ["Подтягивания (если есть турник)", "Тяга гантели одной рукой", "Тяга резинки к поясу (если есть резинка)"]
+        legs_base = ["Приседания", "Болгарские выпады", "Ягодичный мост", "Гоблет-присед (гантель)"]
+
+        shoulders_iso = ["Разведения в стороны (гантели)", "Разведения в наклоне (задняя дельта)"]
+        bi_iso = ["Сгибания гантелей", "Молотки"]
+        tri_iso = ["Отжимания узкие", "Французский жим гантелью"]
+        legs_iso = ["Икры стоя", "Статические выпады"]
+        core = ["Планка", "Скручивания", "Подъём ног лёжа"]
+
+    reps_base = "6–10" if lvl != "novice" else "8–12"
+    reps_iso = "10–15"
+    base_sets = "3–4" if lvl != "novice" else "3"
+    iso_sets = "3"
+
+    f = int(freq or 3)
+    f = max(3, min(f, 5))
+
+    g = (goal or "").lower()
+    if "суш" in g:
+        note = "Сушка: держи 1–2 повтора в запасе (RIR 1–2), отказ редко.\n"
+    elif "мас" in g:
+        note = "Масса: прогрессируй по повторам/весу, отказ редко, техника важнее.\n"
+    else:
+        note = "Форма: прогрессируй плавно, без постоянного отказа.\n"
+
+    days = []
+    for d in range(f):
+        push = _pick(rnd, push_base)
+        pull = _pick(rnd, pull_base)
+        legs = _pick(rnd, legs_base)
+
+        sh = _pick(rnd, shoulders_iso)
+        bi = _pick(rnd, bi_iso)
+        tri = _pick(rnd, tri_iso)
+        lg = _pick(rnd, legs_iso)
+        cr = _pick(rnd, core)
+
+        iso_lines = [
+            f"• {sh} — {iso_sets}×{reps_iso}",
+            f"• {bi} — {iso_sets}×{reps_iso}",
+            f"• {tri} — {iso_sets}×{reps_iso}",
+        ]
+        if f >= 4:
+            iso_lines.append(f"• {lg} — {iso_sets}×{reps_iso}")
+        if f >= 5:
+            iso_lines.append(f"• {cr} — {iso_sets}×12–20")
+
+        day_text = (
+            f"День {d+1}\n"
+            f"БАЗА:\n"
+            f"• {push} — {base_sets}×{reps_base}\n"
+            f"• {pull} — {base_sets}×{reps_base}\n"
+            f"• {legs} — {base_sets}×{reps_base}\n\n"
+            f"ИЗОЛЯЦИЯ:\n" + "\n".join(iso_lines) +
+            "\n\n"
+        )
+        days.append(day_text)
+
+    return (
+        f"🏋️ ТРЕНИРОВКИ ({where}) — {f}×/нед\n\n"
+        f"Цель: {goal}\n"
+        f"{note}\n"
+        "📌 Прогрессия:\n"
+        "1) Доводи подходы до верхней границы повторов\n"
+        "2) Потом добавляй вес (+2.5–5%) и снова работай в диапазоне\n"
+        "3) Если техника ломается — вес не повышай\n"
+        "4) Если усталость копится 7–10 дней — сделай неделю легче (-20–30% объёма)\n\n"
+        + "\n".join(days)
+    )
 
 
-async def profile_freq(message: Message, state: FSMContext):
-    t = re.sub(r"[^\d]", "", message.text or "")
-    if t not in ("3", "4", "5"):
-        await message.answer("Напиши просто цифру: 3 или 4 или 5")
-        return
-    await update_user(message.from_user.id, freq=int(t))
-    await message.answer("✅ Профиль заполнен. Теперь: 💳 Оплата / Доступ", reply_markup=main_menu_kb())
+# =========================
+# ПИТАНИЕ (однотипное, простое)
+# =========================
+FOOD_DB = {
+    "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
+    "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
+    "veg":       {"name": "Овощи (микс)",         "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
+    "chicken":   {"name": "Куриная грудка",       "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
+    "eggs":      {"name": "Яйца",                 "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
+    "curd_0_5":  {"name": "Творог 0–5%",          "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
+    "banana":    {"name": "Банан",                "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
+    "oil":       {"name": "Оливковое масло",      "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
+}
+
+def _nutr_of(item_key: str, grams: float):
+    it = FOOD_DB[item_key]
+    k = grams / 100.0
+    return {"kcal": it["kcal"] * k, "p": it["p"] * k, "f": it["f"] * k, "c": it["c"] * k}
+
+def _sum_nutr(items: List[Tuple[str, float]]):
+    tot = {"kcal": 0.0, "p": 0.0, "f": 0.0, "c": 0.0}
+    for key, g in items:
+        n = _nutr_of(key, g)
+        for kk in tot:
+            tot[kk] += n[kk]
+    return tot
+
+def _fmt_tot(t):
+    return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
+
+def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carbs_g: int):
+    meals = max(3, min(int(meals or 3), 5))
+
+    oats_g = 70.0
+    eggs_g = 180.0
+    rice_g_1 = 90.0
+    rice_g_2 = 90.0
+    chicken_g_1 = 200.0
+    chicken_g_2 = 200.0
+    veg_g_1 = 250.0
+    veg_g_2 = 250.0
+    oil_g = 10.0
+    curd_g = 250.0
+    banana_g = 120.0
+
+    day_meals: List[List[Tuple[str, float]]] = []
+    day_meals.append([("oats", oats_g), ("eggs", eggs_g)])
+    day_meals.append([("rice", rice_g_1), ("chicken", chicken_g_1), ("veg", veg_g_1), ("oil", oil_g)])
+    day_meals.append([("rice", rice_g_2), ("chicken", chicken_g_2), ("veg", veg_g_2)])
+
+    if meals >= 4:
+        day_meals.append([("curd_0_5", curd_g)])
+    if meals >= 5:
+        day_meals.append([("banana", banana_g)])
+
+    def totals():
+        flat = [x for m in day_meals for x in m]
+        return _sum_nutr(flat)
+
+    def add_rice(step=10.0):
+        day_meals[1] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[1]]
+        day_meals[2] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[2]]
+
+    def add_oats(step=10.0):
+        day_meals[0] = [(k, (g + step if k == "oats" else g)) for (k, g) in day_meals[0]]
+
+    def add_oil(step=3.0):
+        day_meals[1] = [(k, (g + step if k == "oil" else g)) for (k, g) in day_meals[1]]
+
+    def add_chicken(step=50.0):
+        day_meals[1] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[1]]
+        day_meals[2] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[2]]
+
+    target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
+
+    for _ in range(10):
+        t = totals()
+        if t["p"] + 8 >= target["p"]:
+            break
+        add_chicken(50.0)
+
+    for _ in range(16):
+        t = totals()
+        if t["kcal"] + 80 >= target["kcal"]:
+            break
+        if t["c"] + 15 < target["c"]:
+            add_rice(10.0)
+        else:
+            add_oats(10.0)
+
+    for _ in range(12):
+        t = totals()
+        if t["f"] + 3 >= target["f"]:
+            break
+        add_oil(3.0)
+
+    return day_meals, totals()
+
+def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
+    out = []
+    for day_i in range(1, 4):
+        day_meals, tot = _build_day_items(meals, calories, protein_g, fat_g, carbs_g)
+
+        lines = [f"📅 День {day_i}", ""]
+        for mi, m in enumerate(day_meals, start=1):
+            mt = _sum_nutr(m)
+            lines.append(f"Приём {mi}  ({_fmt_tot(mt)})")
+            for k, g in m:
+                if k == "eggs":
+                    est = max(1, int(round(g / 60.0)))
+                    lines.append(f"• {FOOD_DB[k]['name']} — ~{est} шт (≈{int(round(g))} г)")
+                else:
+                    lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
+            lines.append("")
+
+        lines.append(f"✅ Итог дня: {_fmt_tot(tot)}")
+        lines.append(f"🎯 Цель:    {int(calories)} ккал | Б {int(protein_g)}г Ж {int(fat_g)}г У {int(carbs_g)}г")
+        lines.append("")
+        out.append("\n".join(lines))
+
+    return "\n\n".join(out)
+
+def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: float, exp: str, freq: int = 3, place: str = "дом") -> str:
+    calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
+    p, f, c = calc_macros(calories, weight, goal)
+    meals = suggest_meals_count(calories)
+
+    tips = (
+        "Как держать прогресс правильно:\n"
+        "• Смотри не один день, а среднее за 7 дней (тренд)\n"
+        "• Взвешивайся утром после туалета, до еды\n"
+        "• Если вес стоит 10–14 дней:\n"
+        "  — масса: +150–200 ккал\n"
+        "  — сушка: -150–200 ккал\n"
+        "• Белок держи стабильно, калории проще крутить углеводами/жирами\n"
+        "\n"
+        "⚠️ Важно:\n"
+        "• Крупы в плане указаны в СУХОМ виде.\n"
+        "• Масло считаем всегда (это самая частая ошибка).\n"
+        "• План однотипный — так проще соблюдать и не путаться.\n"
+    )
+
+    three_days = build_3day_meal_plan(calories, p, f, c, meals)
+
+    return (
+        "🍽 МОЁ ПИТАНИЕ (3 дня)\n\n"
+        f"Цель: {goal}\n"
+        f"Калории: ~{calories} ккал/день\n"
+        f"БЖУ (ориентир): Белки {p}г / Жиры {f}г / Углеводы {c}г\n"
+        f"Приёмов пищи: {meals}\n\n"
+        "Правила:\n"
+        "1) Попади в калории и белок — это главное\n"
+        "2) План повторяй 5–7 дней — так меньше ошибок\n"
+        "3) Если не идёт прогресс 10–14 дней — крути калории на 150–200\n\n"
+        + three_days +
+        "\n\n🔁 Простые замены:\n"
+        "• курица ↔ индейка ↔ рыба\n"
+        "• рис ↔ гречка ↔ макароны\n"
+        "• творог ↔ йогурт/кефир\n\n"
+        + tips
+    )
+
+
+# =========================
+# МЕНЮ / START
+# =========================
+async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
+    text = (
+        "📌 Меню\n\n"
+        "Выбирай раздел ниже 👇"
+    )
+    await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_kb())
+
+
+async def cmd_start(message: Message, bot: Bot):
+    await ensure_user(message.from_user.id, message.from_user.username or "")
+    await show_main_menu(bot, message.chat.id, message.from_user.id)
+
+
+async def cb_menu(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await ensure_user(callback.from_user.id, callback.from_user.username or "")
     await state.clear()
 
+    key = callback.data.split(":", 1)[1]
 
-# ---- Оплата ----
+    if key == "main":
+        await show_main_menu(bot, callback.message.chat.id, callback.from_user.id)
+    elif key == "control":
+        await clean_edit(
+            callback, callback.from_user.id,
+            "⚙️ Панель управления\n\nВыбери действие 👇",
+            reply_markup=menu_control_kb()
+        )
+    elif key == "workouts":
+        await open_workouts_cb(callback, bot)
+    elif key == "nutrition":
+        await open_nutrition_cb(callback, bot)
+    elif key == "measures":
+        await open_measures_cb(callback, state, bot)
+    elif key == "diary":
+        await open_diary_cb(callback, bot)
+    else:
+        await show_main_menu(bot, callback.message.chat.id, callback.from_user.id)
+
+    await callback.answer()
+
+
+async def cb_ctrl(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await ensure_user(callback.from_user.id, callback.from_user.username or "")
+    action = callback.data.split(":", 1)[1]
+    await state.clear()
+
+    if action == "pay":
+        await open_payment_cb(callback, state)
+    elif action == "profile":
+        await start_profile_wizard(callback, state)
+    elif action == "support":
+        await open_support_cb(callback)
+    else:
+        await show_main_menu(bot, callback.message.chat.id, callback.from_user.id)
+
+    await callback.answer()
+
+
+# =========================
+# ПРОФИЛЬ-МАСТЕР: одно сообщение редактируется + шкала
+# =========================
+async def start_profile_wizard(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await state.set_state(ProfileWizard.goal)
+
+    text = (
+        _profile_header(1) +
+        "🎯 Выбери цель:"
+    )
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_goal())
+
+
+async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
+    step = callback.data.split(":")[2]
+    uid = callback.from_user.id
+
+    if step == "goal":
+        await state.set_state(ProfileWizard.goal)
+        text = _profile_header(1) + "🎯 Выбери цель:"
+        await clean_edit(callback, uid, text, reply_markup=kb_goal())
+    elif step == "sex":
+        await state.set_state(ProfileWizard.sex)
+        text = _profile_header(2) + "👤 Выбери пол:"
+        await clean_edit(callback, uid, text, reply_markup=kb_sex())
+    elif step == "age":
+        await state.set_state(ProfileWizard.age)
+        text = _profile_header(3) + "🎂 Выбери возраст:"
+        await clean_edit(callback, uid, text, reply_markup=kb_age())
+    elif step == "height":
+        await state.set_state(ProfileWizard.height)
+        text = _profile_header(4) + "📏 Выбери рост (см):"
+        await clean_edit(callback, uid, text, reply_markup=kb_height())
+    elif step == "weight":
+        await state.set_state(ProfileWizard.weight)
+        text = _profile_header(5) + "⚖️ Выбери вес (кг):"
+        await clean_edit(callback, uid, text, reply_markup=kb_weight())
+    elif step == "place":
+        await state.set_state(ProfileWizard.place)
+        text = _profile_header(6) + "🏠 Где тренируешься?"
+        await clean_edit(callback, uid, text, reply_markup=kb_place())
+    elif step == "exp":
+        await state.set_state(ProfileWizard.exp)
+        text = _profile_header(7) + "📈 Выбери опыт:"
+        await clean_edit(callback, uid, text, reply_markup=kb_exp())
+    else:
+        await show_main_menu(callback.bot, callback.message.chat.id, uid)
+
+    await callback.answer()
+
+
+async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[2]
+    goal = {"mass": "масса", "cut": "сушка", "fit": "форма"}.get(v, v)
+    await update_user(callback.from_user.id, goal=goal)
+
+    await state.set_state(ProfileWizard.sex)
+    text = _profile_header(2) + "👤 Выбери пол:"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_sex())
+    await callback.answer()
+
+
+async def cb_profile_sex(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[2]
+    sex = "м" if v == "m" else "ж"
+    await update_user(callback.from_user.id, sex=sex)
+
+    await state.set_state(ProfileWizard.age)
+    text = _profile_header(3) + "🎂 Выбери возраст:"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_age())
+    await callback.answer()
+
+
+async def cb_profile_age(callback: CallbackQuery, state: FSMContext):
+    age = int(callback.data.split(":")[2])
+    await update_user(callback.from_user.id, age=age)
+
+    await state.set_state(ProfileWizard.height)
+    text = _profile_header(4) + "📏 Выбери рост (см):"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_height())
+    await callback.answer()
+
+
+async def cb_profile_height(callback: CallbackQuery, state: FSMContext):
+    h = int(callback.data.split(":")[2])
+    await update_user(callback.from_user.id, height=h)
+
+    await state.set_state(ProfileWizard.weight)
+    text = _profile_header(5) + "⚖️ Выбери вес (кг):"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_weight())
+    await callback.answer()
+
+
+async def cb_profile_weight(callback: CallbackQuery, state: FSMContext):
+    w = float(callback.data.split(":")[2])
+    await update_user(callback.from_user.id, weight=w)
+
+    await state.set_state(ProfileWizard.place)
+    text = _profile_header(6) + "🏠 Где тренируешься?"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_place())
+    await callback.answer()
+
+
+async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[2]
+    place = "дом" if v == "home" else "зал"
+    await update_user(callback.from_user.id, place=place)
+
+    await state.set_state(ProfileWizard.exp)
+    text = _profile_header(7) + "📈 Выбери опыт:"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_exp())
+    await callback.answer()
+
+
+async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[2]
+
+    if v == "0":
+        await update_user(callback.from_user.id, exp="0", freq=3)
+        await state.clear()
+        text = (
+            _profile_header(8) +
+            "✅ Профиль заполнен!\n\n"
+            "Новичку поставил частоту 3×/нед.\n"
+            "Теперь можно открыть меню и пользоваться разделами."
+        )
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=menu_control_kb())
+        await callback.answer()
+        return
+
+    exp_text = "1-2 года" if v == "mid" else "2+ года"
+    await update_user(callback.from_user.id, exp=exp_text)
+
+    await state.set_state(ProfileWizard.freq)
+    text = _profile_header(8) + "📅 Сколько тренировок в неделю удобно?"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_freq())
+    await callback.answer()
+
+
+async def cb_profile_freq(callback: CallbackQuery, state: FSMContext):
+    f = int(callback.data.split(":")[2])
+    await update_user(callback.from_user.id, freq=f)
+    await state.clear()
+
+    u = await get_user(callback.from_user.id)
+    summary = (
+        _profile_header(8) +
+        "✅ Профиль сохранён!\n\n"
+        f"Цель: {u.get('goal')}\n"
+        f"Пол: {u.get('sex')}\n"
+        f"Возраст: {u.get('age')}\n"
+        f"Рост: {u.get('height')}\n"
+        f"Вес: {u.get('weight')}\n"
+        f"Где: {u.get('place')}\n"
+        f"Опыт: {u.get('exp')}\n"
+        f"Частота: {u.get('freq')}×/нед\n\n"
+        "Можно переходить к оплате или сразу в меню."
+    )
+    await clean_edit(callback, callback.from_user.id, summary, reply_markup=menu_control_kb())
+    await callback.answer()
+
+
+# =========================
+# ОПЛАТА (из панели управления)
+# =========================
 def access_status_str(a: dict) -> str:
     if not a or a.get("paid") != 1:
         return "Статус: ❌ нет доступа"
@@ -1395,12 +1361,11 @@ def access_status_str(a: dict) -> str:
     return f"Статус: ✅ доступ активен до {exp[:10]}" if exp else "Статус: ✅ доступ активен"
 
 
-async def open_payment(message: Message, state: FSMContext):
-    await ensure_user(message.from_user.id, message.from_user.username or "")
-    a = await get_access(message.from_user.id)
+async def open_payment_cb(callback: CallbackQuery, state: FSMContext):
+    a = await get_access(callback.from_user.id)
 
-    if await is_access_active(message.from_user.id):
-        await message.answer(f"✅ Доступ активен.\n{access_status_str(a)}", reply_markup=main_menu_kb())
+    if await is_access_active(callback.from_user.id):
+        await clean_edit(callback, callback.from_user.id, f"✅ Доступ активен.\n{access_status_str(a)}", reply_markup=menu_control_kb())
         return
 
     text = (
@@ -1412,7 +1377,7 @@ async def open_payment(message: Message, state: FSMContext):
         f"• навсегда — {TARIFFS['life']['price']}₽\n\n"
         "После выбора я покажу реквизиты и код для комментария."
     )
-    await message.answer(text, reply_markup=pay_tariff_kb())
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=pay_tariff_kb())
     await state.set_state(PaymentFlow.choose_tariff)
 
 
@@ -1422,8 +1387,8 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Неизвестный тариф", show_alert=True)
         return
 
+    await state.update_data(tariff=tariff_code)
     code = gen_order_code(callback.from_user.id)
-    await state.update_data(tariff=tariff_code, code=code)
 
     text = (
         "💳 Оплата доступа\n\n"
@@ -1452,7 +1417,7 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     tariff = data.get("tariff")
     if not tariff:
-        await callback.message.answer("Сначала выбери тариф в «💳 Оплата / Доступ».")
+        await callback.message.answer("Сначала выбери тариф в «💳 Оплата».")
         await callback.answer()
         return
 
@@ -1462,11 +1427,31 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
         return
 
     await callback.message.answer(
-        "Ок ✅\n"
-        "Теперь отправь чек/скрин оплаты как **фото** (не файл)."
+        f"Введи сумму, которую перевёл.\n"
+        f"Ожидаемая сумма для тарифа «{TARIFFS[tariff]['title']}»: {TARIFFS[tariff]['price']}₽"
     )
-    await state.set_state(PaymentFlow.waiting_receipt)
+    await state.set_state(PaymentFlow.waiting_amount)
     await callback.answer()
+
+
+async def pay_amount(message: Message, state: FSMContext):
+    txt = re.sub(r"[^\d]", "", message.text or "")
+    if not txt:
+        await message.answer("Сумму числом, например 1150")
+        return
+    await state.update_data(amount=int(txt))
+    await message.answer("Введи последние 4 цифры карты отправителя (или 0000):")
+    await state.set_state(PaymentFlow.waiting_last4)
+
+
+async def pay_last4(message: Message, state: FSMContext):
+    txt = re.sub(r"[^\d]", "", message.text or "")
+    if len(txt) != 4:
+        await message.answer("Нужно ровно 4 цифры. Например 1234 (или 0000)")
+        return
+    await state.update_data(last4=txt)
+    await message.answer("Отправь чек/скрин оплаты как фото:")
+    await state.set_state(PaymentFlow.waiting_receipt)
 
 
 async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
@@ -1476,18 +1461,15 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     tariff = data.get("tariff")
-    code = data.get("code") or gen_order_code(message.from_user.id)
-
     if tariff not in TARIFFS:
-        await message.answer("Не вижу выбранный тариф. Зайди в «💳 Оплата / Доступ» и выбери тариф заново.")
+        await message.answer("Не вижу выбранный тариф. Открой «Оплата» и выбери тариф заново.")
         await state.clear()
         return
 
+    amount = int(data.get("amount", 0))
+    last4 = data.get("last4", "0000")
     receipt_file_id = message.photo[-1].file_id
-
-    # ✅ amount/last4 больше не спрашиваем:
-    amount = int(TARIFFS[tariff]["price"])
-    last4 = "0000"
+    code = gen_order_code(message.from_user.id)
 
     payment_id = await create_payment(message.from_user.id, tariff, amount, last4, code, receipt_file_id)
     await message.answer("✅ Заявка отправлена. Как подтвержу — доступ откроется.")
@@ -1502,6 +1484,7 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         f"user_id: {message.from_user.id}\n"
         f"tariff: {tariff} ({TARIFFS[tariff]['title']})\n"
         f"amount: {amount}\n"
+        f"last4: {last4}\n"
         f"code: {code}\n"
     )
     await bot.send_photo(
@@ -1546,76 +1529,163 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
                 "✅ Оплата подтверждена!\n"
                 f"Тариф: {TARIFFS[tariff]['title']}\n"
                 f"{access_status_str(a)}\n\n"
-                "Теперь жми: 🧠 Собрать мой план"
+                "Открой меню и пользуйся разделами 👇"
             ),
-            reply_markup=main_menu_kb()
+            reply_markup=menu_main_kb()
         )
         await callback.answer("Подтверждено ✅")
     else:
         await set_payment_status(pid, "rejected")
         await bot.send_message(
             chat_id=user_id,
-            text="❌ Оплата отклонена. Проверь сумму/чек/комментарий и попробуй снова: 💳 Оплата / Доступ"
+            text="❌ Оплата отклонена. Проверь сумму/чек/комментарий и попробуй снова: Панель управления → Оплата"
         )
         await callback.answer("Отклонено ❌")
 
 
-# ---- Планы ----
-async def build_plan(message: Message):
-    await ensure_user(message.from_user.id, message.from_user.username or "")
-    if not await is_access_active(message.from_user.id):
-        await message.answer(locked_text())
-        return
-
-    u = await get_user(message.from_user.id)
+# =========================
+# РАЗДЕЛЫ: ТРЕНИРОВКИ / ПИТАНИЕ / ЗАМЕРЫ / ДНЕВНИК
+# =========================
+async def ensure_profile_ready(user_id: int) -> bool:
+    u = await get_user(user_id)
     need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq"]
-    if any(not u.get(k) for k in need):
-        await message.answer("⚠️ Не хватает данных профиля. Заполни: ⚙️ Профиль")
-        return
+    return not any(not u.get(k) for k in need)
 
+async def build_plans_if_needed(user_id: int):
+    u = await get_user(user_id)
     workout = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"]),
-        user_id=message.from_user.id
+        user_id=user_id
     )
     nutrition = generate_nutrition_plan(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
         freq=int(u["freq"]), place=u["place"]
     )
-
-    await save_workout_plan(message.from_user.id, workout)
-    await save_nutrition_plan(message.from_user.id, nutrition)
-
-    await message.answer("✅ Готово! Я собрал твой план. Открой разделы 👇", reply_markup=main_menu_kb())
+    await save_workout_plan(user_id, workout)
+    await save_nutrition_plan(user_id, nutrition)
 
 
-async def open_workouts(message: Message):
-    if not await is_access_active(message.from_user.id):
-        await message.answer(locked_text())
+async def open_workouts_cb(callback: CallbackQuery, bot: Bot):
+    uid = callback.from_user.id
+
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text(), reply_markup=menu_control_kb())
         return
-    plan = await get_workout_plan(message.from_user.id)
+
+    if not await ensure_profile_ready(uid):
+        await clean_edit(
+            callback, uid,
+            "⚠️ Сначала заполни профиль.\nПанель управления → Профиль",
+            reply_markup=menu_control_kb()
+        )
+        return
+
+    plan = await get_workout_plan(uid)
     if not plan:
-        await message.answer("Плана пока нет. Нажми 🧠 Собрать мой план")
-        return
-    await safe_send(message, plan)
+        await build_plans_if_needed(uid)
+        plan = await get_workout_plan(uid)
+
+    # «Мои тренировки» + кнопка к техникам
+    head = "🏋️ Мои тренировки\n\n"
+    txt = head + (plan or "План пока не найден.")
+    # чтобы не плодить сообщения — покажем в одном, но если очень длинно, отправим как обычные куски
+    if len(txt) <= TG_SAFE_MSG_LEN:
+        await clean_edit(callback, uid, txt, reply_markup=workouts_kb())
+    else:
+        await callback.message.answer(head, reply_markup=workouts_kb())
+        await safe_send(callback.message, plan or "")
+    return
 
 
-async def open_nutrition(message: Message):
-    if not await is_access_active(message.from_user.id):
-        await message.answer(locked_text())
+async def open_nutrition_cb(callback: CallbackQuery, bot: Bot):
+    uid = callback.from_user.id
+
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text(), reply_markup=menu_control_kb())
         return
-    plan = await get_nutrition_plan(message.from_user.id)
+
+    if not await ensure_profile_ready(uid):
+        await clean_edit(
+            callback, uid,
+            "⚠️ Сначала заполни профиль.\nПанель управления → Профиль",
+            reply_markup=menu_control_kb()
+        )
+        return
+
+    plan = await get_nutrition_plan(uid)
     if not plan:
-        await message.answer("Плана питания пока нет. Нажми 🧠 Собрать мой план")
-        return
-    await safe_send(message, plan)
+        await build_plans_if_needed(uid)
+        plan = await get_nutrition_plan(uid)
+
+    head = "🍽 Моё питание\n\n"
+    txt = head + (plan or "План пока не найден.")
+    if len(txt) <= TG_SAFE_MSG_LEN:
+        await clean_edit(callback, uid, txt, reply_markup=simple_back_to_menu_kb())
+    else:
+        await callback.message.answer(head, reply_markup=simple_back_to_menu_kb())
+        await safe_send(callback.message, plan or "")
 
 
-# ---- Дневник ----
-async def open_diary(message: Message):
-    if not await is_access_active(message.from_user.id):
-        await message.answer(locked_text())
+async def open_measures_cb(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text(), reply_markup=menu_control_kb())
         return
-    await message.answer("📓 Дневник тренировок", reply_markup=diary_inline_kb())
+
+    await state.set_state(MeasureFlow.choose_type)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚖️ Вес (кг)", callback_data="mtype:weight")],
+        [InlineKeyboardButton(text="📏 Талия (см)", callback_data="mtype:waist")],
+        [InlineKeyboardButton(text="💪 Рука (см)", callback_data="mtype:arm")],
+        [InlineKeyboardButton(text="胸 Грудь (см)", callback_data="mtype:chest")],
+        [InlineKeyboardButton(text="🦵 Бедро (см)", callback_data="mtype:thigh")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+    await clean_edit(callback, uid, "📏 Замеры\n\nВыбери, что записать:", reply_markup=kb)
+
+
+async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
+    mtype = callback.data.split(":")[1]
+    await state.update_data(mtype=mtype)
+    await state.set_state(MeasureFlow.enter_value)
+
+    name = {"weight": "Вес (кг)", "waist": "Талия (см)", "arm": "Рука (см)", "chest": "Грудь (см)", "thigh": "Бедро (см)"}.get(mtype, mtype)
+    await callback.message.answer(f"Введи значение для «{name}» числом (например 72.5):")
+    await callback.answer()
+
+
+async def measure_value(message: Message, state: FSMContext):
+    txt = (message.text or "").strip().replace(",", ".")
+    try:
+        val = float(txt)
+    except Exception:
+        await message.answer("Нужно число. Например 72.5")
+        return
+
+    data = await state.get_data()
+    mtype = data.get("mtype")
+
+    await add_measure(message.from_user.id, mtype, val)
+    rows = await get_last_measures(message.from_user.id, mtype, 6)
+
+    name = {"weight": "Вес", "waist": "Талия", "arm": "Рука", "chest": "Грудь", "thigh": "Бедро"}.get(mtype, mtype)
+    hist = "\n".join([f"• {r[0]:g} ({r[1][:10]})" for r in rows])
+    await message.answer(f"✅ Записал: {name} = {val:g}\n\nПоследние:\n{hist}\n\n🏠 Меню: /start")
+    await state.clear()
+
+
+async def open_diary_cb(callback: CallbackQuery, bot: Bot):
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text(), reply_markup=menu_control_kb())
+        return
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Записать тренировку", callback_data="d:new")],
+        [InlineKeyboardButton(text="📜 История (последние 10)", callback_data="d:history")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+    await clean_edit(callback, uid, "📓 Дневник\n\nВыбери действие:", reply_markup=kb)
 
 
 async def diary_new(callback: CallbackQuery, state: FSMContext):
@@ -1658,7 +1728,7 @@ async def diary_enter_title(message: Message, state: FSMContext):
 async def diary_enter_sets(message: Message, state: FSMContext):
     txt = (message.text or "").strip()
     if txt.lower() == "стоп":
-        await message.answer("✅ Тренировка записана.", reply_markup=main_menu_kb())
+        await message.answer("✅ Тренировка записана.\n🏠 Меню: /start")
         await state.clear()
         return
 
@@ -1711,88 +1781,26 @@ async def diary_history(callback: CallbackQuery):
             msg += line + "\n"
         msg += "\n"
 
-    await safe_send(callback.message, msg)
+    await safe_send(callback.message, msg, reply_markup=simple_back_to_menu_kb())
     await callback.answer()
 
 
-# ---- Замеры ----
-async def open_measures(message: Message, state: FSMContext):
-    if not await is_access_active(message.from_user.id):
-        await message.answer(locked_text())
-        return
-    await message.answer("📏 Выбери замер:", reply_markup=measures_inline_kb())
-    await state.set_state(MeasureFlow.choose_type)
-
-
-async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
-    mtype = callback.data.split(":")[1]
-    await state.update_data(mtype=mtype)
-    await callback.message.answer("Введи значение числом (например 72.5):")
-    await state.set_state(MeasureFlow.enter_value)
-    await callback.answer()
-
-
-async def measure_value(message: Message, state: FSMContext):
-    txt = (message.text or "").strip().replace(",", ".")
-    try:
-        val = float(txt)
-    except Exception:
-        await message.answer("Нужно число. Например 72.5")
-        return
-
-    data = await state.get_data()
-    mtype = data.get("mtype")
-
-    await add_measure(message.from_user.id, mtype, val)
-    rows = await get_last_measures(message.from_user.id, mtype, 6)
-
-    name = {"weight": "Вес", "waist": "Талия", "arm": "Рука", "chest": "Грудь", "thigh": "Бедро"}.get(mtype, mtype)
-    hist = "\n".join([f"• {r[0]:g} ({r[1][:10]})" for r in rows])
-    await message.answer(f"✅ Записал: {name} = {val:g}\n\nПоследние:\n{hist}", reply_markup=main_menu_kb())
-    await state.clear()
-
-
-# ---- FAQ ----
-async def open_faq(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("❓ FAQ / Частые вопросы\nВыбери тему:", reply_markup=faq_inline_kb())
-
-
-async def cb_faq(callback: CallbackQuery, state: FSMContext):
-    topic = callback.data.split(":")[1]
-    if topic == "ask":
-        await callback.message.answer("✍️ Напиши свой вопрос одним сообщением.")
-        await state.set_state(FAQFlow.ask)
-    else:
-        await safe_send(callback.message, faq_text(topic))
-    await callback.answer()
-
-
-async def faq_ask(message: Message, state: FSMContext):
-    await safe_send(message, faq_match(message.text or ""), reply_markup=main_menu_kb())
-    await state.clear()
-
-
-# ---- Поддержка ----
-async def open_support(message: Message):
-    await message.answer(
+# =========================
+# ПОДДЕРЖКА (из панели управления)
+# =========================
+async def open_support_cb(callback: CallbackQuery):
+    text = (
         "🆘 Поддержка\n\n"
         "Напиши проблему одним сообщением — я перешлю админу.\n"
-        "Если есть ошибка в консоли/логах — пришли текст.",
-        reply_markup=main_menu_kb()
+        "Если есть ошибка в консоли/логах — пришли текст."
     )
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=menu_control_kb())
 
 
 async def forward_to_admin(message: Message, bot: Bot):
     if message.from_user.id == ADMIN_ID:
         return
     if not message.text or message.text.startswith("/"):
-        return
-    if message.text in {
-        "🧠 Собрать мой план", "💳 Оплата / Доступ", "🏋️ Мои тренировки", "🍽 Мой план питания",
-        "📓 Дневник тренировок", "📏 Замеры", "⚙️ Профиль", "❓ FAQ / Частые вопросы", "🆘 Поддержка",
-        "📚 Техники выполнения"
-    }:
         return
     await bot.send_message(
         chat_id=ADMIN_ID,
@@ -1801,8 +1809,55 @@ async def forward_to_admin(message: Message, bot: Bot):
 
 
 # =========================
-# ✅ ПОСТЫ С КАРТИНКАМИ (АДМИН)
+# ✅ ТЕХНИКИ: ХЕНДЛЕРЫ (с картинками)
 # =========================
+async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.answer("📚 Техники выполнения — выбери упражнение:", reply_markup=tech_kb())
+    await callback.answer()
+
+
+async def cb_tech_show(callback: CallbackQuery, bot: Bot):
+    key = callback.data.split("tech:", 1)[1]
+    item = TECH.get(key)
+    if not item:
+        await callback.answer("Не нашёл упражнение", show_alert=True)
+        return
+
+    text = item["text"]
+    img_path = item["img"]
+
+    caption = text[:1024]
+    rest = text[1024:].strip()
+
+    if os.path.exists(img_path):
+        photo = FSInputFile(img_path)
+        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=tech_back_kb())
+        if rest:
+            await callback.message.answer(rest, reply_markup=tech_back_kb())
+    else:
+        await callback.message.answer(text, reply_markup=tech_back_kb())
+
+    await callback.answer()
+
+
+# =========================
+# ✅ НОВОЕ: ПОСТЫ С КАРТИНКАМИ (АДМИН) — оставил как было
+# =========================
+def admin_posts_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Создать пост", callback_data="post:new")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="menu:main")],
+    ])
+
+
+def post_confirm_kb(post_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")],
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")],
+    ])
+
+
 async def cmd_posts(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
@@ -1876,6 +1931,14 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
     if len(caption) > 1024:
         caption = caption[:1020] + "…"
 
+    # чистим последнее сообщение админа (чтобы не засорять)
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
     if media_type == "photo":
         m = await bot.send_photo(chat_id=chat_id, photo=media_file_id, caption=caption, reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, m.message_id)
@@ -1883,7 +1946,8 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
         m = await bot.send_video(chat_id=chat_id, video=media_file_id, caption=caption, reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, m.message_id)
     else:
-        await clean_send(bot, chat_id, uid, preview_title + text, reply_markup=post_confirm_kb(post_id))
+        mid = await clean_send(bot, chat_id, uid, preview_title + text, reply_markup=post_confirm_kb(post_id))
+        await set_last_bot_msg_id(uid, mid)
 
 
 async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
@@ -1942,68 +2006,63 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
 
 
 # =========================
-# РЕГИСТРАЦИЯ
+# РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
 # =========================
 def setup_handlers(dp: Dispatcher):
     dp.message.register(cmd_start, CommandStart())
 
-    dp.message.register(build_plan, F.text == "🧠 Собрать мой план")
-    dp.message.register(open_payment, F.text == "💳 Оплата / Доступ")
-    dp.message.register(open_workouts, F.text == "🏋️ Мои тренировки")
-    dp.message.register(open_nutrition, F.text == "🍽 Мой план питания")
-    dp.message.register(open_diary, F.text == "📓 Дневник тренировок")
-    dp.message.register(open_measures, F.text == "📏 Замеры")
-    dp.message.register(open_profile, F.text == "⚙️ Профиль")
-    dp.message.register(open_faq, F.text == "❓ FAQ / Частые вопросы")
-    dp.message.register(open_support, F.text == "🆘 Поддержка")
+    # меню / панель
+    dp.callback_query.register(cb_menu, F.data.startswith("menu:"))
+    dp.callback_query.register(cb_ctrl, F.data.startswith("ctrl:"))
 
-    # ✅ ТЕХНИКИ (кнопка в меню)
-    dp.message.register(open_techniques, F.text == "📚 Техники выполнения")
+    # профиль мастер
+    dp.callback_query.register(cb_profile_back, F.data.startswith("p:back:"))
+    dp.callback_query.register(cb_profile_goal, F.data.startswith("p:goal:"))
+    dp.callback_query.register(cb_profile_sex, F.data.startswith("p:sex:"))
+    dp.callback_query.register(cb_profile_age, F.data.startswith("p:age:"))
+    dp.callback_query.register(cb_profile_height, F.data.startswith("p:h:"))
+    dp.callback_query.register(cb_profile_weight, F.data.startswith("p:w:"))
+    dp.callback_query.register(cb_profile_place, F.data.startswith("p:place:"))
+    dp.callback_query.register(cb_profile_exp, F.data.startswith("p:exp:"))
+    dp.callback_query.register(cb_profile_freq, F.data.startswith("p:freq:"))
 
-    dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
-    dp.callback_query.register(cb_place, F.data.startswith("place:"))
-
+    # оплата
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
     dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
     dp.callback_query.register(admin_actions, F.data.startswith("admin_approve:") | F.data.startswith("admin_reject:"))
-
-    dp.callback_query.register(diary_new, F.data == "d:new")
-    dp.callback_query.register(diary_history, F.data == "d:history")
-
-    dp.callback_query.register(cb_measure_type, F.data.startswith("mtype:"))
-    dp.callback_query.register(cb_faq, F.data.startswith("faq:"))
-    dp.callback_query.register(cb_go_menu, F.data == "go_menu")
-
-    # ✅ ТЕХНИКИ (callback)
-    dp.callback_query.register(cb_tech_list, F.data == "tech:list")
-    dp.callback_query.register(cb_tech_show, F.data.startswith("tech:"))
-
-    dp.message.register(profile_sex, ProfileFlow.sex)
-    dp.message.register(profile_age, ProfileFlow.age)
-    dp.message.register(profile_height, ProfileFlow.height)
-    dp.message.register(profile_weight, ProfileFlow.weight)
-    dp.message.register(profile_exp, ProfileFlow.exp)
-    dp.message.register(profile_freq, ProfileFlow.freq)
-
-    # ✅ Оплата: теперь только чек
+    dp.message.register(pay_amount, PaymentFlow.waiting_amount)
+    dp.message.register(pay_last4, PaymentFlow.waiting_last4)
     dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
 
+    # дневник
+    dp.callback_query.register(diary_new, F.data == "d:new")
+    dp.callback_query.register(diary_history, F.data == "d:history")
     dp.message.register(diary_choose_day, DiaryFlow.choose_day)
     dp.message.register(diary_enter_title, DiaryFlow.enter_title)
     dp.message.register(diary_enter_sets, DiaryFlow.enter_sets)
 
+    # замеры
+    dp.callback_query.register(cb_measure_type, F.data.startswith("mtype:"))
     dp.message.register(measure_value, MeasureFlow.enter_value)
-    dp.message.register(faq_ask, FAQFlow.ask)
 
+    # техники
+    dp.callback_query.register(cb_tech_list, F.data == "tech:list")
+    dp.callback_query.register(cb_tech_show, F.data.startswith("tech:"))
+
+    # админ посты
     dp.message.register(cmd_posts, Command("posts"))
     dp.callback_query.register(cb_post_new, F.data == "post:new")
     dp.callback_query.register(cb_post_cancel, F.data == "post:cancel")
     dp.callback_query.register(cb_post_send, F.data.startswith("post:send:"))
     dp.message.register(post_waiting_content, PostFlow.waiting_content)
 
+    # поддержка (любой текст пользователи -> админу)
     dp.message.register(forward_to_admin)
 
 
+# =========================
+# WEB SERVER (Render/health)
+# =========================
 async def run_web_server():
     app = web.Application()
 
@@ -2026,7 +2085,7 @@ async def run_web_server():
 
 
 # =========================
-# MAIN (устойчивый запуск: автоперезапуск при ошибках)
+# MAIN (устойчивый запуск)
 # =========================
 async def main():
     if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
@@ -2063,10 +2122,8 @@ async def main():
         run_web_server(),
     )
 
-
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
