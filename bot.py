@@ -16,10 +16,22 @@ from aiogram.types import (
     Message, CallbackQuery,
     ReplyKeyboardMarkup, KeyboardButton,
     InlineKeyboardMarkup, InlineKeyboardButton,
-    FSInputFile,  # ✅ ДОБАВЛЕНО
+    FSInputFile,
 )
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("trainer_bot")
+
+# =========================
+# ✅ ПУТИ (чтобы картинки работали и на сервере)
+# =========================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def p(*parts: str) -> str:
+    """Абсолютный путь относительно папки, где лежит bot.py"""
+    return os.path.join(BASE_DIR, *parts)
 
 # =========================
 # НАСТРОЙКИ (через ENV — безопасно для GitHub/Render)
@@ -31,7 +43,7 @@ BANK_NAME = os.getenv("BANK_NAME", "Сбербанк")
 CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
 CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 
-DB_PATH = os.getenv("DB_PATH", "bot.db")
+DB_PATH = os.getenv("DB_PATH", p("bot.db"))
 
 # ТАРИФЫ
 TARIFFS = {
@@ -41,9 +53,6 @@ TARIFFS = {
 }
 
 TG_SAFE_MSG_LEN = 3800
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("trainer_bot")
 
 
 # =========================
@@ -60,10 +69,9 @@ class ProfileFlow(StatesGroup):
     freq = State()
 
 
+# ✅ УПРОЩЕНО: после "Я оплатил" — просим только чек/скрин
 class PaymentFlow(StatesGroup):
     choose_tariff = State()
-    waiting_amount = State()
-    waiting_last4 = State()
     waiting_receipt = State()
 
 
@@ -82,10 +90,10 @@ class FAQFlow(StatesGroup):
     ask = State()
 
 
-# ✅ НОВОЕ: ПОСТЫ (с картинкой/без) + РАССЫЛКА
+# ✅ ПОСТЫ + РАССЫЛКА
 class PostFlow(StatesGroup):
-    waiting_content = State()   # ждём текст/фото/видео
-    waiting_confirm = State()   # подтверждение отправки
+    waiting_content = State()
+    waiting_confirm = State()
 
 
 # =========================
@@ -94,7 +102,7 @@ class PostFlow(StatesGroup):
 TECH = {
     "squat": {
         "title": "Присед",
-        "img": "media/tech/squat.jpg",
+        "img": p("media", "tech", "squat.jpg"),
         "text": (
             "📚 Присед (база)\n\n"
             "Настройка:\n"
@@ -111,26 +119,56 @@ TECH = {
             "• пятки отрываются"
         )
     },
-    "bench": {"title": "Жим лёжа", "img": "media/tech/bench.jpg",
-              "text": "📚 Жим лёжа\n\nКоротко: лопатки сведены, локти ~45°, штанга на низ груди. Без отрыва таза."},
-    "row": {"title": "Тяга (гребля)", "img": "media/tech/row.jpg",
-            "text": "📚 Тяга (гребля)\n\nКоротко: спина стабильна, тяни локтём назад, лопатка работает, без рывков."},
-    "latpulldown": {"title": "Верхний блок", "img": "media/tech/latpulldown.jpg",
-                    "text": "📚 Верхний блок\n\nКоротко: тяни к верху груди, плечи вниз, корпус не раскачивай."},
-    "pullup": {"title": "Подтягивания", "img": "media/tech/pullup.jpg",
-               "text": "📚 Подтягивания\n\nКоротко: сначала лопатки вниз, потом тяни локти к рёбрам. Без раскачки."},
-    "rdl": {"title": "Румынская тяга", "img": "media/tech/rdl.jpg",
-            "text": "📚 Румынская тяга\n\nКоротко: таз назад, спина ровная, гриф близко к ногам, колени чуть согнуты."},
-    "ohp": {"title": "Жим вверх", "img": "media/tech/ohp.jpg",
-            "text": "📚 Жим вверх\n\nКоротко: пресс напряжён, не прогибайся, штанга по линии лица, локти под грифом."},
-    "lateralraise": {"title": "Разведения в стороны", "img": "media/tech/lateralraise.jpg",
-                     "text": "📚 Разведения в стороны\n\nКоротко: локоть чуть выше кисти, без рывков, плечи вниз."},
-    "biceps": {"title": "Бицепс сгибания", "img": "media/tech/biceps.jpg",
-               "text": "📚 Бицепс сгибания\n\nКоротко: локти фиксируй, корпус не качай, движение контролируй."},
-    "triceps": {"title": "Трицепс на блоке", "img": "media/tech/triceps.jpg",
-                "text": "📚 Трицепс на блоке\n\nКоротко: локти прижаты, разгибай до конца без читинга."},
-    "legpress": {"title": "Жим ногами", "img": "media/tech/legpress.jpg",
-                 "text": "📚 Жим ногами\n\nКоротко: колени по носкам, пятки не отрывай, поясницу не отрывай от спинки."},
+    "bench": {
+        "title": "Жим лёжа",
+        "img": p("media", "tech", "bench.jpg"),
+        "text": "📚 Жим лёжа\n\nКоротко: лопатки сведены, локти ~45°, штанга на низ груди. Без отрыва таза."
+    },
+    "row": {
+        "title": "Тяга (гребля)",
+        "img": p("media", "tech", "row.jpg"),
+        "text": "📚 Тяга (гребля)\n\nКоротко: спина стабильна, тяни локтём назад, лопатка работает, без рывков."
+    },
+    "latpulldown": {
+        "title": "Верхний блок",
+        "img": p("media", "tech", "latpulldown.jpg"),
+        "text": "📚 Верхний блок\n\nКоротко: тяни к верху груди, плечи вниз, корпус не раскачивай."
+    },
+    "pullup": {
+        "title": "Подтягивания",
+        "img": p("media", "tech", "pullup.jpg"),
+        "text": "📚 Подтягивания\n\nКоротко: сначала лопатки вниз, потом тяни локти к рёбрам. Без раскачки."
+    },
+    "rdl": {
+        "title": "Румынская тяга",
+        "img": p("media", "tech", "rdl.jpg"),
+        "text": "📚 Румынская тяга\n\nКоротко: таз назад, спина ровная, гриф близко к ногам, колени чуть согнуты."
+    },
+    "ohp": {
+        "title": "Жим вверх",
+        "img": p("media", "tech", "ohp.jpg"),
+        "text": "📚 Жим вверх\n\nКоротко: пресс напряжён, не прогибайся, штанга по линии лица, локти под грифом."
+    },
+    "lateralraise": {
+        "title": "Разведения в стороны",
+        "img": p("media", "tech", "lateralraise.jpg"),
+        "text": "📚 Разведения в стороны\n\nКоротко: локоть чуть выше кисти, без рывков, плечи вниз."
+    },
+    "biceps": {
+        "title": "Бицепс сгибания",
+        "img": p("media", "tech", "biceps.jpg"),
+        "text": "📚 Бицепс сгибания\n\nКоротко: локти фиксируй, корпус не качай, движение контролируй."
+    },
+    "triceps": {
+        "title": "Трицепс на блоке",
+        "img": p("media", "tech", "triceps.jpg"),
+        "text": "📚 Трицепс на блоке\n\nКоротко: локти прижаты, разгибай до конца без читинга."
+    },
+    "legpress": {
+        "title": "Жим ногами",
+        "img": p("media", "tech", "legpress.jpg"),
+        "text": "📚 Жим ногами\n\nКоротко: колени по носкам, пятки не отрывай, поясницу не отрывай от спинки."
+    },
 }
 
 
@@ -175,7 +213,7 @@ def main_menu_kb():
             [KeyboardButton(text="🏋️ Мои тренировки"), KeyboardButton(text="🍽 Мой план питания")],
             [KeyboardButton(text="📓 Дневник тренировок"), KeyboardButton(text="📏 Замеры")],
             [KeyboardButton(text="⚙️ Профиль"), KeyboardButton(text="❓ FAQ / Частые вопросы")],
-            [KeyboardButton(text="📚 Техники выполнения")],  # ✅ ДОБАВЛЕНО
+            [KeyboardButton(text="📚 Техники выполнения")],
             [KeyboardButton(text="🆘 Поддержка")],
         ],
         resize_keyboard=True
@@ -256,7 +294,7 @@ def faq_inline_kb():
     ])
 
 
-# ✅ НОВОЕ: КНОПКИ ДЛЯ АДМИН-ПОСТОВ
+# ✅ КНОПКИ ДЛЯ АДМИН-ПОСТОВ
 def admin_posts_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="➕ Создать пост", callback_data="post:new")],
@@ -362,7 +400,7 @@ def suggest_meals_count(calories: int) -> int:
     return 3
 
 
-# ✅ НОВОЕ: Анти-спам чата (храним последнее сообщение БОТА и удаляем его перед отправкой нового)
+# ✅ Анти-спам: храним последнее сообщение БОТА и удаляем его перед отправкой нового
 async def get_last_bot_msg_id(user_id: int) -> Optional[int]:
     async with db() as conn:
         async with conn.execute("SELECT last_bot_msg_id FROM bot_state WHERE user_id=?", (user_id,)) as cur:
@@ -396,14 +434,6 @@ async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_mark
     await set_last_bot_msg_id(user_id, m.message_id)
 
 
-async def clean_edit(message: Message, user_id: int, text: str, reply_markup=None):
-    try:
-        await message.edit_text(text, reply_markup=reply_markup)
-        await set_last_bot_msg_id(user_id, message.message_id)
-    except Exception:
-        await message.answer(text, reply_markup=reply_markup)
-
-
 # =========================
 # ✅ ТЕХНИКИ: ХЕНДЛЕРЫ
 # =========================
@@ -425,19 +455,36 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
         await callback.answer("Не нашёл упражнение", show_alert=True)
         return
 
-    text = item["text"]
-    img_path = item["img"]
+    text = (item.get("text") or "").strip()
+    img_path = item.get("img") or ""
 
-    caption = text[:1024]
-    rest = text[1024:].strip()
+    caption = (text[:1024] if text else "").strip()
+    rest = (text[1024:].strip() if text and len(text) > 1024 else "")
 
-    if os.path.exists(img_path):
-        photo = FSInputFile(img_path)
-        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=tech_back_kb())
-        if rest:
-            await callback.message.answer(rest, reply_markup=tech_back_kb())
+    if img_path and os.path.isfile(img_path):
+        try:
+            photo = FSInputFile(img_path)
+            await callback.message.answer_photo(
+                photo=photo,
+                caption=caption if caption else None,
+                reply_markup=tech_back_kb()
+            )
+            if rest:
+                await callback.message.answer(rest, reply_markup=tech_back_kb())
+        except Exception as e:
+            await callback.message.answer(
+                f"⚠️ Не смог отправить фото (ошибка: {e}).\n"
+                f"Путь файла: {img_path}\n\n{text}",
+                reply_markup=tech_back_kb()
+            )
     else:
-        await callback.message.answer(text, reply_markup=tech_back_kb())
+        await callback.message.answer(
+            "⚠️ Фото не найдено.\n"
+            f"Бот ищет тут:\n{img_path}\n\n"
+            "Проверь, что файлы реально лежат в репозитории/на сервере (media/tech/*.jpg) и не игнорируются .gitignore.\n\n"
+            + (text or ""),
+            reply_markup=tech_back_kb()
+        )
 
     await callback.answer()
 
@@ -551,13 +598,10 @@ FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
     "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
     "veg":       {"name": "Овощи (микс)",         "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
-
     "chicken":   {"name": "Куриная грудка",       "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
     "eggs":      {"name": "Яйца",                 "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
-
     "curd_0_5":  {"name": "Творог 0–5%",          "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
     "banana":    {"name": "Банан",                "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
-
     "oil":       {"name": "Оливковое масло",      "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
 }
 
@@ -671,7 +715,7 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
 
 def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: float, exp: str, freq: int = 3, place: str = "дом") -> str:
     calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
-    p, f, c = calc_macros(calories, weight, goal)
+    p_, f_, c_ = calc_macros(calories, weight, goal)
     meals = suggest_meals_count(calories)
 
     tips = (
@@ -689,13 +733,13 @@ def generate_nutrition_plan(goal: str, sex: str, age: int, height: int, weight: 
         "• План однотипный — так проще соблюдать и не путаться.\n"
     )
 
-    three_days = build_3day_meal_plan(calories, p, f, c, meals)
+    three_days = build_3day_meal_plan(calories, p_, f_, c_, meals)
 
     return (
         "🍽 МОЙ ПЛАН ПИТАНИЯ (3 дня)\n\n"
         f"Цель: {goal}\n"
         f"Калории: ~{calories} ккал/день\n"
-        f"БЖУ (ориентир): Белки {p}г / Жиры {f}г / Углеводы {c}г\n"
+        f"БЖУ (ориентир): Белки {p_}г / Жиры {f_}г / Углеводы {c_}г\n"
         f"Приёмов пищи: {meals}\n\n"
         "Правила (коротко и по делу):\n"
         "1) Попади в калории и белок — это главное\n"
@@ -726,7 +770,7 @@ def faq_text(topic: str) -> str:
             "Почему подтверждение вручную:\n"
             "— это перевод на карту, без платёжного сервиса, поэтому админ сверяет чек.\n\n"
             "Если доступ не открылся за 5–15 минут:\n"
-            "— зайди в «🆘 Поддержка» и пришли: дату/сумму/тариф/чек."
+            "— зайди в «🆘 Поддержка» и пришли: дату/тариф/чек."
         )
     if topic == "plan":
         return (
@@ -936,14 +980,12 @@ async def init_db():
             created_at TEXT
         )
         """)
-
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS bot_state (
             user_id INTEGER PRIMARY KEY,
             last_bot_msg_id INTEGER
         )
         """)
-
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -965,7 +1007,6 @@ async def init_db():
             created_at TEXT
         )
         """)
-
         await conn.commit()
 
 
@@ -1103,7 +1144,7 @@ async def create_payment(user_id: int, tariff: str, amount: int, last4: str, cod
         cur = await conn.execute("""
             INSERT INTO payments (user_id, tariff, amount, last4, code, status, receipt_file_id, created_at)
             VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
-        """, (user_id, tariff, amount, last4, code, receipt_file_id, now))
+        """, (user_id, tariff, int(amount or 0), (last4 or ""), code, receipt_file_id, now))
         await conn.commit()
         return cur.lastrowid
 
@@ -1390,8 +1431,8 @@ def access_status_str(a: dict) -> str:
         return "Статус: ❌ нет доступа"
     if a.get("tariff") == "life":
         return "Статус: ✅ доступ активен (НАВСЕГДА)"
-    exp = a.get("expires_at")
-    return f"Статус: ✅ доступ активен до {exp[:10]}" if exp else "Статус: ✅ доступ активен"
+    exp_ = a.get("expires_at")
+    return f"Статус: ✅ доступ активен до {exp_[:10]}" if exp_ else "Статус: ✅ доступ активен"
 
 
 async def open_payment(message: Message, state: FSMContext):
@@ -1460,32 +1501,9 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
 
-    await callback.message.answer(
-        f"Введи сумму, которую перевёл.\n"
-        f"Ожидаемая сумма для тарифа «{TARIFFS[tariff]['title']}»: {TARIFFS[tariff]['price']}₽"
-    )
-    await state.set_state(PaymentFlow.waiting_amount)
-    await callback.answer()
-
-
-async def pay_amount(message: Message, state: FSMContext):
-    txt = re.sub(r"[^\d]", "", message.text or "")
-    if not txt:
-        await message.answer("Сумму числом, например 1150")
-        return
-    await state.update_data(amount=int(txt))
-    await message.answer("Введи последние 4 цифры карты отправителя (или 0000):")
-    await state.set_state(PaymentFlow.waiting_last4)
-
-
-async def pay_last4(message: Message, state: FSMContext):
-    txt = re.sub(r"[^\d]", "", message.text or "")
-    if len(txt) != 4:
-        await message.answer("Нужно ровно 4 цифры. Например 1234 (или 0000)")
-        return
-    await state.update_data(last4=txt)
-    await message.answer("Отправь чек/скрин оплаты как фото:")
+    await callback.message.answer("Ок ✅ Теперь отправь чек/скрин оплаты как фото:")
     await state.set_state(PaymentFlow.waiting_receipt)
+    await callback.answer()
 
 
 async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
@@ -1500,10 +1518,12 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
         return
 
-    amount = int(data.get("amount", 0))
-    last4 = data.get("last4", "0000")
     receipt_file_id = message.photo[-1].file_id
     code = gen_order_code(message.from_user.id)
+
+    # ✅ сохраняем сумму тарифа (без вопросов пользователю)
+    amount = int(TARIFFS[tariff]["price"])
+    last4 = ""  # больше не спрашиваем
 
     payment_id = await create_payment(message.from_user.id, tariff, amount, last4, code, receipt_file_id)
     await message.answer("✅ Заявка отправлена. Как подтвержу — доступ откроется.")
@@ -1518,7 +1538,6 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         f"user_id: {message.from_user.id}\n"
         f"tariff: {tariff} ({TARIFFS[tariff]['title']})\n"
         f"amount: {amount}\n"
-        f"last4: {last4}\n"
         f"code: {code}\n"
     )
     await bot.send_photo(
@@ -1538,16 +1557,16 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
     action, pid = callback.data.split(":")
     pid = int(pid)
 
-    p = await get_payment(pid)
-    if not p:
+    pmt = await get_payment(pid)
+    if not pmt:
         await callback.answer("Платёж не найден", show_alert=True)
         return
-    if p["status"] != "pending":
-        await callback.answer(f"Уже обработано: {p['status']}", show_alert=True)
+    if pmt["status"] != "pending":
+        await callback.answer(f"Уже обработано: {pmt['status']}", show_alert=True)
         return
 
-    user_id = p["user_id"]
-    tariff = p.get("tariff")
+    user_id = pmt["user_id"]
+    tariff = pmt.get("tariff")
 
     if action == "admin_approve":
         if tariff not in TARIFFS:
@@ -1572,7 +1591,7 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
         await set_payment_status(pid, "rejected")
         await bot.send_message(
             chat_id=user_id,
-            text="❌ Оплата отклонена. Проверь сумму/чек/комментарий и попробуй снова: 💳 Оплата / Доступ"
+            text="❌ Оплата отклонена. Проверь чек/комментарий и попробуй снова: 💳 Оплата / Доступ"
         )
         await callback.answer("Отклонено ❌")
 
@@ -1692,10 +1711,10 @@ async def diary_enter_sets(message: Message, state: FSMContext):
     data = await state.get_data()
     session_id = data["session_id"]
 
-    for i, p in enumerate(parts, start=1):
-        m = re.match(r"^(\d+(\.\d+)?)\s*[xх]\s*(\d+)$", p.lower())
+    for i, pp in enumerate(parts, start=1):
+        m = re.match(r"^(\d+(\.\d+)?)\s*[xх]\s*(\d+)$", pp.lower())
         if not m:
-            await message.answer(f"Не понял подход: '{p}'. Пример: 60x8")
+            await message.answer(f"Не понял подход: '{pp}'. Пример: 60x8")
             return
         w = float(m.group(1))
         r = int(m.group(3))
@@ -1818,7 +1837,7 @@ async def forward_to_admin(message: Message, bot: Bot):
 
 
 # =========================
-# ✅ НОВОЕ: ПОСТЫ С КАРТИНКАМИ (АДМИН)
+# ✅ ПОСТЫ С КАРТИНКАМИ (АДМИН)
 # =========================
 async def cmd_posts(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
@@ -1894,21 +1913,9 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
         caption = caption[:1020] + "…"
 
     if media_type == "photo":
-        last_id = await get_last_bot_msg_id(uid)
-        if last_id:
-            try:
-                await bot.delete_message(chat_id=chat_id, message_id=last_id)
-            except Exception:
-                pass
         m = await bot.send_photo(chat_id=chat_id, photo=media_file_id, caption=caption, reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, m.message_id)
     elif media_type == "video":
-        last_id = await get_last_bot_msg_id(uid)
-        if last_id:
-            try:
-                await bot.delete_message(chat_id=chat_id, message_id=last_id)
-            except Exception:
-                pass
         m = await bot.send_video(chat_id=chat_id, video=media_file_id, caption=caption, reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, m.message_id)
     else:
@@ -1985,8 +1992,6 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_profile, F.text == "⚙️ Профиль")
     dp.message.register(open_faq, F.text == "❓ FAQ / Частые вопросы")
     dp.message.register(open_support, F.text == "🆘 Поддержка")
-
-    # ✅ ТЕХНИКИ (кнопка в меню)
     dp.message.register(open_techniques, F.text == "📚 Техники выполнения")
 
     dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
@@ -2003,7 +2008,6 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_faq, F.data.startswith("faq:"))
     dp.callback_query.register(cb_go_menu, F.data == "go_menu")
 
-    # ✅ ТЕХНИКИ (callback)
     dp.callback_query.register(cb_tech_list, F.data == "tech:list")
     dp.callback_query.register(cb_tech_show, F.data.startswith("tech:"))
 
@@ -2014,8 +2018,7 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_exp, ProfileFlow.exp)
     dp.message.register(profile_freq, ProfileFlow.freq)
 
-    dp.message.register(pay_amount, PaymentFlow.waiting_amount)
-    dp.message.register(pay_last4, PaymentFlow.waiting_last4)
+    # ✅ Оплата: ждём только чек
     dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
 
     dp.message.register(diary_choose_day, DiaryFlow.choose_day)
@@ -2066,6 +2069,12 @@ async def main():
         logger.warning("ADMIN_ID не задан. Подтверждение оплат админом работать не будет.")
 
     await init_db()
+
+    # Быстрая диагностика картинок в логах (можешь оставить — полезно)
+    try:
+        logger.info("TECH squat path=%s exists=%s", TECH["squat"]["img"], os.path.isfile(TECH["squat"]["img"]))
+    except Exception:
+        pass
 
     bot = Bot(token=BOT_TOKEN)
     await bot.delete_webhook(drop_pending_updates=True)
