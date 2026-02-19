@@ -1,4 +1,537 @@
+from aiohttp import web
 
+import asyncio
+import logging
+import os
+import random
+import re
+from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
+
+import aiosqlite
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import CommandStart
+from aiogram.types import (
+    Message, CallbackQuery,
+    ReplyKeyboardMarkup, KeyboardButton,
+    InlineKeyboardMarkup, InlineKeyboardButton
+)
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.context import FSMContext
+
+# =========================
+# НАСТРОЙКИ (через ENV — безопасно для GitHub/Render)
+# =========================
+BOT_TOKEN = os.getenv("BOT_TOKEN", "PASTE_NEW_TOKEN_HERE")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+
+BANK_NAME = os.getenv("BANK_NAME", "Сбербанк")
+CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
+CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
+
+DB_PATH = os.getenv("DB_PATH", "bot.db")
+
+# (опционально) file_id картинок для техник:
+# пример: TECH_IMG_SQUAT="<file_id>"
+TECH_IMG = {
+    "squat": os.getenv("TECH_IMG_SQUAT", ""),
+    "bench": os.getenv("TECH_IMG_BENCH", ""),
+    "row": os.getenv("TECH_IMG_ROW", ""),
+    "pulldown": os.getenv("TECH_IMG_PULLDOWN", ""),
+    "pullup": os.getenv("TECH_IMG_PULLUP", ""),
+    "ohp": os.getenv("TECH_IMG_OHP", ""),
+    "deadlift_rdl": os.getenv("TECH_IMG_RDL", ""),
+    "lateral_raise": os.getenv("TECH_IMG_LATERAL", ""),
+    "biceps_curl": os.getenv("TECH_IMG_CURL", ""),
+    "triceps_pushdown": os.getenv("TECH_IMG_TRICEPS", ""),
+    "leg_press": os.getenv("TECH_IMG_LEGPRESS", ""),
+}
+
+# ТАРИФЫ
+TARIFFS = {
+    "t1": {"title": "1 месяц", "days": 30, "price": 1150},
+    "t3": {"title": "3 месяца", "days": 90, "price": 2790},
+    "life": {"title": "Навсегда", "days": None, "price": 6990},
+}
+
+TG_SAFE_MSG_LEN = 3800
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("trainer_bot")
+
+# =========================
+# FSM СТЕЙТЫ
+# =========================
+class ProfileFlow(StatesGroup):
+    goal = State()
+    sex = State()
+    age = State()
+    height = State()
+    weight = State()
+    place = State()
+    exp = State()
+    freq = State()
+
+class PaymentFlow(StatesGroup):
+    choose_tariff = State()
+    waiting_receipt = State()
+
+class DiaryFlow(StatesGroup):
+    choose_day = State()
+    enter_title = State()
+    enter_sets = State()
+
+class MeasureFlow(StatesGroup):
+    choose_type = State()
+    enter_value = State()
+
+class FAQFlow(StatesGroup):
+    ask = State()
+
+# =========================
+# UI: КНОПКИ
+# =========================
+# ✅ Панель управления — ТОЛЬКО 4 кнопки (как ты попросил)
+def control_panel_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="💳 Оплата / Доступ"), KeyboardButton(text="⚙️ Профиль")],
+            [KeyboardButton(text="❓ FAQ"), KeyboardButton(text="🆘 Поддержка")],
+        ],
+        resize_keyboard=True
+    )
+
+# ✅ Меню планов (inline, чтобы не засорять чат)
+def plans_menu_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🍽 Мой план питания", callback_data="open:nutrition")],
+        [InlineKeyboardButton(text="🏋️ Мои тренировки", callback_data="open:workouts")],
+        [InlineKeyboardButton(text="📓 Дневник тренировок", callback_data="open:diary")],
+        [InlineKeyboardButton(text="📏 Замеры", callback_data="open:measures")],
+        [InlineKeyboardButton(text="📚 Техники выполнения", callback_data="open:tech")],
+        [InlineKeyboardButton(text="🏠 Панель управления", callback_data="open:panel")],
+    ])
+
+def go_plans_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Меню", callback_data="open:plans")],
+    ])
+
+def pay_tariff_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text="📋 Меню", callback_data="open:plans")],
+        [InlineKeyboardButton(text="🏠 Панель", callback_data="open:panel")],
+    ])
+
+def pay_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Я оплатил", callback_data="pay_i_paid")],
+        [InlineKeyboardButton(text="🏠 Панель", callback_data="open:panel")],
+    ])
+
+def admin_review_kb(payment_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"admin_approve:{payment_id}")],
+        [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"admin_reject:{payment_id}")],
+    ])
+
+def goal_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💪 Масса", callback_data="goal:mass")],
+        [InlineKeyboardButton(text="🔥 Сушка", callback_data="goal:cut")],
+        [InlineKeyboardButton(text="🧩 Форма", callback_data="goal:fit")],
+        [InlineKeyboardButton(text="🏠 Панель", callback_data="open:panel")],
+    ])
+
+def measures_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚖️ Вес (кг)", callback_data="mtype:weight")],
+        [InlineKeyboardButton(text="📏 Талия (см)", callback_data="mtype:waist")],
+        [InlineKeyboardButton(text="💪 Рука (см)", callback_data="mtype:arm")],
+        [InlineKeyboardButton(text="胸 Грудь (см)", callback_data="mtype:chest")],
+        [InlineKeyboardButton(text="🦵 Бедро (см)", callback_data="mtype:thigh")],
+        [InlineKeyboardButton(text="📋 Меню", callback_data="open:plans")],
+    ])
+
+def diary_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Записать тренировку", callback_data="d:new")],
+        [InlineKeyboardButton(text="📜 История (последние 10)", callback_data="d:history")],
+        [InlineKeyboardButton(text="📋 Меню", callback_data="open:plans")],
+    ])
+
+def faq_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Оплата и доступ", callback_data="faq:pay")],
+        [InlineKeyboardButton(text="🧠 Как строится план", callback_data="faq:plan")],
+        [InlineKeyboardButton(text="🏋️ Прогресс/отказ", callback_data="faq:progress")],
+        [InlineKeyboardButton(text="🍽 Калории/БЖУ", callback_data="faq:nutrition")],
+        [InlineKeyboardButton(text="📌 Как считать калории", callback_data="faq:count")],
+        [InlineKeyboardButton(text="⚠️ Нет результата", callback_data="faq:stuck")],
+        [InlineKeyboardButton(text="😴 Сон", callback_data="faq:recovery")],
+        [InlineKeyboardButton(text="🦵 Боль/техника", callback_data="faq:safety")],
+        [InlineKeyboardButton(text="📓 Дневник/замеры", callback_data="faq:diary")],
+        [InlineKeyboardButton(text="✍️ Задать вопрос", callback_data="faq:ask")],
+        [InlineKeyboardButton(text="🏠 Панель", callback_data="open:panel")],
+    ])
+
+# =========================
+# УТИЛИТЫ: АНТИ-ЗАСОР ЧАТА
+# =========================
+async def safe_send_chunks_edit_or_new(
+    bot: Bot,
+    chat_id: int,
+    base_message: Message | None,
+    text: str,
+    reply_markup=None
+):
+    """
+    1) Если есть base_message — пробуем edit_text.
+    2) Если слишком длинно — отправляем кусками (и всё равно стараемся не плодить).
+    """
+    t = (text or "").strip()
+    if not t:
+        return None
+
+    if len(t) <= TG_SAFE_MSG_LEN and base_message is not None:
+        try:
+            await base_message.edit_text(t, reply_markup=reply_markup)
+            return base_message
+        except Exception:
+            pass
+
+    # fallback: chunks (придётся несколько сообщений)
+    chunks = []
+    while len(t) > TG_SAFE_MSG_LEN:
+        cut = t.rfind("\n", 0, TG_SAFE_MSG_LEN)
+        if cut == -1:
+            cut = TG_SAFE_MSG_LEN
+        chunks.append(t[:cut].strip())
+        t = t[cut:].strip()
+    if t:
+        chunks.append(t)
+
+    last = None
+    for i, ch in enumerate(chunks):
+        last = await bot.send_message(
+            chat_id=chat_id,
+            text=ch,
+            reply_markup=reply_markup if i == len(chunks) - 1 else None
+        )
+    return last
+
+def gen_order_code(user_id: int) -> str:
+    rnd = random.randint(100, 999)
+    return f"TG{str(user_id)[-3:]}{rnd}"
+
+def locked_text() -> str:
+    return "🔒 Раздел доступен после оплаты.\nОткрой: 💳 Оплата / Доступ"
+
+def exp_level(exp: str) -> str:
+    t = (exp or "").strip().lower()
+    if t in ("0", "новичок", "нов", "beginner"):
+        return "novice"
+    if "2+" in t or "2 +" in t or "2 года" in t or "3" in t or "4" in t or "5" in t:
+        return "adv"
+    return "mid"
+
+def _activity_factor(freq: int, place: str) -> float:
+    pl = (place or "").lower()
+    is_gym = ("зал" in pl) or (pl == "gym")
+    f = int(freq or 3)
+
+    if f <= 2:
+        return 1.35
+    if f == 3:
+        return 1.45 if is_gym else 1.40
+    if f == 4:
+        return 1.55 if is_gym else 1.50
+    return 1.65 if is_gym else 1.55
+
+def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "дом") -> int:
+    sx = (sex or "м").lower()
+    if sx == "м":
+        bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
+    else:
+        bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age - 161
+
+    af = _activity_factor(int(freq or 3), place)
+    tdee = bmr * af
+
+    g = (goal or "").lower()
+    if "мас" in g:
+        target = tdee * 1.10
+    elif "суш" in g:
+        target = tdee * 0.82
+    else:
+        target = tdee * 1.00
+
+    return int(round(target))
+
+def calc_macros(calories: int, weight_kg: float, goal: str):
+    g = (goal or "").lower()
+    protein = int(round(weight_kg * (2.2 if "суш" in g else 1.8)))
+    fat = int(round(weight_kg * 0.8))
+    carbs_kcal = max(calories - (protein * 4 + fat * 9), 0)
+    carbs = int(round(carbs_kcal / 4))
+    return protein, fat, carbs
+
+def suggest_meals_count(calories: int) -> int:
+    if calories >= 3200:
+        return 5
+    if calories >= 2600:
+        return 4
+    return 3
+
+# =========================
+# DB (устойчиво + храним last_bot_msg для удаления)
+# =========================
+@asynccontextmanager
+async def db():
+    conn = await aiosqlite.connect(DB_PATH)
+    try:
+        await conn.execute("PRAGMA journal_mode=WAL;")
+        await conn.execute("PRAGMA synchronous=NORMAL;")
+        await conn.execute("PRAGMA foreign_keys=ON;")
+        await conn.execute("PRAGMA busy_timeout=5000;")
+        yield conn
+    finally:
+        await conn.close()
+
+async def init_db():
+    async with db() as conn:
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            goal TEXT,
+            sex TEXT,
+            age INTEGER,
+            height INTEGER,
+            weight REAL,
+            place TEXT,
+            exp TEXT,
+            freq INTEGER,
+            created_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS access (
+            user_id INTEGER PRIMARY KEY,
+            paid INTEGER DEFAULT 0,
+            tariff TEXT,
+            expires_at TEXT,
+            paid_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            tariff TEXT,
+            amount INTEGER,
+            last4 TEXT,
+            code TEXT,
+            status TEXT,
+            receipt_file_id TEXT,
+            created_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS workout_plans (
+            user_id INTEGER PRIMARY KEY,
+            plan_text TEXT,
+            updated_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS nutrition_plans (
+            user_id INTEGER PRIMARY KEY,
+            plan_text TEXT,
+            updated_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS diary_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            session_date TEXT,
+            title TEXT,
+            created_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS diary_sets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER,
+            exercise TEXT,
+            set_no INTEGER,
+            weight REAL,
+            reps INTEGER
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS measurements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            mtype TEXT,
+            value REAL,
+            created_at TEXT
+        )
+        """)
+        # ✅ UI state: последнее сообщение бота (чтобы удалять и не засорять)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS ui_state (
+            user_id INTEGER PRIMARY KEY,
+            last_bot_message_id INTEGER
+        )
+        """)
+        await conn.commit()
+
+async def ensure_user(user_id: int, username: str):
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        await conn.execute(
+            "INSERT OR IGNORE INTO users (user_id, username, created_at) VALUES (?, ?, ?)",
+            (user_id, username or "", now)
+        )
+        await conn.execute(
+            "INSERT OR IGNORE INTO access (user_id, paid, tariff, expires_at, paid_at) VALUES (?, 0, NULL, NULL, NULL)",
+            (user_id,)
+        )
+        await conn.execute(
+            "INSERT OR IGNORE INTO ui_state (user_id, last_bot_message_id) VALUES (?, NULL)",
+            (user_id,)
+        )
+        await conn.commit()
+
+async def get_user(user_id: int):
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq
+            FROM users WHERE user_id=?
+        """, (user_id,)) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return {}
+    return {
+        "user_id": row[0], "username": row[1], "goal": row[2], "sex": row[3],
+        "age": row[4], "height": row[5], "weight": row[6], "place": row[7],
+        "exp": row[8], "freq": row[9]
+    }
+
+async def update_user(user_id: int, **fields):
+    if not fields:
+        return
+    keys, vals = [], []
+    for k, v in fields.items():
+        keys.append(f"{k}=?")
+        vals.append(v)
+    vals.append(user_id)
+    q = "UPDATE users SET " + ", ".join(keys) + " WHERE user_id=?"
+    async with db() as conn:
+        await conn.execute(q, tuple(vals))
+        await conn.commit()
+
+async def get_access(user_id: int):
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT paid, tariff, expires_at, paid_at FROM access WHERE user_id=?",
+            (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return {"paid": 0, "tariff": None, "expires_at": None, "paid_at": None}
+    return {"paid": row[0], "tariff": row[1], "expires_at": row[2], "paid_at": row[3]}
+
+async def is_access_active(user_id: int) -> bool:
+    a = await get_access(user_id)
+    if a["paid"] != 1:
+        return False
+    if a["tariff"] == "life":
+        return True
+    if not a["expires_at"]:
+        return False
+    try:
+        exp = datetime.fromisoformat(a["expires_at"])
+    except Exception:
+        return False
+    return datetime.utcnow() < exp
+
+async def set_paid_tariff(user_id: int, tariff_code: str):
+    t = TARIFFS.get(tariff_code)
+    if not t:
+        raise ValueError("Unknown tariff")
+    now = datetime.utcnow()
+    now_iso = now.isoformat()
+    expires_at = None if t["days"] is None else (now + timedelta(days=int(t["days"]))).isoformat()
+    async with db() as conn:
+        await conn.execute(
+            "UPDATE access SET paid=1, tariff=?, expires_at=?, paid_at=? WHERE user_id=?",
+            (tariff_code, expires_at, now_iso, user_id)
+        )
+        await conn.commit()
+
+async def save_workout_plan(user_id: int, text: str):
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        await conn.execute("""
+            INSERT INTO workout_plans (user_id, plan_text, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET plan_text=excluded.plan_text, updated_at=excluded.updated_at
+        """, (user_id, text, now))
+        await conn.commit()
+
+async def save_nutrition_plan(user_id: int, text: str):
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        await conn.execute("""
+            INSERT INTO nutrition_plans (user_id, plan_text, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET plan_text=excluded.plan_text, updated_at=excluded.updated_at
+        """, (user_id, text, now))
+        await conn.commit()
+
+async def get_workout_plan(user_id: int):
+    async with db() as conn:
+        async with conn.execute("SELECT plan_text FROM workout_plans WHERE user_id=?", (user_id,)) as cur:
+            row = await cur.fetchone()
+    return row[0] if row else None
+
+async def get_nutrition_plan(user_id: int):
+    async with db() as conn:
+        async with conn.execute("SELECT plan_text FROM nutrition_plans WHERE user_id=?", (user_id,)) as cur:
+            row = await cur.fetchone()
+    return row[0] if row else None
+
+async def create_payment(user_id: int, tariff: str, amount: int, last4: str, code: str, receipt_file_id: str):
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        cur = await conn.execute("""
+            INSERT INTO payments (user_id, tariff, amount, last4, code, status, receipt_file_id, created_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+        """, (user_id, tariff, amount, last4, code, receipt_file_id, now))
+        await conn.commit()
+        return cur.lastrowid
+
+async def get_payment(payment_id: int):
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT id, user_id, tariff, amount, last4, code, status, receipt_file_id, created_at
+            FROM payments WHERE id=?
+        """, (payment_id,)) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return {}
+    return {
+        "id": row[0], "user_id": row[1], "tariff": row[2], "amount": row[3],
+        "last4": row[4], "code": row[5], "status": row[6], "receipt_file_id": row[7], "created_at": row[8]
+    }
+
+async def set_payment_status(payment_id: int, status: str):
     async with db() as conn:
         await conn.execute("UPDATE payments SET status=? WHERE id=?", (status, payment_id))
         await conn.commit()
