@@ -124,13 +124,7 @@ def goal_inline_kb():
         [InlineKeyboardButton(text="💪 Масса", callback_data="goal:mass")],
         [InlineKeyboardButton(text="🔥 Сушка", callback_data="goal:cut")],
         [InlineKeyboardButton(text="🧩 Форма", callback_data="goal:fit")],
-    ])
-
-
-def place_inline_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏠 Дом", callback_data="place:home")],
-        [InlineKeyboardButton(text="🏋️ Зал", callback_data="place:gym")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
     ])
 
 
@@ -283,11 +277,9 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
 
     lvl = exp_level(exp)
 
-    # Seed чтобы план был "стабильным" внутри дня
     seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
     rnd = random.Random(seed)
 
-    # База и изоляция (простые)
     if is_gym:
         push_base = ["Жим лёжа (штанга)", "Жим гантелей лёжа", "Жим в тренажёре", "Отжимания"]
         pull_base = ["Тяга горизонтального блока", "Тяга гантели одной рукой", "Верхний блок", "Подтягивания (если можешь)"]
@@ -309,19 +301,15 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
         legs_iso = ["Икры стоя", "Статические выпады"]
         core = ["Планка", "Скручивания", "Подъём ног лёжа"]
 
-    # Диапазоны повторений
     reps_base = "6–10" if lvl != "novice" else "8–12"
     reps_iso = "10–15"
 
-    # Подходы
     base_sets = "3–4" if lvl != "novice" else "3"
     iso_sets = "3"
 
-    # Частота
     f = int(freq or 3)
     f = max(3, min(f, 5))
 
-    # Под цель (короткая подсказка)
     g = (goal or "").lower()
     if "суш" in g:
         note = "Сушка: держи 1–2 повтора в запасе (RIR 1–2), отказ редко.\n"
@@ -342,7 +330,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
         lg = _pick(rnd, legs_iso)
         cr = _pick(rnd, core)
 
-        # 3 изоляции всегда, 4-я по желанию/частоте
         iso_lines = [
             f"• {sh} — {iso_sets}×{reps_iso}",
             f"• {bi} — {iso_sets}×{reps_iso}",
@@ -384,7 +371,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
     "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
-    "veg":       {"name": "Овощи (микс)",          "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
+    "veg":       {"name": "Овощи (микс)",         "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
 
     "chicken":   {"name": "Куриная грудка",       "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
     "eggs":      {"name": "Яйца",                 "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
@@ -418,14 +405,12 @@ def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carb
     - Приём 1: овсянка + яйца
     - Приём 2: рис + курица + овощи + масло
     - Приём 3: рис + курица + овощи
-    - Приём 4 (если нужно): творог (+ банан опционально)
+    - Приём 4 (если нужно): творог
     - Приём 5 (если нужно): банан
-    Далее мягко подстраиваем граммовки небольшими шагами, распределяя по ДНЮ,
-    а не одной "добивкой".
+    Подстройка граммовок маленькими шагами и распределённо.
     """
     meals = max(3, min(int(meals or 3), 5))
 
-    # База (адекватные порции)
     oats_g = 70.0
     eggs_g = 180.0  # ~3 яйца
     rice_g_1 = 90.0
@@ -438,10 +423,8 @@ def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carb
     curd_g = 250.0
     banana_g = 120.0
 
-    # Собираем список приёмов
     day_meals: list[list[tuple[str, float]]] = []
     day_meals.append([("oats", oats_g), ("eggs", eggs_g)])
-
     day_meals.append([("rice", rice_g_1), ("chicken", chicken_g_1), ("veg", veg_g_1), ("oil", oil_g)])
     day_meals.append([("rice", rice_g_2), ("chicken", chicken_g_2), ("veg", veg_g_2)])
 
@@ -450,14 +433,11 @@ def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carb
     if meals >= 5:
         day_meals.append([("banana", banana_g)])
 
-    # Подстройка по целям (маленькими шагами и РАСПРЕДЕЛЁННО)
     def totals():
         flat = [x for m in day_meals for x in m]
         return _sum_nutr(flat)
 
-    # Функции корректировки (в разумных пределах)
     def add_rice(step=10.0):
-        # делим добавку по двум рисовым приёмам
         day_meals[1] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[1]]
         day_meals[2] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[2]]
 
@@ -465,36 +445,29 @@ def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carb
         day_meals[0] = [(k, (g + step if k == "oats" else g)) for (k, g) in day_meals[0]]
 
     def add_oil(step=3.0):
-        # масло добавляем в приём 2
         day_meals[1] = [(k, (g + step if k == "oil" else g)) for (k, g) in day_meals[1]]
 
     def add_chicken(step=50.0):
-        # белок распределяем
         day_meals[1] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[1]]
         day_meals[2] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[2]]
 
-    # Цели
     target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
 
-    # Сначала добираем белок (если не дотягиваем)
     for _ in range(10):
         t = totals()
         if t["p"] + 8 >= target["p"]:
             break
         add_chicken(50.0)
 
-    # Затем калории/углеводы (рис/овсянка)
     for _ in range(16):
         t = totals()
         if t["kcal"] + 80 >= target["kcal"]:
             break
-        # если углеводов мало — рис, иначе овсянка
         if t["c"] + 15 < target["c"]:
             add_rice(10.0)
         else:
             add_oats(10.0)
 
-    # Затем жиры (масло) если нужно
     for _ in range(12):
         t = totals()
         if t["f"] + 3 >= target["f"]:
@@ -505,12 +478,6 @@ def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carb
 
 
 def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
-    """
-    Обновлено:
-    - Нет "добивок" гигантским рисом
-    - Минимум готовки: одни и те же блюда
-    - Граммовки подстраиваются распределённо по приёмам
-    """
     out = []
     for day_i in range(1, 4):
         day_meals, tot = _build_day_items(meals, calories, protein_g, fat_g, carbs_g)
@@ -520,7 +487,6 @@ def build_3day_meal_plan(calories: int, protein_g: int, fat_g: int, carbs_g: int
             mt = _sum_nutr(m)
             lines.append(f"Приём {mi}  ({_fmt_tot(mt)})")
             for k, g in m:
-                # яйца показываем как "примерно шт"
                 if k == "eggs":
                     est = max(1, int(round(g / 60.0)))
                     lines.append(f"• {FOOD_DB[k]['name']} — ~{est} шт (≈{int(round(g))} г)")
@@ -1090,6 +1056,311 @@ async def get_last_measures(user_id: int, mtype: str, limit: int = 8):
 
 
 # =========================
+# ПРОФИЛЬ — МАСТЕР (один экран, edit_text, шкала прогресса)
+# =========================
+PROFILE_STEPS_TOTAL = 8  # goal, sex, age, height, weight, place, exp, freq
+
+def _progress_bar(step: int, total: int = PROFILE_STEPS_TOTAL) -> str:
+    step = max(1, min(step, total))
+    filled = int(round((step / total) * 10))
+    filled = max(1, min(filled, 10))
+    return f"Шаг {step}/{total}  " + ("█" * filled) + ("░" * (10 - filled))
+
+async def _edit_or_send(msg: Message, text: str, reply_markup=None):
+    try:
+        await msg.edit_text(text, reply_markup=reply_markup)
+    except Exception:
+        await msg.answer(text, reply_markup=reply_markup)
+
+def sex_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👨 Мужчина", callback_data="sex:m"),
+         InlineKeyboardButton(text="👩 Женщина", callback_data="sex:f")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:goal"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
+def age_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="18–25", callback_data="age:18-25"),
+         InlineKeyboardButton(text="26–35", callback_data="age:26-35")],
+        [InlineKeyboardButton(text="36–45", callback_data="age:36-45"),
+         InlineKeyboardButton(text="46–55", callback_data="age:46-55")],
+        [InlineKeyboardButton(text="56+", callback_data="age:56+")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:sex"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
+def height_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="150–160 см", callback_data="height:150-160"),
+         InlineKeyboardButton(text="161–170 см", callback_data="height:161-170")],
+        [InlineKeyboardButton(text="171–180 см", callback_data="height:171-180"),
+         InlineKeyboardButton(text="181–190 см", callback_data="height:181-190")],
+        [InlineKeyboardButton(text="191+ см", callback_data="height:191+")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:age"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
+def weight_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="30–50", callback_data="weight:30-50"),
+         InlineKeyboardButton(text="50–60", callback_data="weight:50-60")],
+        [InlineKeyboardButton(text="60–80", callback_data="weight:60-80"),
+         InlineKeyboardButton(text="80–100", callback_data="weight:80-100")],
+        [InlineKeyboardButton(text="100–120", callback_data="weight:100-120"),
+         InlineKeyboardButton(text="120+", callback_data="weight:120+")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:height"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
+def exp_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🌱 Новичок (0)", callback_data="exp:0")],
+        [InlineKeyboardButton(text="📈 1–2 года", callback_data="exp:1-2")],
+        [InlineKeyboardButton(text="💪 2+ года", callback_data="exp:2+")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:place"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
+def freq_inline_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="3", callback_data="freq:3"),
+         InlineKeyboardButton(text="4", callback_data="freq:4"),
+         InlineKeyboardButton(text="5", callback_data="freq:5")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:exp"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+
+def _range_mid_int(s: str, default_mid: int) -> int:
+    s = (s or "").strip()
+    if s.endswith("+"):
+        return default_mid
+    if "-" in s:
+        a, b = s.split("-", 1)
+        a = int(re.sub(r"\D", "", a) or "0")
+        b = int(re.sub(r"\D", "", b) or "0")
+        if a and b:
+            return int(round((a + b) / 2))
+    return default_mid
+
+def _range_mid_float(s: str, default_mid: float) -> float:
+    s = (s or "").strip()
+    if s.endswith("+"):
+        return float(default_mid)
+    if "-" in s:
+        a, b = s.split("-", 1)
+        a = float(re.sub(r"[^\d]", "", a) or "0")
+        b = float(re.sub(r"[^\d]", "", b) or "0")
+        if a and b:
+            return float((a + b) / 2)
+    return float(default_mid)
+
+async def open_profile(message: Message, state: FSMContext):
+    u = await get_user(message.from_user.id)
+    header = (
+        "⚙️ Профиль — заполним быстро (кнопками)\n"
+        f"{_progress_bar(1)}\n\n"
+        "Выбери цель:"
+    )
+    await message.answer(header, reply_markup=goal_inline_kb())
+    await state.set_state(ProfileFlow.goal)
+
+async def cb_goal(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    goal = {"mass": "масса", "cut": "сушка", "fit": "форма"}.get(v, v)
+    await update_user(callback.from_user.id, goal=goal)
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(2)}\n\n"
+        "👤 Выбери пол:"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=sex_inline_kb())
+    await state.set_state(ProfileFlow.sex)
+    await callback.answer()
+
+async def cb_sex(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    sex = "м" if v == "m" else "ж"
+    await update_user(callback.from_user.id, sex=sex)
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(3)}\n\n"
+        "🎂 Выбери возраст:"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=age_inline_kb())
+    await state.set_state(ProfileFlow.age)
+    await callback.answer()
+
+async def cb_age(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    age = _range_mid_int(v, default_mid=60 if v == "56+" else 22)
+    await update_user(callback.from_user.id, age=age)
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(4)}\n\n"
+        "📏 Выбери рост:"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=height_inline_kb())
+    await state.set_state(ProfileFlow.height)
+    await callback.answer()
+
+async def cb_height(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    height = _range_mid_int(v, default_mid=195 if v == "191+" else 175)
+    await update_user(callback.from_user.id, height=height)
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(5)}\n\n"
+        "⚖️ Выбери вес:"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=weight_inline_kb())
+    await state.set_state(ProfileFlow.weight)
+    await callback.answer()
+
+async def cb_weight(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    weight = _range_mid_float(v, default_mid=125.0 if v == "120+" else 70.0)
+    await update_user(callback.from_user.id, weight=weight)
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(6)}\n\n"
+        "🏠/🏋️ Где тренируешься?"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏠 Дом", callback_data="place:home"),
+         InlineKeyboardButton(text="🏋️ Зал", callback_data="place:gym")],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:weight"),
+         InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+    ])
+    await _edit_or_send(callback.message, text, reply_markup=kb)
+    await state.set_state(ProfileFlow.place)
+    await callback.answer()
+
+async def cb_place(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    place = "дом" if v == "home" else "зал"
+    await update_user(callback.from_user.id, place=place)
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(7)}\n\n"
+        "📚 Выбери опыт тренировок:"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=exp_inline_kb())
+    await state.set_state(ProfileFlow.exp)
+    await callback.answer()
+
+async def cb_exp(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    exp_map = {"0": "0", "1-2": "1-2 года", "2+": "2+ года"}
+    exp = exp_map.get(v, v)
+    await update_user(callback.from_user.id, exp=exp)
+
+    lvl = exp_level(exp)
+    if lvl == "novice":
+        await update_user(callback.from_user.id, freq=3)
+        text = (
+            "✅ Профиль заполнен!\n"
+            f"{_progress_bar(PROFILE_STEPS_TOTAL)}\n\n"
+            "Для новичка поставил частоту: 3×/нед.\n\n"
+            "Дальше по шагам:\n"
+            "1) 💳 Оплата / Доступ\n"
+            "2) 🧠 Собрать мой план"
+        )
+        await _edit_or_send(
+            callback.message,
+            text,
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💳 Оплата / Доступ", callback_data="go_pay")],
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+            ])
+        )
+        await state.clear()
+        await callback.answer()
+        return
+
+    text = (
+        "⚙️ Профиль\n"
+        f"{_progress_bar(8)}\n\n"
+        "📅 Сколько тренировок в неделю удобно?"
+    )
+    await _edit_or_send(callback.message, text, reply_markup=freq_inline_kb())
+    await state.set_state(ProfileFlow.freq)
+    await callback.answer()
+
+async def cb_freq(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":")[1]
+    if v not in ("3", "4", "5"):
+        await callback.answer("Выбери 3/4/5", show_alert=True)
+        return
+    await update_user(callback.from_user.id, freq=int(v))
+
+    text = (
+        "✅ Профиль заполнен!\n"
+        f"{_progress_bar(PROFILE_STEPS_TOTAL)}\n\n"
+        "Дальше по шагам:\n"
+        "1) 💳 Оплата / Доступ\n"
+        "2) 🧠 Собрать мой план"
+    )
+    await _edit_or_send(
+        callback.message,
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💳 Оплата / Доступ", callback_data="go_pay")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+        ])
+    )
+    await state.clear()
+    await callback.answer()
+
+async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
+    target = callback.data.split(":")[1]  # goal/sex/age/height/weight/place/exp
+
+    if target == "goal":
+        text = "⚙️ Профиль — заполним быстро (кнопками)\n" + _progress_bar(1) + "\n\nВыбери цель:"
+        await _edit_or_send(callback.message, text, reply_markup=goal_inline_kb())
+        await state.set_state(ProfileFlow.goal)
+    elif target == "sex":
+        text = "⚙️ Профиль\n" + _progress_bar(2) + "\n\n👤 Выбери пол:"
+        await _edit_or_send(callback.message, text, reply_markup=sex_inline_kb())
+        await state.set_state(ProfileFlow.sex)
+    elif target == "age":
+        text = "⚙️ Профиль\n" + _progress_bar(3) + "\n\n🎂 Выбери возраст:"
+        await _edit_or_send(callback.message, text, reply_markup=age_inline_kb())
+        await state.set_state(ProfileFlow.age)
+    elif target == "height":
+        text = "⚙️ Профиль\n" + _progress_bar(4) + "\n\n📏 Выбери рост:"
+        await _edit_or_send(callback.message, text, reply_markup=height_inline_kb())
+        await state.set_state(ProfileFlow.height)
+    elif target == "weight":
+        text = "⚙️ Профиль\n" + _progress_bar(5) + "\n\n⚖️ Выбери вес:"
+        await _edit_or_send(callback.message, text, reply_markup=weight_inline_kb())
+        await state.set_state(ProfileFlow.weight)
+    elif target == "place":
+        text = "⚙️ Профиль\n" + _progress_bar(6) + "\n\n🏠/🏋️ Где тренируешься?"
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🏠 Дом", callback_data="place:home"),
+             InlineKeyboardButton(text="🏋️ Зал", callback_data="place:gym")],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data="prof_back:weight"),
+             InlineKeyboardButton(text="🏠 Меню", callback_data="go_menu")],
+        ])
+        await _edit_or_send(callback.message, text, reply_markup=kb)
+        await state.set_state(ProfileFlow.place)
+    elif target == "exp":
+        text = "⚙️ Профиль\n" + _progress_bar(7) + "\n\n📚 Выбери опыт тренировок:"
+        await _edit_or_send(callback.message, text, reply_markup=exp_inline_kb())
+        await state.set_state(ProfileFlow.exp)
+
+    await callback.answer()
+
+
+# =========================
 # ХЕНДЛЕРЫ
 # =========================
 async def cmd_start(message: Message):
@@ -1112,120 +1383,6 @@ async def cb_go_menu(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.answer("Ок 👇", reply_markup=main_menu_kb())
     await callback.answer()
-
-
-# ---- Профиль ----
-async def open_profile(message: Message, state: FSMContext):
-    u = await get_user(message.from_user.id)
-    await message.answer(
-        "⚙️ Профиль\n\n"
-        f"Цель: {u.get('goal') or '—'}\n"
-        f"Пол: {u.get('sex') or '—'}\n"
-        f"Возраст: {u.get('age') or '—'}\n"
-        f"Рост: {u.get('height') or '—'}\n"
-        f"Вес: {u.get('weight') or '—'}\n"
-        f"Где тренируешься: {u.get('place') or '—'}\n"
-        f"Опыт: {u.get('exp') or '—'}\n"
-        f"Частота: {u.get('freq') or '—'}\n\n"
-        "Выбери цель:",
-        reply_markup=goal_inline_kb()
-    )
-    await state.set_state(ProfileFlow.goal)
-
-
-async def cb_goal(callback: CallbackQuery, state: FSMContext):
-    v = callback.data.split(":")[1]
-    goal = {"mass": "масса", "cut": "сушка", "fit": "форма"}.get(v, v)
-    await update_user(callback.from_user.id, goal=goal)
-    await callback.message.answer("Пол? Напиши: м или ж")
-    await state.set_state(ProfileFlow.sex)
-    await callback.answer()
-
-
-async def profile_sex(message: Message, state: FSMContext):
-    t = (message.text or "").strip().lower()
-    if t not in ("м", "ж", "муж", "жен", "мужской", "женский"):
-        await message.answer("Напиши просто: м или ж")
-        return
-    sex = "м" if t.startswith("м") else "ж"
-    await update_user(message.from_user.id, sex=sex)
-    await message.answer("Возраст (числом), например 19:")
-    await state.set_state(ProfileFlow.age)
-
-
-async def profile_age(message: Message, state: FSMContext):
-    if not (message.text or "").isdigit():
-        await message.answer("Возраст нужен числом, например 19")
-        return
-    age = int(message.text)
-    if age < 10 or age > 90:
-        await message.answer("Возраст странный. Введи ещё раз.")
-        return
-    await update_user(message.from_user.id, age=age)
-    await message.answer("Рост (см), например 175:")
-    await state.set_state(ProfileFlow.height)
-
-
-async def profile_height(message: Message, state: FSMContext):
-    if not (message.text or "").isdigit():
-        await message.answer("Рост числом в см, например 175")
-        return
-    h = int(message.text)
-    if h < 120 or h > 230:
-        await message.answer("Рост странный. Введи ещё раз.")
-        return
-    await update_user(message.from_user.id, height=h)
-    await message.answer("Вес (кг), например 72 или 72.5:")
-    await state.set_state(ProfileFlow.weight)
-
-
-async def profile_weight(message: Message, state: FSMContext):
-    txt = (message.text or "").strip().replace(",", ".")
-    try:
-        w = float(txt)
-    except:
-        await message.answer("Вес числом, например 72 или 72.5")
-        return
-    if w < 30 or w > 250:
-        await message.answer("Вес странный. Введи ещё раз.")
-        return
-    await update_user(message.from_user.id, weight=w)
-    await message.answer("Где тренируешься? Выбери:", reply_markup=place_inline_kb())
-    await state.set_state(ProfileFlow.place)
-
-
-async def cb_place(callback: CallbackQuery, state: FSMContext):
-    v = callback.data.split(":")[1]
-    place = "дом" if v == "home" else "зал"
-    await update_user(callback.from_user.id, place=place)
-    await callback.message.answer("Опыт? Напиши: 0 / 1-2 года / 2+ года")
-    await state.set_state(ProfileFlow.exp)
-    await callback.answer()
-
-
-async def profile_exp(message: Message, state: FSMContext):
-    exp = (message.text or "").strip()
-    await update_user(message.from_user.id, exp=exp)
-
-    lvl = exp_level(exp)
-    if lvl == "novice":
-        await update_user(message.from_user.id, freq=3)
-        await message.answer("✅ Профиль заполнен (для новичка будет 3×/нед).", reply_markup=main_menu_kb())
-        await state.clear()
-        return
-
-    await message.answer("Сколько тренировок в неделю удобно? Напиши: 3 / 4 / 5")
-    await state.set_state(ProfileFlow.freq)
-
-
-async def profile_freq(message: Message, state: FSMContext):
-    t = re.sub(r"[^\d]", "", message.text or "")
-    if t not in ("3", "4", "5"):
-        await message.answer("Напиши просто цифру: 3 или 4 или 5")
-        return
-    await update_user(message.from_user.id, freq=int(t))
-    await message.answer("✅ Профиль заполнен. Теперь: 💳 Оплата / Доступ", reply_markup=main_menu_kb())
-    await state.clear()
 
 
 # ---- Оплата ----
@@ -1258,6 +1415,10 @@ async def open_payment(message: Message, state: FSMContext):
     await message.answer(text, reply_markup=pay_tariff_kb())
     await state.set_state(PaymentFlow.choose_tariff)
 
+async def cb_go_pay(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await open_payment(callback.message, state)
+    await callback.answer()
 
 async def cb_tariff(callback: CallbackQuery, state: FSMContext):
     tariff_code = callback.data.split(":")[1]
@@ -1676,36 +1837,50 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_faq, F.text == "❓ FAQ / Частые вопросы")
     dp.message.register(open_support, F.text == "🆘 Поддержка")
 
+    # Профиль-мастер (кнопки + редактирование одного сообщения)
     dp.callback_query.register(cb_goal, F.data.startswith("goal:"))
+    dp.callback_query.register(cb_sex, F.data.startswith("sex:"))
+    dp.callback_query.register(cb_age, F.data.startswith("age:"))
+    dp.callback_query.register(cb_height, F.data.startswith("height:"))
+    dp.callback_query.register(cb_weight, F.data.startswith("weight:"))
     dp.callback_query.register(cb_place, F.data.startswith("place:"))
+    dp.callback_query.register(cb_exp, F.data.startswith("exp:"))
+    dp.callback_query.register(cb_freq, F.data.startswith("freq:"))
+    dp.callback_query.register(cb_profile_back, F.data.startswith("prof_back:"))
+    dp.callback_query.register(cb_go_pay, F.data == "go_pay")
 
+    # Оплата
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
     dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
     dp.callback_query.register(admin_actions, F.data.startswith("admin_approve:") | F.data.startswith("admin_reject:"))
 
+    # Дневник
     dp.callback_query.register(diary_new, F.data == "d:new")
     dp.callback_query.register(diary_history, F.data == "d:history")
 
+    # Замеры
     dp.callback_query.register(cb_measure_type, F.data.startswith("mtype:"))
+
+    # FAQ
     dp.callback_query.register(cb_faq, F.data.startswith("faq:"))
+
+    # Системные
     dp.callback_query.register(cb_go_menu, F.data == "go_menu")
 
-    dp.message.register(profile_sex, ProfileFlow.sex)
-    dp.message.register(profile_age, ProfileFlow.age)
-    dp.message.register(profile_height, ProfileFlow.height)
-    dp.message.register(profile_weight, ProfileFlow.weight)
-    dp.message.register(profile_exp, ProfileFlow.exp)
-    dp.message.register(profile_freq, ProfileFlow.freq)
-
+    # Оплата FSM
     dp.message.register(pay_amount, PaymentFlow.waiting_amount)
     dp.message.register(pay_last4, PaymentFlow.waiting_last4)
     dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
 
+    # Дневник FSM
     dp.message.register(diary_choose_day, DiaryFlow.choose_day)
     dp.message.register(diary_enter_title, DiaryFlow.enter_title)
     dp.message.register(diary_enter_sets, DiaryFlow.enter_sets)
 
+    # Замеры FSM
     dp.message.register(measure_value, MeasureFlow.enter_value)
+
+    # FAQ FSM
     dp.message.register(faq_ask, FAQFlow.ask)
 
     dp.message.register(forward_to_admin)
