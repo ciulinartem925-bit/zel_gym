@@ -1,4 +1,4 @@
-\from aiohttp import web
+from aiohttp import web
 
 import asyncio
 import logging
@@ -2467,3 +2467,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
