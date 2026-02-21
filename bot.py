@@ -1264,13 +1264,150 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limitation
 
 
 # =========================
-# ПИТАНИЕ (оставил как было — логика питания прежняя)
-# (Если хочешь — могу потом так же “пример 1/2/3” оформить под твой стиль.)
+# ПИТАНИЕ (однотипное, простое) + ✅ 3 кнопки примеров
 # =========================
-# --- тут можно оставить ваш блок питания без изменений ---
-# Чтобы не раздувать ответ ещё больше, я оставил питание как в твоём коде (оно уже работало).
-# ВАЖНО: ниже open_nutrition использует generate_nutrition_summary и кнопки примеров — если у тебя был этот блок,
-# просто оставь его как есть.
+FOOD_DB = {
+    "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
+    "rice":      {"name": "Рис (сухой)",          "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
+    "veg":       {"name": "Овощи (микс)",         "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
+    "chicken":   {"name": "Куриная грудка",       "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
+    "eggs":      {"name": "Яйца",                 "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
+    "curd_0_5":  {"name": "Творог 0–5%",          "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
+    "banana":    {"name": "Банан",                "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
+    "oil":       {"name": "Оливковое масло",      "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
+}
+
+def _nutr_of(item_key: str, grams: float):
+    it = FOOD_DB[item_key]
+    k = grams / 100.0
+    return {"kcal": it["kcal"] * k, "p": it["p"] * k, "f": it["f"] * k, "c": it["c"] * k}
+
+def _sum_nutr(items: List[Tuple[str, float]]):
+    tot = {"kcal": 0.0, "p": 0.0, "f": 0.0, "c": 0.0}
+    for key, g in items:
+        n = _nutr_of(key, g)
+        for kk in tot:
+            tot[kk] += n[kk]
+    return tot
+
+def _fmt_tot(t):
+    return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
+
+def _build_day_items(meals: int, calories: int, protein_g: int, fat_g: int, carbs_g: int):
+    meals = max(3, min(int(meals or 3), 5))
+
+    oats_g = 70.0
+    eggs_g = 180.0
+    rice_g_1 = 90.0
+    rice_g_2 = 90.0
+    chicken_g_1 = 200.0
+    chicken_g_2 = 200.0
+    veg_g_1 = 250.0
+    veg_g_2 = 250.0
+    oil_g = 10.0
+    curd_g = 250.0
+    banana_g = 120.0
+
+    day_meals: List[List[Tuple[str, float]]] = []
+    day_meals.append([("oats", oats_g), ("eggs", eggs_g)])
+    day_meals.append([("rice", rice_g_1), ("chicken", chicken_g_1), ("veg", veg_g_1), ("oil", oil_g)])
+    day_meals.append([("rice", rice_g_2), ("chicken", chicken_g_2), ("veg", veg_g_2)])
+
+    if meals >= 4:
+        day_meals.append([("curd_0_5", curd_g)])
+    if meals >= 5:
+        day_meals.append([("banana", banana_g)])
+
+    def totals():
+        flat = [x for m in day_meals for x in m]
+        return _sum_nutr(flat)
+
+    def add_rice(step=10.0):
+        day_meals[1] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[1]]
+        day_meals[2] = [(k, (g + step if k == "rice" else g)) for (k, g) in day_meals[2]]
+
+    def add_oats(step=10.0):
+        day_meals[0] = [(k, (g + step if k == "oats" else g)) for (k, g) in day_meals[0]]
+
+    def add_oil(step=3.0):
+        day_meals[1] = [(k, (g + step if k == "oil" else g)) for (k, g) in day_meals[1]]
+
+    def add_chicken(step=50.0):
+        day_meals[1] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[1]]
+        day_meals[2] = [(k, (g + step if k == "chicken" else g)) for (k, g) in day_meals[2]]
+
+    target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
+
+    for _ in range(10):
+        t = totals()
+        if t["p"] + 8 >= target["p"]:
+            break
+        add_chicken(50.0)
+
+    for _ in range(16):
+        t = totals()
+        if t["kcal"] + 80 >= target["kcal"]:
+            break
+        if t["c"] + 15 < target["c"]:
+            add_rice(10.0)
+        else:
+            add_oats(10.0)
+
+    for _ in range(12):
+        t = totals()
+        if t["f"] + 3 >= target["f"]:
+            break
+        add_oil(3.0)
+
+    return day_meals, totals()
+
+def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
+    day_meals, tot = _build_day_items(meals, calories, protein_g, fat_g, carbs_g)
+
+    lines = [f"📅 Пример {day_i}", ""]
+    for mi, m in enumerate(day_meals, start=1):
+        mt = _sum_nutr(m)
+        lines.append(f"Приём {mi}  ({_fmt_tot(mt)})")
+        for k, g in m:
+            if k == "eggs":
+                est = max(1, int(round(g / 60.0)))
+                lines.append(f"• {FOOD_DB[k]['name']} — ~{est} шт (≈{int(round(g))} г)")
+            else:
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
+        lines.append("")
+    lines.append(f"✅ Итог дня: {_fmt_tot(tot)}")
+    lines.append(f"🎯 Цель:    {int(calories)} ккал | Б {int(protein_g)}г Ж {int(fat_g)}г У {int(carbs_g)}г")
+    return "\n".join(lines)
+
+def nutrition_examples_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🥣 Пример 1", callback_data="nutr:ex:1")],
+        [InlineKeyboardButton(text="🍗 Пример 2", callback_data="nutr:ex:2")],
+        [InlineKeyboardButton(text="🍚 Пример 3", callback_data="nutr:ex:3")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+def nutrition_back_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к примерам", callback_data="nutr:back")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weight: float, exp: str, freq: int = 3, place: str = "дом") -> Tuple[str, int, int, int, int, int]:
+    calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
+    p, f, c = calc_macros(calories, weight, goal)
+    meals = suggest_meals_count(calories)
+
+    summary = (
+        "🍽 Моё питание\n\n"
+        f"Цель: {goal}\n"
+        f"Калории: ~{calories} ккал/день\n"
+        f"БЖУ (ориентир): Б {p}г / Ж {f}г / У {c}г\n"
+        f"Приёмов пищи: {meals}\n\n"
+        "Нажми на пример ниже — открою готовый вариант на день.\n"
+        "⚠️ Крупы в плане указаны в СУХОМ виде. Масло считай всегда."
+    )
+    return summary, calories, p, f, c, meals
 
 
 # =========================
@@ -1911,3 +2048,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
