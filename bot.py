@@ -74,12 +74,13 @@ class PostFlow(StatesGroup):
 class ProfileWizard(StatesGroup):
     goal = State()
     sex = State()
-    age = State()
-    height = State()
-    weight = State()
+    age = State()         # теперь ввод вручную
+    height = State()      # теперь ввод вручную
+    weight = State()      # теперь ввод вручную
     place = State()
     exp = State()
     freq = State()
+    limitations = State()  # ✅ новое: ограничения
 
 
 # =========================
@@ -383,7 +384,7 @@ def tech_kb():
 
 
 def tech_back_kb():
-    # ✅ убрали кнопку "к тренировкам/меню" — оставили только назад к списку
+    # ✅ оставили только назад к списку
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад к списку", callback_data="tech:list")],
     ])
@@ -456,29 +457,25 @@ def admin_review_kb(payment_id: int):
 
 
 # =========================
-# Профиль: «приятное заполнение» + шкала
+# Профиль: «приятное заполнение» + шкала "■■■■□□□ 100%"
 # =========================
-TOTAL_PROFILE_STEPS = 8
+TOTAL_PROFILE_STEPS = 9          # шагов реально 9
+BAR_SEGMENTS = 10                # квадратиков в шкале 10
 
-
-def _bar(step: int, total: int = TOTAL_PROFILE_STEPS) -> str:
-    step = max(0, min(step, total))
-    done = "⬛" * step
-    left = "⬜" * (total - step)
-    return f"▭{done}{left}▭"
-
+def _bar(step: int) -> str:
+    step = max(0, min(step, TOTAL_PROFILE_STEPS))
+    filled = int(round(step / TOTAL_PROFILE_STEPS * BAR_SEGMENTS))
+    filled = max(0, min(filled, BAR_SEGMENTS))
+    pct = int(round(step / TOTAL_PROFILE_STEPS * 100))
+    return f"{'■'*filled}{'□'*(BAR_SEGMENTS-filled)} {pct}%"
 
 def _profile_header(step: int) -> str:
-    # ✅ добавили “воздуха” между строками
     return f"🧩 Заполнение профиля {step}/{TOTAL_PROFILE_STEPS}\n{_bar(step)}\n\n"
 
-
 def profile_done_kb():
-    # ✅ кнопка после заполнения профиля -> ведёт к главному меню (где тренировки и питание)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏋️🍽 Перейти к тренировкам и питанию", callback_data="nav:menu")]
     ])
-
 
 def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -488,7 +485,6 @@ def kb_goal():
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
-
 def kb_sex():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👨 Мужчина", callback_data="p:sex:m"),
@@ -497,43 +493,11 @@ def kb_sex():
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
-
-def kb_age():
+def _kb_input_back(back_to: str):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="18–25", callback_data="p:age:21"),
-         InlineKeyboardButton(text="26–35", callback_data="p:age:30")],
-        [InlineKeyboardButton(text="36–45", callback_data="p:age:40"),
-         InlineKeyboardButton(text="46–55", callback_data="p:age:50")],
-        [InlineKeyboardButton(text="56+", callback_data="p:age:60")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:sex")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"p:back:{back_to}")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
-
-
-def kb_height():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="150–160", callback_data="p:h:155"),
-         InlineKeyboardButton(text="161–170", callback_data="p:h:166")],
-        [InlineKeyboardButton(text="171–180", callback_data="p:h:176"),
-         InlineKeyboardButton(text="181–190", callback_data="p:h:186")],
-        [InlineKeyboardButton(text="191+", callback_data="p:h:195")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:age")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
-    ])
-
-
-def kb_weight():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="30–50", callback_data="p:w:45"),
-         InlineKeyboardButton(text="50–60", callback_data="p:w:55")],
-        [InlineKeyboardButton(text="60–80", callback_data="p:w:70"),
-         InlineKeyboardButton(text="80–100", callback_data="p:w:90")],
-        [InlineKeyboardButton(text="100–120", callback_data="p:w:110"),
-         InlineKeyboardButton(text="120+", callback_data="p:w:125")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:height")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
-    ])
-
 
 def kb_place():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -542,7 +506,6 @@ def kb_place():
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:weight")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
-
 
 def kb_exp():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -553,13 +516,18 @@ def kb_exp():
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
-
 def kb_freq():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="3×/нед", callback_data="p:freq:3"),
          InlineKeyboardButton(text="4×/нед", callback_data="p:freq:4")],
         [InlineKeyboardButton(text="5×/нед", callback_data="p:freq:5")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:exp")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+def kb_limitations():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:freq")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -571,10 +539,8 @@ def gen_order_code(user_id: int) -> str:
     rnd = random.randint(100, 999)
     return f"TG{str(user_id)[-3:]}{rnd}"
 
-
 def locked_text() -> str:
     return "🔒 Раздел доступен после оплаты.\nНажми снизу: 💳 Оплата/доступ"
-
 
 def exp_level(exp: str) -> str:
     t = (exp or "").strip().lower()
@@ -583,7 +549,6 @@ def exp_level(exp: str) -> str:
     if "2+" in t or "2 +" in t or "2 года" in t or "3" in t or "4" in t or "5" in t:
         return "adv"
     return "mid"
-
 
 def _activity_factor(freq: int, place: str) -> float:
     pl = (place or "").lower()
@@ -597,7 +562,6 @@ def _activity_factor(freq: int, place: str) -> float:
     if f == 4:
         return 1.55 if is_gym else 1.50
     return 1.65 if is_gym else 1.55
-
 
 def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "дом") -> int:
     sx = (sex or "м").lower()
@@ -619,7 +583,6 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
 
     return int(round(target))
 
-
 def calc_macros(calories: int, weight_kg: float, goal: str):
     g = (goal or "").lower()
     protein = int(round(weight_kg * (2.2 if "суш" in g else 1.8)))
@@ -628,14 +591,12 @@ def calc_macros(calories: int, weight_kg: float, goal: str):
     carbs = int(round(carbs_kcal / 4))
     return protein, fat, carbs
 
-
 def suggest_meals_count(calories: int) -> int:
     if calories >= 3200:
         return 5
     if calories >= 2600:
         return 4
     return 3
-
 
 async def safe_send(message: Message, text: str, reply_markup=None):
     if not text:
@@ -653,7 +614,6 @@ async def safe_send(message: Message, text: str, reply_markup=None):
 
     for i, ch in enumerate(chunks):
         await message.answer(ch, reply_markup=reply_markup if i == len(chunks) - 1 else None)
-
 
 async def try_delete_user_message(bot: Bot, message: Message):
     try:
@@ -676,7 +636,6 @@ async def get_last_bot_msg_id(user_id: int) -> Optional[int]:
     except Exception:
         return None
 
-
 async def set_last_bot_msg_id(user_id: int, msg_id: int):
     async with db() as conn:
         await conn.execute("""
@@ -685,7 +644,6 @@ async def set_last_bot_msg_id(user_id: int, msg_id: int):
             ON CONFLICT(user_id) DO UPDATE SET last_bot_msg_id=excluded.last_bot_msg_id
         """, (user_id, int(msg_id)))
         await conn.commit()
-
 
 async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_markup=None):
     last_id = await get_last_bot_msg_id(user_id)
@@ -697,7 +655,6 @@ async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_mark
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     await set_last_bot_msg_id(user_id, m.message_id)
     return m.message_id
-
 
 async def clean_edit(callback: CallbackQuery, user_id: int, text: str, reply_markup=None):
     try:
@@ -722,7 +679,6 @@ async def db():
     finally:
         await conn.close()
 
-
 async def init_db():
     async with db() as conn:
         await conn.execute("""
@@ -737,9 +693,16 @@ async def init_db():
             place TEXT,
             exp TEXT,
             freq INTEGER,
+            limitations TEXT,            -- ✅ новое поле
             created_at TEXT
         )
         """)
+        # если база уже была старая — аккуратно добавим колонку
+        try:
+            await conn.execute("ALTER TABLE users ADD COLUMN limitations TEXT")
+        except Exception:
+            pass
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS access (
             user_id INTEGER PRIMARY KEY,
@@ -833,7 +796,6 @@ async def init_db():
         """)
         await conn.commit()
 
-
 async def ensure_user(user_id: int, username: str):
     now = datetime.utcnow().isoformat()
     async with db() as conn:
@@ -851,11 +813,10 @@ async def ensure_user(user_id: int, username: str):
         )
         await conn.commit()
 
-
 async def get_user(user_id: int):
     async with db() as conn:
         async with conn.execute("""
-            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq
+            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq, limitations
             FROM users WHERE user_id=?
         """, (user_id,)) as cur:
             row = await cur.fetchone()
@@ -865,9 +826,8 @@ async def get_user(user_id: int):
     return {
         "user_id": row[0], "username": row[1], "goal": row[2], "sex": row[3],
         "age": row[4], "height": row[5], "weight": row[6], "place": row[7],
-        "exp": row[8], "freq": row[9]
+        "exp": row[8], "freq": row[9], "limitations": row[10]
     }
-
 
 async def update_user(user_id: int, **fields):
     if not fields:
@@ -882,7 +842,6 @@ async def update_user(user_id: int, **fields):
         await conn.execute(q, tuple(vals))
         await conn.commit()
 
-
 async def get_access(user_id: int):
     async with db() as conn:
         async with conn.execute(
@@ -893,7 +852,6 @@ async def get_access(user_id: int):
     if not row:
         return {"paid": 0, "tariff": None, "expires_at": None, "paid_at": None}
     return {"paid": row[0], "tariff": row[1], "expires_at": row[2], "paid_at": row[3]}
-
 
 async def is_access_active(user_id: int) -> bool:
     a = await get_access(user_id)
@@ -908,7 +866,6 @@ async def is_access_active(user_id: int) -> bool:
     except Exception:
         return False
     return datetime.utcnow() < exp
-
 
 async def set_paid_tariff(user_id: int, tariff_code: str):
     t = TARIFFS.get(tariff_code)
@@ -925,7 +882,6 @@ async def set_paid_tariff(user_id: int, tariff_code: str):
         )
         await conn.commit()
 
-
 async def save_workout_plan(user_id: int, text: str):
     now = datetime.utcnow().isoformat()
     async with db() as conn:
@@ -935,7 +891,6 @@ async def save_workout_plan(user_id: int, text: str):
             ON CONFLICT(user_id) DO UPDATE SET plan_text=excluded.plan_text, updated_at=excluded.updated_at
         """, (user_id, text, now))
         await conn.commit()
-
 
 async def save_nutrition_plan(user_id: int, text: str):
     now = datetime.utcnow().isoformat()
@@ -947,20 +902,17 @@ async def save_nutrition_plan(user_id: int, text: str):
         """, (user_id, text, now))
         await conn.commit()
 
-
 async def get_workout_plan(user_id: int):
     async with db() as conn:
         async with conn.execute("SELECT plan_text FROM workout_plans WHERE user_id=?", (user_id,)) as cur:
             row = await cur.fetchone()
     return row[0] if row else None
 
-
 async def get_nutrition_plan(user_id: int):
     async with db() as conn:
         async with conn.execute("SELECT plan_text FROM nutrition_plans WHERE user_id=?", (user_id,)) as cur:
             row = await cur.fetchone()
     return row[0] if row else None
-
 
 async def create_payment(user_id: int, tariff: str, amount: int, last4: str, code: str, receipt_file_id: str):
     now = datetime.utcnow().isoformat()
@@ -971,7 +923,6 @@ async def create_payment(user_id: int, tariff: str, amount: int, last4: str, cod
         """, (user_id, tariff, amount, last4, code, receipt_file_id, now))
         await conn.commit()
         return cur.lastrowid
-
 
 async def get_payment(payment_id: int):
     async with db() as conn:
@@ -987,12 +938,10 @@ async def get_payment(payment_id: int):
         "last4": row[4], "code": row[5], "status": row[6], "receipt_file_id": row[7], "created_at": row[8]
     }
 
-
 async def set_payment_status(payment_id: int, status: str):
     async with db() as conn:
         await conn.execute("UPDATE payments SET status=? WHERE id=?", (status, payment_id))
         await conn.commit()
-
 
 async def has_recent_pending_payment(user_id: int) -> bool:
     since = (datetime.utcnow() - timedelta(hours=2)).isoformat()
@@ -1004,7 +953,6 @@ async def has_recent_pending_payment(user_id: int) -> bool:
             row = await cur.fetchone()
     return bool(row and row[0] > 0)
 
-
 async def create_diary_session(user_id: int, session_date: str, title: str):
     now = datetime.utcnow().isoformat()
     async with db() as conn:
@@ -1014,7 +962,6 @@ async def create_diary_session(user_id: int, session_date: str, title: str):
         """, (user_id, session_date, title, now))
         await conn.commit()
         return cur.lastrowid
-
 
 async def get_or_create_today_session(user_id: int) -> int:
     today = datetime.now().strftime("%Y-%m-%d")
@@ -1036,7 +983,6 @@ async def get_or_create_today_session(user_id: int) -> int:
         await conn.commit()
         return int(cur2.lastrowid)
 
-
 async def add_set(session_id: int, exercise: str, set_no: int, weight: float, reps: int):
     async with db() as conn:
         await conn.execute("""
@@ -1044,7 +990,6 @@ async def add_set(session_id: int, exercise: str, set_no: int, weight: float, re
             VALUES (?, ?, ?, ?, ?)
         """, (session_id, exercise, set_no, weight, reps))
         await conn.commit()
-
 
 async def get_diary_history(user_id: int, limit_sessions: int = 10):
     async with db() as conn:
@@ -1069,7 +1014,6 @@ async def get_diary_history(user_id: int, limit_sessions: int = 10):
             out.append((s, sets))
     return out
 
-
 async def add_measure(user_id: int, mtype: str, value: float):
     now = datetime.utcnow().isoformat()
     async with db() as conn:
@@ -1078,7 +1022,6 @@ async def add_measure(user_id: int, mtype: str, value: float):
             (user_id, mtype, value, now)
         )
         await conn.commit()
-
 
 async def get_last_measures(user_id: int, mtype: str, limit: int = 8):
     async with db() as conn:
@@ -1091,7 +1034,6 @@ async def get_last_measures(user_id: int, mtype: str, limit: int = 8):
             rows = await cur.fetchall()
     return rows or []
 
-
 async def create_post_draft(admin_id: int, media_type: str, media_file_id: Optional[str], text: Optional[str]) -> int:
     now = datetime.utcnow().isoformat()
     async with db() as conn:
@@ -1101,7 +1043,6 @@ async def create_post_draft(admin_id: int, media_type: str, media_file_id: Optio
         """, (admin_id, media_type, media_file_id or "", text or "", now))
         await conn.commit()
         return cur.lastrowid
-
 
 async def get_post(post_id: int):
     async with db() as conn:
@@ -1117,12 +1058,10 @@ async def get_post(post_id: int):
         "media_file_id": row[3], "text": row[4], "status": row[5], "created_at": row[6]
     }
 
-
 async def set_post_status(post_id: int, status: str):
     async with db() as conn:
         await conn.execute("UPDATE posts SET status=? WHERE id=?", (status, post_id))
         await conn.commit()
-
 
 async def get_all_user_ids():
     async with db() as conn:
@@ -1132,16 +1071,35 @@ async def get_all_user_ids():
 
 
 # =========================
-# ТРЕНИРОВКИ (база + изоляция) — ✅ без заголовков и один абзац на день
+# ТРЕНИРОВКИ — ✅ формат как ты просил + индивидуально под цель/возможности/ограничения
 # =========================
+def _avoid_if_limited(ex_name: str, limitations: str) -> bool:
+    lim = (limitations or "").lower()
+    n = (ex_name or "").lower()
+
+    # очень простая логика, но работает
+    if any(k in lim for k in ["поясниц", "спина", "грыж", "протру"]):
+        if any(k in n for k in ["станов", "румын", "наклон", "тяга", "гудмор"]):
+            return True
+    if any(k in lim for k in ["колен", "колено", "мениск"]):
+        if any(k in n for k in ["присед", "жим ног", "выпад", "разгибан"]):
+            return True
+    if any(k in lim for k in ["плеч", "плечо", "импиндж"]):
+        if any(k in n for k in ["жим вверх", "армей", "разведен", "мах"]):
+            return True
+    return False
+
+def _filter_pool(pool: List[str], limitations: str) -> List[str]:
+    out = [x for x in pool if x and not _avoid_if_limited(x, limitations)]
+    return out
+
 def _pick(rnd: random.Random, items: List[str]) -> str:
     items = [x for x in items if x]
     if not items:
         return "—"
     return rnd.choice(items)
 
-
-def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: int = 0) -> str:
+def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limitations: str = "", user_id: int = 0) -> str:
     pl = (place or "").lower()
     is_gym = ("зал" in pl) or (pl == "gym") or ("gym" in pl)
     where = "ЗАЛ" if is_gym else "ДОМ"
@@ -1150,9 +1108,10 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
     seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
     rnd = random.Random(seed)
 
+    # Пулы под "возможности" (дом/зал)
     if is_gym:
         push_base = ["Жим лёжа (штанга)", "Жим гантелей лёжа", "Жим в тренажёре", "Отжимания"]
-        pull_base = ["Тяга горизонтального блока", "Тяга гантели одной рукой", "Верхний блок", "Подтягивания (если можешь)"]
+        pull_base = ["Тяга горизонтального блока", "Тяга гантели одной рукой", "Тяга верхнего блока", "Подтягивания (если можешь)"]
         legs_base = ["Присед со штангой", "Жим ногами", "Гоблет-присед", "Румынская тяга (лёгкая)"]
 
         shoulders_iso = ["Разведения в стороны (гантели)", "Face pull (канат)"]
@@ -1161,7 +1120,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
         legs_iso = ["Икры стоя/сидя", "Разгибания ног", "Сгибания ног"]
         core = ["Планка", "Скручивания", "Подъёмы ног"]
     else:
-        push_base = ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа (если есть скамья/пол)"]
+        push_base = ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа (если есть)"]
         pull_base = ["Подтягивания (если есть турник)", "Тяга гантели одной рукой", "Тяга резинки к поясу (если есть резинка)"]
         legs_base = ["Приседания", "Болгарские выпады", "Ягодичный мост", "Гоблет-присед (гантель)"]
 
@@ -1171,14 +1130,23 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
         legs_iso = ["Икры стоя", "Статические выпады"]
         core = ["Планка", "Скручивания", "Подъём ног лёжа"]
 
+    # ✅ учитываем ограничения: фильтруем упражнения
+    push_base = _filter_pool(push_base, limitations) or push_base
+    pull_base = _filter_pool(pull_base, limitations) or pull_base
+    legs_base = _filter_pool(legs_base, limitations) or legs_base
+    shoulders_iso = _filter_pool(shoulders_iso, limitations) or shoulders_iso
+    bi_iso = _filter_pool(bi_iso, limitations) or bi_iso
+    tri_iso = _filter_pool(tri_iso, limitations) or tri_iso
+    legs_iso = _filter_pool(legs_iso, limitations) or legs_iso
+    core = _filter_pool(core, limitations) or core
+
+    # Диапазоны под цель/опыт
     reps_base = "6–10" if lvl != "novice" else "8–12"
     reps_iso = "10–15"
     base_sets = "3–4" if lvl != "novice" else "3"
     iso_sets = "3"
 
-    f = int(freq or 3)
-    f = max(3, min(f, 5))
-
+    # слегка под цель
     g = (goal or "").lower()
     if "суш" in g:
         note = "Сушка: держи 1–2 повтора в запасе (RIR 1–2), отказ редко.\n"
@@ -1187,50 +1155,106 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, user_id: i
     else:
         note = "Форма: прогрессируй плавно, без постоянного отказа.\n"
 
-    days = []
-    for d in range(f):
+    f = int(freq or 3)
+    f = max(3, min(f, 5))
+
+    # ✅ собираем дни в нужном формате
+    days_txt: List[str] = []
+    for d in range(1, f + 1):
+        # День 4 — если зал и 4+ тренировки, делаем как твой пример (чётко)
+        if is_gym and d == 4 and f >= 4:
+            day_lines = [
+                f"День {d}",
+                "",
+                f"• Жим в тренажёре — {base_sets}×{reps_base}",
+                f"• Тяга горизонтального блока — {base_sets}×{reps_base}",
+                f"• Румынская тяга (лёгкая) — {base_sets}×{reps_base}",
+                f"• Разведения в стороны (гантели) — {iso_sets}×{reps_iso}",
+                f"• Сгибания гантелей — {iso_sets}×{reps_iso}",
+                f"• Разгибания на блоке — {iso_sets}×{reps_iso}",
+                f"• Разгибания ног — {iso_sets}×{reps_iso}",
+            ]
+            # если ограничения — можем заменить “потенциально опасные”
+            fixed = []
+            for line in day_lines:
+                if line.startswith("• "):
+                    name = line.split(" — ")[0].replace("• ", "").strip()
+                    if _avoid_if_limited(name, limitations):
+                        # мягкая замена
+                        if "румын" in name.lower():
+                            repl = "Ягодичный мост (лёгко)" if not is_gym else "Гиперэкстензия (лёгко)"
+                            line = line.replace(name, repl)
+                        elif "разгибания ног" in name.lower():
+                            line = line.replace(name, "Сгибания ног")
+                        elif "жим" in name.lower():
+                            line = line.replace(name, "Жим гантелей лёжа (лёгко)")
+                    fixed.append(line)
+                else:
+                    fixed.append(line)
+            days_txt.append("\n".join(fixed))
+            continue
+
         push = _pick(rnd, push_base)
         pull = _pick(rnd, pull_base)
         legs = _pick(rnd, legs_base)
-
         sh = _pick(rnd, shoulders_iso)
         bi = _pick(rnd, bi_iso)
         tri = _pick(rnd, tri_iso)
         lg = _pick(rnd, legs_iso)
         cr = _pick(rnd, core)
 
-        # ✅ один абзац на день, без заголовков БАЗА/ИЗОЛЯЦИЯ
-        ex_parts = [
-            f"{push} — {base_sets}×{reps_base}",
-            f"{pull} — {base_sets}×{reps_base}",
-            f"{legs} — {base_sets}×{reps_base}",
-            f"{sh} — {iso_sets}×{reps_iso}",
-            f"{bi} — {iso_sets}×{reps_iso}",
-            f"{tri} — {iso_sets}×{reps_iso}",
+        exercises = [
+            (push, f"{base_sets}×{reps_base}"),
+            (pull, f"{base_sets}×{reps_base}"),
+            (legs, f"{base_sets}×{reps_base}"),
+            (sh, f"{iso_sets}×{reps_iso}"),
+            (bi, f"{iso_sets}×{reps_iso}"),
+            (tri, f"{iso_sets}×{reps_iso}"),
         ]
         if f >= 4:
-            ex_parts.append(f"{lg} — {iso_sets}×{reps_iso}")
+            exercises.append((lg, f"{iso_sets}×{reps_iso}"))
         if f >= 5:
-            ex_parts.append(f"{cr} — {iso_sets}×12–20")
+            exercises.append((cr, f"{iso_sets}×12–20"))
 
-        day_text = f"День {d+1}: " + "; ".join(ex_parts) + "\n\n"
-        days.append(day_text)
+        # финальная подстраховка: если что-то всё же не подходит — заменим
+        safe_out = []
+        for name, sr in exercises:
+            if _avoid_if_limited(name, limitations):
+                # простая замена
+                if "присед" in (name or "").lower():
+                    name = "Ягодичный мост" if not is_gym else "Сгибания ног"
+                elif "румын" in (name or "").lower() or "станов" in (name or "").lower():
+                    name = "Гиперэкстензия (лёгко)" if is_gym else "Ягодичный мост"
+                elif "жим ног" in (name or "").lower():
+                    name = "Икры стоя" if is_gym else "Икры стоя"
+                elif "жим вверх" in (name or "").lower():
+                    name = "Face pull (канат)" if is_gym else "Разведения в наклоне (лёгко)"
+            safe_out.append((name, sr))
+
+        lines = [f"День {d}", ""]
+        for name, sr in safe_out:
+            lines.append(f"• {name} — {sr}")
+        days_txt.append("\n".join(lines))
+
+    lim_str = (limitations or "").strip()
+    lim_block = f"\nОграничения: {lim_str}\n" if lim_str else "\nОграничения: нет\n"
 
     return (
         f"🏋️ ТРЕНИРОВКИ ({where}) — {f}×/нед\n\n"
         f"Цель: {goal}\n"
-        f"{note}\n"
+        f"{note}"
+        f"{lim_block}\n"
         "📌 Прогрессия:\n"
         "1) Доводи подходы до верхней границы повторов\n"
         "2) Потом добавляй вес (+2.5–5%) и снова работай в диапазоне\n"
         "3) Если техника ломается — вес не повышай\n"
         "4) Если усталость копится 7–10 дней — сделай неделю легче (-20–30% объёма)\n\n"
-        + "".join(days)
+        + "\n\n".join(days_txt)
     )
 
 
 # =========================
-# ПИТАНИЕ (однотипное, простое) + ✅ 3 кнопки примеров
+# ПИТАНИЕ (без изменений)
 # =========================
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",      "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
@@ -1386,21 +1410,20 @@ async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
         "• составить тренировки под твою цель\n"
         "• дать простое питание (без запар)\n"
         "• вести дневник тренировок и замеры, чтобы видеть прогресс\n\n"
-        "Выбирай раздел ниже 👇\n\n"
-        "ℹ️ Управление (оплата/профиль/поддержка) всегда находится на клавиатуре снизу."
+        "Выбирай раздел ниже 👇"
     )
     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
 
 
 async def cmd_start(message: Message, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
-    # ставим постоянную клавиатуру (внизу)
+    # ✅ УБРАНО сообщение "✅ Панель управления закреплена снизу."
+    # просто ставим постоянную клавиатуру (внизу)
     await bot.send_message(
         chat_id=message.chat.id,
-        text="✅ Панель управления закреплена снизу.",
+        text="",
         reply_markup=control_reply_kb()
     )
-    # и сразу показываем меню (в одном «чистом» сообщении)
     await show_main_menu(bot, message.chat.id, message.from_user.id)
     await try_delete_user_message(bot, message)
 
@@ -1433,7 +1456,7 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ✅ Панель управления — теперь внизу (ReplyKeyboard)
+# ✅ Панель управления — ReplyKeyboard
 # =========================
 async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
@@ -1459,7 +1482,6 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
 
     await try_delete_user_message(bot, message)
 
-
 async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     fake_msg = await bot.send_message(message.chat.id, "Открываю профиль…")
@@ -1474,7 +1496,6 @@ async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot)
     text = _profile_header(1) + "🎯 Выбери цель:"
     await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_goal())
 
-
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
@@ -1486,7 +1507,6 @@ async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot)
     await clean_send(bot, message.chat.id, message.from_user.id, text)
     await try_delete_user_message(bot, message)
 
-
 async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
@@ -1495,7 +1515,7 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ПРОФИЛЬ-МАСТЕР: одно сообщение редактируется + шкала
+# ПРОФИЛЬ-МАСТЕР: callbacks + ввод вручную (возраст/рост/вес/ограничения)
 # =========================
 async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
     step = callback.data.split(":")[2]
@@ -1503,37 +1523,33 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
 
     if step == "goal":
         await state.set_state(ProfileWizard.goal)
-        text = _profile_header(1) + "🎯 Выбери цель:"
-        await clean_edit(callback, uid, text, reply_markup=kb_goal())
+        await clean_edit(callback, uid, _profile_header(1) + "🎯 Выбери цель:", reply_markup=kb_goal())
     elif step == "sex":
         await state.set_state(ProfileWizard.sex)
-        text = _profile_header(2) + "👤 Выбери пол:"
-        await clean_edit(callback, uid, text, reply_markup=kb_sex())
+        await clean_edit(callback, uid, _profile_header(2) + "👤 Выбери пол:", reply_markup=kb_sex())
     elif step == "age":
         await state.set_state(ProfileWizard.age)
-        text = _profile_header(3) + "🎂 Выбери возраст:"
-        await clean_edit(callback, uid, text, reply_markup=kb_age())
+        await clean_edit(callback, uid, _profile_header(3) + "🎂 Введи возраст числом (например 18):", reply_markup=_kb_input_back("sex"))
     elif step == "height":
         await state.set_state(ProfileWizard.height)
-        text = _profile_header(4) + "📏 Выбери рост (см):"
-        await clean_edit(callback, uid, text, reply_markup=kb_height())
+        await clean_edit(callback, uid, _profile_header(4) + "📏 Введи рост в см (например 175):", reply_markup=_kb_input_back("age"))
     elif step == "weight":
         await state.set_state(ProfileWizard.weight)
-        text = _profile_header(5) + "⚖️ Выбери вес (кг):"
-        await clean_edit(callback, uid, text, reply_markup=kb_weight())
+        await clean_edit(callback, uid, _profile_header(5) + "⚖️ Введи вес в кг (например 72.5):", reply_markup=_kb_input_back("height"))
     elif step == "place":
         await state.set_state(ProfileWizard.place)
-        text = _profile_header(6) + "🏠 Где тренируешься?"
-        await clean_edit(callback, uid, text, reply_markup=kb_place())
+        await clean_edit(callback, uid, _profile_header(6) + "🏠 Где тренируешься?", reply_markup=kb_place())
     elif step == "exp":
         await state.set_state(ProfileWizard.exp)
-        text = _profile_header(7) + "📈 Выбери опыт:"
-        await clean_edit(callback, uid, text, reply_markup=kb_exp())
+        await clean_edit(callback, uid, _profile_header(7) + "📈 Выбери опыт:", reply_markup=kb_exp())
+    elif step == "freq":
+        await state.set_state(ProfileWizard.freq)
+        await clean_edit(callback, uid, _profile_header(8) + "📅 Сколько тренировок в неделю удобно?", reply_markup=kb_freq())
     else:
-        await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
+        await state.set_state(ProfileWizard.limitations)
+        await clean_edit(callback, uid, _profile_header(9) + "Есть какие-то ограничения? (если нет — напиши «нет»)", reply_markup=kb_limitations())
 
     await callback.answer()
-
 
 async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
@@ -1541,10 +1557,8 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
     await update_user(callback.from_user.id, goal=goal)
 
     await state.set_state(ProfileWizard.sex)
-    text = _profile_header(2) + "👤 Выбери пол:"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_sex())
+    await clean_edit(callback, callback.from_user.id, _profile_header(2) + "👤 Выбери пол:", reply_markup=kb_sex())
     await callback.answer()
-
 
 async def cb_profile_sex(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
@@ -1552,40 +1566,56 @@ async def cb_profile_sex(callback: CallbackQuery, state: FSMContext):
     await update_user(callback.from_user.id, sex=sex)
 
     await state.set_state(ProfileWizard.age)
-    text = _profile_header(3) + "🎂 Выбери возраст:"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_age())
+    await clean_edit(callback, callback.from_user.id, _profile_header(3) + "🎂 Введи возраст числом (например 18):", reply_markup=_kb_input_back("sex"))
     await callback.answer()
 
+async def profile_age_input(message: Message, state: FSMContext, bot: Bot):
+    txt = (message.text or "").strip()
+    try:
+        age = int(re.sub(r"[^\d]", "", txt))
+        if age < 10 or age > 90:
+            raise ValueError
+    except Exception:
+        await clean_send(bot, message.chat.id, message.from_user.id, "Возраст введи числом (например 18).", reply_markup=_kb_input_back("sex"))
+        await try_delete_user_message(bot, message)
+        return
 
-async def cb_profile_age(callback: CallbackQuery, state: FSMContext):
-    age = int(callback.data.split(":")[2])
-    await update_user(callback.from_user.id, age=age)
-
+    await update_user(message.from_user.id, age=age)
     await state.set_state(ProfileWizard.height)
-    text = _profile_header(4) + "📏 Выбери рост (см):"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_height())
-    await callback.answer()
+    await clean_send(bot, message.chat.id, message.from_user.id, _profile_header(4) + "📏 Введи рост в см (например 175):", reply_markup=_kb_input_back("age"))
+    await try_delete_user_message(bot, message)
 
+async def profile_height_input(message: Message, state: FSMContext, bot: Bot):
+    txt = (message.text or "").strip()
+    try:
+        h = int(re.sub(r"[^\d]", "", txt))
+        if h < 120 or h > 230:
+            raise ValueError
+    except Exception:
+        await clean_send(bot, message.chat.id, message.from_user.id, "Рост введи числом в см (например 175).", reply_markup=_kb_input_back("age"))
+        await try_delete_user_message(bot, message)
+        return
 
-async def cb_profile_height(callback: CallbackQuery, state: FSMContext):
-    h = int(callback.data.split(":")[2])
-    await update_user(callback.from_user.id, height=h)
-
+    await update_user(message.from_user.id, height=h)
     await state.set_state(ProfileWizard.weight)
-    text = _profile_header(5) + "⚖️ Выбери вес (кг):"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_weight())
-    await callback.answer()
+    await clean_send(bot, message.chat.id, message.from_user.id, _profile_header(5) + "⚖️ Введи вес в кг (например 72.5):", reply_markup=_kb_input_back("height"))
+    await try_delete_user_message(bot, message)
 
+async def profile_weight_input(message: Message, state: FSMContext, bot: Bot):
+    raw = (message.text or "").strip().replace(",", ".")
+    try:
+        w = float(re.sub(r"[^0-9\.]", "", raw))
+        if w < 30 or w > 250:
+            raise ValueError
+    except Exception:
+        await clean_send(bot, message.chat.id, message.from_user.id, "Вес введи числом (например 72.5).", reply_markup=_kb_input_back("height"))
+        await try_delete_user_message(bot, message)
+        return
 
-async def cb_profile_weight(callback: CallbackQuery, state: FSMContext):
-    w = float(callback.data.split(":")[2])
-    await update_user(callback.from_user.id, weight=w)
-
+    await update_user(message.from_user.id, weight=w)
     await state.set_state(ProfileWizard.place)
-    text = _profile_header(6) + "🏠 Где тренируешься?"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_place())
-    await callback.answer()
-
+    await clean_send(bot, message.chat.id, message.from_user.id, _profile_header(6) + "🏠 Где тренируешься?", reply_markup=kb_place())
+    await try_delete_user_message(bot, message)
 
 async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
@@ -1593,25 +1623,22 @@ async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
     await update_user(callback.from_user.id, place=place)
 
     await state.set_state(ProfileWizard.exp)
-    text = _profile_header(7) + "📈 Выбери опыт:"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_exp())
+    await clean_edit(callback, callback.from_user.id, _profile_header(7) + "📈 Выбери опыт:", reply_markup=kb_exp())
     await callback.answer()
-
 
 async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
 
     if v == "0":
+        # новичок: частоту 3, и дальше спрашиваем ограничения
         await update_user(callback.from_user.id, exp="0", freq=3)
-        await state.clear()
-        text = (
-            _profile_header(8) +
-            "✅ Профиль заполнен!\n\n"
-            "Новичку поставил частоту 3×/нед.\n"
-            "Можно пользоваться меню."
+        await state.set_state(ProfileWizard.limitations)
+        await clean_edit(
+            callback,
+            callback.from_user.id,
+            _profile_header(9) + "Есть какие-то ограничения? (спина/колени/плечи и т.п.)\nЕсли нет — напиши «нет».",
+            reply_markup=kb_limitations()
         )
-        # ✅ кнопка после окончания профиля
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=profile_done_kb())
         await callback.answer()
         return
 
@@ -1619,19 +1646,37 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
     await update_user(callback.from_user.id, exp=exp_text)
 
     await state.set_state(ProfileWizard.freq)
-    text = _profile_header(8) + "📅 Сколько тренировок в неделю удобно?"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_freq())
+    await clean_edit(callback, callback.from_user.id, _profile_header(8) + "📅 Сколько тренировок в неделю удобно?", reply_markup=kb_freq())
     await callback.answer()
-
 
 async def cb_profile_freq(callback: CallbackQuery, state: FSMContext):
     f = int(callback.data.split(":")[2])
     await update_user(callback.from_user.id, freq=f)
+
+    await state.set_state(ProfileWizard.limitations)
+    await clean_edit(
+        callback,
+        callback.from_user.id,
+        _profile_header(9) + "Есть какие-то ограничения? (спина/колени/плечи и т.п.)\nЕсли нет — напиши «нет».",
+        reply_markup=kb_limitations()
+    )
+    await callback.answer()
+
+async def profile_limitations_input(message: Message, state: FSMContext, bot: Bot):
+    txt = (message.text or "").strip()
+    if not txt:
+        await clean_send(bot, message.chat.id, message.from_user.id, "Напиши ограничения текстом или «нет».", reply_markup=kb_limitations())
+        await try_delete_user_message(bot, message)
+        return
+    if txt.lower() == "нет":
+        txt = "нет"
+
+    await update_user(message.from_user.id, limitations=txt)
     await state.clear()
 
-    u = await get_user(callback.from_user.id)
+    u = await get_user(message.from_user.id)
     summary = (
-        _profile_header(8) +
+        _profile_header(9) +
         "✅ Профиль сохранён!\n\n"
         f"Цель: {u.get('goal')}\n"
         f"Пол: {u.get('sex')}\n"
@@ -1640,12 +1685,12 @@ async def cb_profile_freq(callback: CallbackQuery, state: FSMContext):
         f"Вес: {u.get('weight')}\n"
         f"Где: {u.get('place')}\n"
         f"Опыт: {u.get('exp')}\n"
-        f"Частота: {u.get('freq')}×/нед\n\n"
+        f"Частота: {u.get('freq')}×/нед\n"
+        f"Ограничения: {u.get('limitations')}\n\n"
         "Теперь можно открыть питание/тренировки."
     )
-    # ✅ кнопка после окончания профиля
-    await clean_edit(callback, callback.from_user.id, summary, reply_markup=profile_done_kb())
-    await callback.answer()
+    await clean_send(bot, message.chat.id, message.from_user.id, summary, reply_markup=profile_done_kb())
+    await try_delete_user_message(bot, message)
 
 
 # =========================
@@ -1658,7 +1703,6 @@ def access_status_str(a: dict) -> str:
         return "Статус: ✅ доступ активен (НАВСЕГДА)"
     exp = a.get("expires_at")
     return f"Статус: ✅ доступ активен до {exp[:10]}" if exp else "Статус: ✅ доступ активен"
-
 
 async def cb_tariff(callback: CallbackQuery, state: FSMContext):
     tariff_code = callback.data.split(":")[1]
@@ -1683,7 +1727,6 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext):
     )
     await callback.message.answer(text, reply_markup=pay_inline_kb())
     await callback.answer()
-
 
 async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
     await ensure_user(callback.from_user.id, callback.from_user.username or "")
@@ -1712,7 +1755,6 @@ async def cb_i_paid(callback: CallbackQuery, state: FSMContext):
     await state.set_state(PaymentFlow.waiting_amount)
     await callback.answer()
 
-
 async def pay_amount(message: Message, state: FSMContext, bot: Bot):
     txt = re.sub(r"[^\d]", "", message.text or "")
     if not txt:
@@ -1724,7 +1766,6 @@ async def pay_amount(message: Message, state: FSMContext, bot: Bot):
     await state.set_state(PaymentFlow.waiting_last4)
     await try_delete_user_message(bot, message)
 
-
 async def pay_last4(message: Message, state: FSMContext, bot: Bot):
     txt = re.sub(r"[^\d]", "", message.text or "")
     if len(txt) != 4:
@@ -1735,7 +1776,6 @@ async def pay_last4(message: Message, state: FSMContext, bot: Bot):
     await message.answer("Отправь чек/скрин оплаты как фото:")
     await state.set_state(PaymentFlow.waiting_receipt)
     await try_delete_user_message(bot, message)
-
 
 async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
     if not message.photo:
@@ -1780,7 +1820,6 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         reply_markup=admin_review_kb(payment_id)
     )
     await state.clear()
-
 
 async def admin_actions(callback: CallbackQuery, bot: Bot):
     if callback.from_user.id != ADMIN_ID:
@@ -1834,13 +1873,14 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
 # =========================
 async def ensure_profile_ready(user_id: int) -> bool:
     u = await get_user(user_id)
-    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq"]
-    return not any(not u.get(k) for k in need)
+    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq", "limitations"]
+    return not any(u.get(k) in (None, "", 0) for k in need)
 
 async def build_plans_if_needed(user_id: int):
     u = await get_user(user_id)
     workout = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"]),
+        limitations=u.get("limitations") or "",
         user_id=user_id
     )
     summary, cal, p, f, c, meals = generate_nutrition_summary(
@@ -1964,8 +2004,9 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
     else:
         await clean_send(bot, chat_id, user_id, text, reply_markup=diary_exercises_kb())
 
+
 # =========================
-# ✅ ДНЕВНИК: выбор упражнения → ввод только вес/повторы
+# ✅ ДНЕВНИК: выбор упражнения → ввод только вес/повторы (без изменений)
 # =========================
 async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     exercise = callback.data.split("d:ex:", 1)[1].strip()
@@ -2056,7 +2097,7 @@ async def diary_history(callback: CallbackQuery):
 
 
 # =========================
-# ✅ ЗАМЕРЫ
+# ✅ ЗАМЕРЫ (без изменений)
 # =========================
 async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
     mtype = callback.data.split(":")[1]
@@ -2066,7 +2107,6 @@ async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
     name = {"weight": "Вес (кг)", "waist": "Талия (см)", "arm": "Рука (см)", "chest": "Грудь (см)", "thigh": "Бедро (см)"}.get(mtype, mtype)
     await callback.message.answer(f"Введи значение для «{name}» числом (например 72.5):")
     await callback.answer()
-
 
 async def measure_value(message: Message, state: FSMContext, bot: Bot):
     txt = (message.text or "").strip().replace(",", ".")
@@ -2092,7 +2132,7 @@ async def measure_value(message: Message, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ✅ ПИТАНИЕ: 3 кнопки → показываем конкретный день
+# ✅ ПИТАНИЕ: 3 кнопки → показываем конкретный день (без изменений)
 # =========================
 async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     if not await is_access_active(callback.from_user.id):
@@ -2128,7 +2168,6 @@ async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
     await clean_edit(callback, callback.from_user.id, "📚 Техники выполнения — выбери упражнение:", reply_markup=tech_kb())
     await callback.answer()
 
-
 async def cb_tech_show(callback: CallbackQuery, bot: Bot):
     key = callback.data.split("tech:", 1)[1]
     item = TECH.get(key)
@@ -2154,7 +2193,7 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
 
 
 # =========================
-# ✅ НОВОЕ: ПОСТЫ С КАРТИНКАМИ (АДМИН)
+# ✅ НОВОЕ: ПОСТЫ С КАРТИНКАМИ (АДМИН) — без изменений
 # =========================
 def admin_posts_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -2162,20 +2201,17 @@ def admin_posts_kb():
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
-
 def post_confirm_kb(post_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")],
         [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")],
     ])
 
-
 async def cmd_posts(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
     await state.clear()
     await message.answer("🗞 Управление постами (админ):", reply_markup=admin_posts_kb())
-
 
 async def cb_post_new(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
@@ -2199,7 +2235,6 @@ async def cb_post_new(callback: CallbackQuery, state: FSMContext):
     await state.set_state(PostFlow.waiting_content)
     await callback.answer()
 
-
 async def cb_post_cancel(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer()
@@ -2207,7 +2242,6 @@ async def cb_post_cancel(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.answer("Отменено.", reply_markup=admin_posts_kb())
     await callback.answer()
-
 
 async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
     if message.from_user.id != ADMIN_ID:
@@ -2261,7 +2295,6 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
         await set_last_bot_msg_id(uid, mid)
 
     await try_delete_user_message(bot, message)
-
 
 async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
@@ -2319,7 +2352,7 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
 
 
 # =========================
-# ПОДДЕРЖКА: любой текст пользователей -> админу (и удаляем у пользователя)
+# ПОДДЕРЖКА: любой текст пользователей -> админу
 # =========================
 async def forward_to_admin(message: Message, bot: Bot):
     if message.from_user.id == ADMIN_ID:
@@ -2346,12 +2379,15 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_profile_back, F.data.startswith("p:back:"))
     dp.callback_query.register(cb_profile_goal, F.data.startswith("p:goal:"))
     dp.callback_query.register(cb_profile_sex, F.data.startswith("p:sex:"))
-    dp.callback_query.register(cb_profile_age, F.data.startswith("p:age:"))
-    dp.callback_query.register(cb_profile_height, F.data.startswith("p:h:"))
-    dp.callback_query.register(cb_profile_weight, F.data.startswith("p:w:"))
     dp.callback_query.register(cb_profile_place, F.data.startswith("p:place:"))
     dp.callback_query.register(cb_profile_exp, F.data.startswith("p:exp:"))
     dp.callback_query.register(cb_profile_freq, F.data.startswith("p:freq:"))
+
+    # ✅ ввод вручную возраст/рост/вес/ограничения
+    dp.message.register(profile_age_input, ProfileWizard.age)
+    dp.message.register(profile_height_input, ProfileWizard.height)
+    dp.message.register(profile_weight_input, ProfileWizard.weight)
+    dp.message.register(profile_limitations_input, ProfileWizard.limitations)
 
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
     dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
@@ -2454,4 +2490,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
