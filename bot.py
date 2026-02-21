@@ -2440,3 +2440,158 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
             except Exception:
                 pass
 
+        await asyncio.sleep(0.03)
+
+    await set_post_status(post_id, "sent")
+    await callback.message.answer(f"✅ Готово! Отправлено: {ok}\nОшибок: {fail}", reply_markup=admin_posts_kb())
+    await state.clear()
+
+
+# =========================
+# ПОДДЕРЖКА: любой текст пользователей -> админу (и удаляем у пользователя)
+# =========================
+async def forward_to_admin(message: Message, bot: Bot):
+    if message.from_user.id == ADMIN_ID:
+        return
+    if not message.text or message.text.startswith("/"):
+        return
+
+    await bot.send_message(
+        chat_id=ADMIN_ID,
+        text=f"📩 Поддержка от @{message.from_user.username or 'no_username'} (id={message.from_user.id}):\n\n{message.text}"
+    )
+    await try_delete_user_message(bot, message)
+    await clean_send(bot, message.chat.id, message.from_user.id, "✅ Отправил в поддержку. Я отвечу здесь, как админ отреагирует.")
+
+
+# =========================
+# РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
+# =========================
+def setup_handlers(dp: Dispatcher):
+    dp.message.register(cmd_start, CommandStart())
+
+    # inline навигация меню/разделов
+    dp.callback_query.register(cb_nav, F.data.startswith("nav:"))
+
+    # профиль мастер (callback)
+    dp.callback_query.register(cb_profile_back, F.data.startswith("p:back:"))
+    dp.callback_query.register(cb_profile_goal, F.data.startswith("p:goal:"))
+    dp.callback_query.register(cb_profile_sex, F.data.startswith("p:sex:"))
+    dp.callback_query.register(cb_profile_place, F.data.startswith("p:place:"))
+    dp.callback_query.register(cb_profile_exp, F.data.startswith("p:exp:"))
+    dp.callback_query.register(cb_profile_freq, F.data.startswith("p:freq:"))
+
+    # профиль мастер (ручной ввод)
+    dp.message.register(profile_age_input, ProfileWizard.age)
+    dp.message.register(profile_height_input, ProfileWizard.height)
+    dp.message.register(profile_weight_input, ProfileWizard.weight)
+
+    # оплата
+    dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
+    dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
+    dp.callback_query.register(admin_actions, F.data.startswith("admin_approve:") | F.data.startswith("admin_reject:"))
+    dp.message.register(pay_amount, PaymentFlow.waiting_amount)
+    dp.message.register(pay_last4, PaymentFlow.waiting_last4)
+    dp.message.register(pay_receipt, PaymentFlow.waiting_receipt)
+
+    # замеры
+    dp.callback_query.register(cb_measure_type, F.data.startswith("mtype:"))
+    dp.message.register(measure_value, MeasureFlow.enter_value)
+
+    # дневник
+    dp.callback_query.register(diary_pick_ex, F.data.startswith("d:ex:"))
+    dp.callback_query.register(diary_history, F.data == "d:history")
+    dp.message.register(diary_enter_sets, DiaryFlow.enter_sets)
+
+    # техники
+    dp.callback_query.register(cb_tech_list, F.data == "tech:list")
+    dp.callback_query.register(cb_tech_show, F.data.startswith("tech:"))
+
+    # питание примеры
+    dp.callback_query.register(cb_nutr_example, F.data.startswith("nutr:ex:"))
+    dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
+
+    # админ посты
+    dp.message.register(cmd_posts, Command("posts"))
+    dp.callback_query.register(cb_post_new, F.data == "post:new")
+    dp.callback_query.register(cb_post_cancel, F.data == "post:cancel")
+    dp.callback_query.register(cb_post_send, F.data.startswith("post:send:"))
+    dp.message.register(post_waiting_content, PostFlow.waiting_content)
+
+    # ✅ панель управления снизу (ReplyKeyboard)
+    dp.message.register(open_payment_from_reply, F.text == "💳 Оплата/доступ")
+    dp.message.register(open_profile_from_reply, F.text == "⚙️ Профиль")
+    dp.message.register(open_support_from_reply, F.text == "🆘 Поддержка")
+    dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
+
+    # поддержка: любой текст пользователей -> админу
+    dp.message.register(forward_to_admin)
+
+
+# =========================
+# WEB SERVER (Render/health)
+# =========================
+async def run_web_server():
+    app = web.Application()
+
+    async def health(request):
+        return web.Response(text="ok")
+
+    app.router.add_get("/", health)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    port = int(os.getenv("PORT", 10000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+    print(f"Web server started on port {port}")
+
+    while True:
+        await asyncio.sleep(3600)
+
+
+# =========================
+# MAIN (устойчивый запуск)
+# =========================
+async def main():
+    if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
+        raise RuntimeError("Нужно задать BOT_TOKEN через переменные окружения (ENV).")
+
+    if ADMIN_ID == 0:
+        logger.warning("ADMIN_ID не задан. Подтверждение оплат админом работать не будет.")
+
+    await init_db()
+
+    bot = Bot(token=BOT_TOKEN)
+    await bot.delete_webhook(drop_pending_updates=True)
+    logger.info("Webhook cleared, starting polling...")
+
+    dp = Dispatcher()
+    setup_handlers(dp)
+
+    async def bot_loop():
+        backoff = 2
+        while True:
+            try:
+                logger.info("Bot polling started.")
+                await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+            except Exception:
+                logger.exception("Polling crashed. Restarting...")
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+            else:
+                backoff = 2
+                await asyncio.sleep(2)
+
+    await asyncio.gather(
+        bot_loop(),
+        run_web_server(),
+    )
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
