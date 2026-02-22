@@ -270,10 +270,8 @@ def control_reply_kb():
 # =========================
 def menu_main_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏋️ Мои тренировки", callback_data="nav:workouts")],
-        [InlineKeyboardButton(text="🍽 Моё питание", callback_data="nav:nutrition")],
-        [InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures")],
-        [InlineKeyboardButton(text="📓 Дневник", callback_data="nav:diary")],
+        [InlineKeyboardButton(text="🏋️ Мои тренировки", callback_data="nav:workouts"), InlineKeyboardButton(text="🍽 Моё питание", callback_data="nav:nutrition")],
+        [InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures"), InlineKeyboardButton(text="📓 Дневник", callback_data="nav:diary")],
     ])
 
 
@@ -2822,3 +2820,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
