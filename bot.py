@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import re
+import json
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 from typing import Optional, List, Tuple, Dict
@@ -41,6 +42,9 @@ TARIFFS = {
 }
 
 TG_SAFE_MSG_LEN = 3800
+
+MIN_DAYS = 3
+MAX_DAYS = 5
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("trainer_bot")
@@ -111,7 +115,6 @@ TECH = {
             "Главное: плечи не тянем вперёд, жмём грудью и трицепсом, без суеты."
         )
     },
-    # ✅ вместо "Тяга (гребля)" теперь "Отжимания"
     "row": {
         "title": "Отжимания",
         "img": "media/tech/pushup.jpg",
@@ -140,7 +143,7 @@ TECH = {
         "text": (
             "📚 Подтягивания\n\n"
             "1) Сначала лопатки вниз — как будто «плечи от ушей».\n"
-            "2) Тяни локти к рёбрам, грудь к перекладине.\n"
+            "2) Тяни локты к рёбрам, грудь к перекладине.\n"
             "3) Вниз опускайся медленно 2–3 сек.\n\n"
             "Если не идёт — резинка/гравитрон и делай качественно."
         )
@@ -274,15 +277,35 @@ def menu_main_inline_kb():
     ])
 
 
-def workouts_inline_kb():
+def simple_back_to_menu_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📚 Техники выполнения упражнений", callback_data="tech:list")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
-def simple_back_to_menu_inline_kb():
+# =========================
+# ✅ Тренировки: кнопки дней + обновить
+# =========================
+def workout_days_kb(freq: int):
+    freq = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
+    rows = []
+    btns = [InlineKeyboardButton(text=f"📅 День {i}", callback_data=f"wday:{i}") for i in range(1, freq + 1)]
+    for i in range(0, len(btns), 2):
+        rows.append(btns[i:i+2])
+
+    rows += [
+        [InlineKeyboardButton(text="🔁 Обновить план", callback_data="plan:refresh")],
+        [InlineKeyboardButton(text="📚 Техники выполнения упражнений", callback_data="tech:list")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def workouts_inline_kb():
+    # совместимость
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔁 Обновить план", callback_data="plan:refresh")],
+        [InlineKeyboardButton(text="📚 Техники выполнения упражнений", callback_data="tech:list")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -314,7 +337,7 @@ def admin_review_kb(payment_id: int):
 
 
 # =========================
-# ✅ Профиль: прогресс "■■■■■■■□□□ 100%" + возраст/рост/вес текстом + ограничения + состояние
+# ✅ Профиль: прогресс "■■■■■■■□□□ 100%"
 # =========================
 TOTAL_PROFILE_STEPS = 10
 
@@ -398,9 +421,40 @@ def kb_text_step(back_to: str):
     ])
 
 
+def kb_state():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="😄 Отличное", callback_data="p:state:отличное"),
+         InlineKeyboardButton(text="🙂 Норм", callback_data="p:state:норм")],
+        [InlineKeyboardButton(text="😴 Устал/не выспался", callback_data="p:state:устал"),
+         InlineKeyboardButton(text="😖 Есть дискомфорт/болит", callback_data="p:state:болит")],
+        [InlineKeyboardButton(text="✍️ Напишу текстом", callback_data="p:state:text")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:limits")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+
 # =========================
 # УТИЛИТЫ
 # =========================
+def dumps_plan(plan: dict) -> str:
+    return json.dumps(plan, ensure_ascii=False)
+
+
+def loads_plan(text: str) -> dict:
+    try:
+        return json.loads(text or "")
+    except Exception:
+        return {}
+
+
+def weekday_schedule(freq: int) -> str:
+    if freq <= 3:
+        return "Пн / Ср / Пт (или Вт / Чт / Сб)"
+    if freq == 4:
+        return "Пн / Вт / Чт / Сб (или Пн / Ср / Пт / Вс)"
+    return "Пн / Вт / Ср / Пт / Сб (или 5 дней подряд, если ок)"
+
+
 def gen_order_code(user_id: int) -> str:
     rnd = random.randint(100, 999)
     return f"TG{str(user_id)[-3:]}{rnd}"
@@ -609,13 +663,21 @@ async def init_db():
             created_at TEXT
         )
         """)
+
+        # ✅ тренировки: добавили plan_json
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS workout_plans (
             user_id INTEGER PRIMARY KEY,
             plan_text TEXT,
+            plan_json TEXT,
             updated_at TEXT
         )
         """)
+        try:
+            await conn.execute("ALTER TABLE workout_plans ADD COLUMN plan_json TEXT")
+        except Exception:
+            pass
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS nutrition_plans (
             user_id INTEGER PRIMARY KEY,
@@ -773,14 +835,17 @@ async def set_paid_tariff(user_id: int, tariff_code: str):
         await conn.commit()
 
 
-async def save_workout_plan(user_id: int, text: str):
+async def save_workout_plan(user_id: int, text: str, plan_json: Optional[str] = None):
     now = datetime.utcnow().isoformat()
     async with db() as conn:
         await conn.execute("""
-            INSERT INTO workout_plans (user_id, plan_text, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET plan_text=excluded.plan_text, updated_at=excluded.updated_at
-        """, (user_id, text, now))
+            INSERT INTO workout_plans (user_id, plan_text, plan_json, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                plan_text=excluded.plan_text,
+                plan_json=excluded.plan_json,
+                updated_at=excluded.updated_at
+        """, (user_id, text, plan_json or "", now))
         await conn.commit()
 
 
@@ -797,9 +862,11 @@ async def save_nutrition_plan(user_id: int, text: str):
 
 async def get_workout_plan(user_id: int):
     async with db() as conn:
-        async with conn.execute("SELECT plan_text FROM workout_plans WHERE user_id=?", (user_id,)) as cur:
+        async with conn.execute("SELECT plan_text, plan_json FROM workout_plans WHERE user_id=?", (user_id,)) as cur:
             row = await cur.fetchone()
-    return row[0] if row else None
+    if not row:
+        return None, {}
+    return (row[0] or ""), loads_plan(row[1] or "")
 
 
 async def get_nutrition_plan(user_id: int):
@@ -991,7 +1058,7 @@ async def get_all_user_ids():
 
 
 # =========================
-# ✅ ТРЕНИРОВКИ (индивидуально: цель + возможности + состояние)
+# ✅ ТРЕНИРОВКИ: индивидуально + новичок/средний + RIR каждый день + акцент + без повторов + дни кнопками
 # =========================
 def _limits_tags(limits: str) -> Dict[str, bool]:
     t = (limits or "").lower()
@@ -1005,7 +1072,6 @@ def _limits_tags(limits: str) -> Dict[str, bool]:
 
 def _state_tags(state: str) -> Dict[str, bool]:
     s = (state or "").lower()
-    # грубо, но работает: по словам ловим “уставший/сон/стресс/после перерыва/болит”
     return {
         "tired": any(x in s for x in ["устал", "устав", "мало сна", "сон плох", "не высп", "стресс", "перегруз"]),
         "backoff": any(x in s for x in ["после перерыва", "давно не", "возвращаюсь", "только начал"]),
@@ -1014,152 +1080,127 @@ def _state_tags(state: str) -> Dict[str, bool]:
     }
 
 
-def _pick_with_avoid(rnd: random.Random, items: List[str], avoid_keys: List[str]) -> str:
-    safe, risky = [], []
-    for it in items:
-        it_low = (it or "").lower()
-        if any(k in it_low for k in avoid_keys):
-            risky.append(it)
-        else:
-            safe.append(it)
-    if safe:
-        return rnd.choice(safe)
-    if risky:
-        return rnd.choice(risky)
-    return "—"
-
-
-def _fmt_day(day_no: int, lines: List[str]) -> str:
-    out = [f"День {day_no}", ""]
-    for ln in lines:
-        out.append(f"• {ln}")
-    out.append("")
-    return "\n".join(out)
-
-
-def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: str, state_text: str, user_id: int = 0) -> str:
-    """
-    ✅ Индивидуально:
-    - Цель: масса/сушка/форма
-    - Возможности: дом/зал + частота + опыт
-    - Состояние: если устал/после перерыва/есть боль — уменьшаем объём и “жёсткость”
-    - Ограничения: стараемся избегать провокационных движений
-    """
+def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: str, state_text: str, user_id: int = 0) -> Tuple[str, dict]:
     pl = (place or "").lower()
     is_gym = ("зал" in pl) or (pl == "gym") or ("gym" in pl)
     where = "ЗАЛ" if is_gym else "ДОМ"
 
-    lvl = exp_level(exp)
-    seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
-    rnd = random.Random(seed)
+    lvl = exp_level(exp)  # novice / mid / adv
+    is_novice = (lvl == "novice")
+    g = (goal or "").lower()
+    is_cut = ("суш" in g)
 
     tags = _limits_tags(limits)
     st = _state_tags(state_text)
+
+    f = int(freq or 3)
+    f = max(MIN_DAYS, min(f, MAX_DAYS))
+    if (st["tired"] or st["backoff"]) and f >= 5:
+        f = 4
+    if st["backoff"] and f >= 4:
+        f = 3
+
+    reps_base = "6–10" if not is_cut else "5–8"
+    reps_iso = "10–15" if not is_cut else "12–20"
+
+    base_sets = "3" if is_novice else "3–4"
+    iso_sets = "2–3" if is_novice else "3"
+
+    rir = "2–3" if (st["tired"] or st["backoff"] or st["pain"]) else "1–2"
+
+    seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
+    rnd = random.Random(seed)
 
     avoid_knee = ["присед", "жим ног", "выпад", "болгар", "разгиб"]
     avoid_back = ["тяга", "станов", "наклон", "гребл", "румын"]
     avoid_shoulder = ["жим вверх", "жим лёжа", "жим в тренаж", "отжим"]
     avoid_elbow = ["разгиб", "француз", "трицепс", "сгибан"]
 
-    g = (goal or "").lower()
-    is_cut = ("суш" in g)
-
-    # ✅ базовые диапазоны (и чуть мягче, если состояние не ок)
-    reps_base = "5–8" if is_cut else "6–10"
-    if lvl == "novice" and not is_cut:
-        reps_base = "8–12"
-
-    # объём по уровню
-    base_sets = "3–4" if lvl != "novice" else "3"
-    iso_sets = "3" if lvl != "novice" else "2–3"
-    reps_iso = "8–15"
-
-    # ✅ состояние влияет на объём/запас
-    rir_line = "1–2 повтора в запасе"
-    if st["tired"] or st["backoff"] or st["pain"]:
-        base_sets = "2–3"
-        iso_sets = "2–3"
-        rir_line = "2–3 повтора в запасе (сегодня без геройства)"
-
-    f = int(freq or 3)
-    f = max(3, min(f, 5))
-    if st["tired"] and f >= 5:
-        f = 4
-    if st["backoff"] and f >= 4:
-        f = 3
-
-    def choose_base_push():
-        if is_gym:
-            base = ["Жим лёжа (штанга)", "Жим гантелей лёжа", "Жим в тренажёре", "Отжимания"]
-        else:
-            base = ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа"]
+    def avoid_keys_for_base():
+        keys = []
+        if tags["knee"] or st["pain"]:
+            keys += avoid_knee
+        if tags["back"] or st["pain"]:
+            keys += avoid_back
         if tags["shoulder"] or st["pain"]:
-            base += ["Жим в тренажёре (лёгко)", "Сведения на блоке/в тренажёре"]
-        return _pick_with_avoid(rnd, base, avoid_shoulder if (tags["shoulder"] or st["pain"]) else [])
+            keys += avoid_shoulder
+        if tags["elbow"] or st["pain"]:
+            keys += avoid_elbow
+        return keys
 
-    def choose_base_pull():
-        if is_gym:
-            base = ["Верхний блок", "Подтягивания", "Тяга горизонтального блока", "Тяга гантели одной рукой"]
-        else:
-            base = ["Подтягивания", "Тяга гантели одной рукой", "Тяга резинки к поясу"]
-        if tags["back"] or st["pain"]:
-            base += ["Верхний блок (лёгко, без раскачки)", "Тяга к груди сидя (лёгко)"]
-        return _pick_with_avoid(rnd, base, avoid_back if (tags["back"] or st["pain"]) else [])
+    def pick_unique(pool: List[str], used: set, avoid_keys: List[str]) -> str:
+        candidates = []
+        for it in pool:
+            low = it.lower()
+            if any(k in low for k in avoid_keys):
+                continue
+            if it in used:
+                continue
+            candidates.append(it)
+        if candidates:
+            pick = rnd.choice(candidates)
+            used.add(pick)
+            return pick
 
-    def choose_base_legs():
-        if is_gym:
-            base = ["Присед со штангой", "Жим ногами", "Гоблет-присед", "Румынская тяга (лёгкая)", "Ягодичный мост"]
-        else:
-            base = ["Приседания", "Болгарские выпады", "Ягодичный мост", "Гоблет-присед"]
-        if tags["knee"] or st["pain"]:
-            base += ["Ягодичный мост", "Сгибания ног (если есть тренажёр)"]
-        if tags["back"] or st["pain"]:
-            base += ["Жим ногами (лёгко)", "Ягодичный мост"]
-        avoid = []
-        if tags["knee"] or st["pain"]:
-            avoid += avoid_knee
-        if tags["back"] or st["pain"]:
-            avoid += avoid_back
-        return _pick_with_avoid(rnd, base, avoid)
+        safe = [it for it in pool if not any(k in it.lower() for k in avoid_keys)]
+        if safe:
+            pick = rnd.choice(safe)
+            used.add(pick)
+            return pick
 
-    def choose_base_extra(day_index: int):
-        # 4-е базовое упражнение — только если норм состояние и есть смысл по объёму
-        if st["tired"] or st["backoff"] or st["pain"]:
-            return None
-        if lvl == "novice" and f <= 3:
-            return None
-        options = ["Жим вверх", "Подтягивания", "Верхний блок", "Жим ногами"] if is_gym else ["Отжимания", "Подтягивания", "Ягодичный мост"]
-        avoid = []
-        if tags["shoulder"]:
-            avoid += avoid_shoulder
-        if tags["back"]:
-            avoid += avoid_back
-        if tags["knee"]:
-            avoid += avoid_knee
-        pick = _pick_with_avoid(rnd, options, avoid)
-        if f == 3 and day_index % 2 == 0:
-            return None
+        pick = rnd.choice(pool) if pool else "—"
+        used.add(pick)
         return pick
 
-    shoulders_iso = ["Face pull (канат)", "Разведения в стороны (гантели)"]
-    biceps_iso = ["Сгибания на блоке", "Сгибания гантелей"]
-    triceps_iso = ["Разгибания на блоке", "Разгибания одной рукой (лёгко)", "Отжимания узкие"]
-    legs_iso = ["Икры стоя/сидя", "Сгибания ног", "Разгибания ног"]
+    used_bases = set()
+
+    if is_gym:
+        PUSH_BASE_N = ["Жим в тренажёре", "Жим гантелей лёжа", "Отжимания", "Сведения в тренажёре/кроссовере"]
+        PULL_BASE_N = ["Верхний блок", "Тяга горизонтального блока", "Тяга гантели одной рукой"]
+        LEGS_BASE_N = ["Жим ногами (лёгко)", "Гоблет-присед", "Ягодичный мост", "Сгибания ног (тренажёр)"]
+
+        PUSH_BASE_M = ["Жим лёжа (штанга)", "Жим гантелей лёжа", "Жим в тренажёре", "Отжимания"]
+        PULL_BASE_M = ["Подтягивания", "Верхний блок", "Тяга горизонтального блока", "Тяга гантели одной рукой"]
+        LEGS_BASE_M = ["Присед (вариант)", "Жим ногами", "Румынская тяга (лёгкая)", "Ягодичный мост"]
+    else:
+        PUSH_BASE_N = ["Отжимания", "Отжимания с упором ног", "Жим гантелей лёжа"]
+        PULL_BASE_N = ["Подтягивания (резинка/негативы)", "Тяга резинки к поясу", "Тяга гантели одной рукой"]
+        LEGS_BASE_N = ["Приседания", "Гоблет-присед", "Ягодичный мост", "Болгарские (лёгко)"]
+
+        PUSH_BASE_M = ["Отжимания", "Жим гантелей лёжа", "Отжимания с упором ног"]
+        PULL_BASE_M = ["Подтягивания", "Тяга гантели одной рукой", "Тяга резинки к поясу"]
+        LEGS_BASE_M = ["Приседания", "Болгарские выпады", "Ягодичный мост", "Румынская тяга (гантели)"]
+
+    PUSH_BASE = PUSH_BASE_N if is_novice else PUSH_BASE_M
+    PULL_BASE = PULL_BASE_N if is_novice else PULL_BASE_M
+    LEGS_BASE = LEGS_BASE_N if is_novice else LEGS_BASE_M
+
+    ISO_SHOULDERS = ["Разведения в стороны (гантели)", "Face pull (канат)", "Задняя дельта (тренажёр/резинка)"]
+    ISO_BACK = ["Гиперэкстензия (лёгко)", "Тяга прямыми руками (блок)", "Пуловер (блок/гантель)"]
+    ISO_ARMS_BI = ["Сгибания гантелей", "Сгибания на блоке", "Молотки"]
+    ISO_ARMS_TRI = ["Разгибания на блоке", "Разгибания одной рукой (лёгко)", "Отжимания узкие"]
+    ISO_LEGS = ["Икры стоя/сидя", "Сгибания ног", "Разгибания ног"]
 
     if tags["elbow"] or st["pain"]:
-        biceps_iso += ["Молотки (лёгко)"]
-        triceps_iso = ["Разгибания на блоке (лёгко)", "Разгибания одной рукой (лёгко)"]
+        ISO_ARMS_TRI = ["Разгибания на блоке (лёгко)", "Разгибания одной рукой (лёгко)"]
 
     if tags["knee"] or st["pain"]:
-        legs_iso = ["Икры стоя/сидя", "Сгибания ног", "Ягодичный мост"]
+        ISO_LEGS = ["Икры стоя/сидя", "Сгибания ног", "Ягодичный мост"]
 
-    iso_avoid = []
-    if tags["shoulder"]:
-        iso_avoid += avoid_shoulder
-    if tags["elbow"]:
-        iso_avoid += avoid_elbow
-    if tags["knee"]:
-        iso_avoid += avoid_knee
+    avoid_keys = avoid_keys_for_base()
+
+    st_low = (state_text or "").lower()
+    if any(x in st_low for x in ["спина", "широч", "тяга"]):
+        focus_cycle = ["спина", "плечи", "руки"]
+    elif any(x in st_low for x in ["груд", "жим"]):
+        focus_cycle = ["грудь", "плечи", "руки"]
+    elif any(x in st_low for x in ["ног", "бедр", "ягод"]):
+        focus_cycle = ["ноги/ягодицы", "спина", "плечи"]
+    else:
+        focus_cycle = ["плечи", "спина", "руки"]
+
+    def focus_for_day(d: int) -> str:
+        return focus_cycle[(d - 1) % len(focus_cycle)]
 
     def fmt_base(name: str) -> str:
         return f"{name} — {base_sets}×{reps_base}"
@@ -1170,81 +1211,98 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     limits_line = (limits or "").strip() or "нет"
     state_line = (state_text or "").strip() or "норм"
 
-    header_note = (
-        "✅ Как я это собрал под тебя\n"
-        "• Разминка 5–10 мин: лёгкое кардио + 1–2 разминочных подхода.\n"
-        f"• База: 3–4 упражнения, {base_sets} подхода, {reps_base} повторов, отдых 2–3 мин, {rir_line}.\n"
-        f"• Изоляция: 2–3 упражнения, {iso_sets} подхода, {reps_iso} повторов, отдых 60–90 сек.\n"
-    )
-    if is_cut:
-        header_note += (
-            "\n🔥 Сушка (без фанатизма):\n"
-            "• держим силу насколько можно\n"
-            "• кардио/шаги: 2–4 раза/нед 20–40 мин ИЛИ 8–12 тыс шагов/день\n"
-        )
-    else:
-        header_note += (
-            "\n💪 Рост мышц:\n"
-            "• прогрессируй: больше повторов → потом чуть больше вес\n"
-            "• техника всегда важнее цифр\n"
-        )
-
-    prog = (
-        "\n📌 Как прогрессировать:\n"
-        "• дошёл до верхней границы повторов — добавь вес (+2.5–5%)\n"
-        "• если техника ломается — вес не трогаем\n"
-        "• если усталость копится — сделай неделю полегче\n"
+    prog_name = "Старт Гипертрофии" if is_novice else "Гипертрофия PRO"
+    basis = (
+        "Основа: базовые движения (жим/тяга/ноги) + изоляция на акцент дня.\n"
+        f"Принцип: прогрессия (повторы → вес), контроль техники, RIR {rir}."
     )
 
-    days_text = []
-    for d in range(1, f + 1):
-        base_push = choose_base_push()
-        base_pull = choose_base_pull()
-        base_legs = choose_base_legs()
-        base_extra = choose_base_extra(d)
-
-        iso1 = _pick_with_avoid(rnd, shoulders_iso, iso_avoid)
-        iso2 = _pick_with_avoid(rnd, biceps_iso, iso_avoid)
-        iso3 = _pick_with_avoid(rnd, triceps_iso, iso_avoid)
-        iso4 = _pick_with_avoid(rnd, legs_iso, iso_avoid)
-
-        lines = [
-            fmt_base(base_push),
-            fmt_base(base_pull),
-            fmt_base(base_legs),
-        ]
-        if base_extra:
-            lines.append(fmt_base(base_extra))
-
-        # состояние “похуже” — меньше изоляции
-        if st["tired"] or st["backoff"] or st["pain"]:
-            lines += [fmt_iso(iso1), fmt_iso(iso2)]
-        else:
-            lines += [fmt_iso(iso1), fmt_iso(iso2)]
-            if f >= 4 or lvl != "novice":
-                lines.append(fmt_iso(iso3))
-            if f >= 5:
-                lines.append(fmt_iso(iso4))
-
-        days_text.append(_fmt_day(d, lines))
-
-    return (
-        f"🏋️ Мои тренировки ({where}) — {f}×/нед\n\n"
+    intro = (
+        f"🏋️ Мои тренировки — {prog_name} ({where})\n\n"
+        f"Частота: {f}×/нед\n"
+        f"Рекомендуемые дни: {weekday_schedule(f)}\n\n"
         f"Цель: {goal}\n"
+        f"Уровень: {'новичок' if is_novice else 'средний+'}\n"
         f"Ограничения: {limits_line}\n"
         f"Состояние: {state_line}\n\n"
-        + header_note
-        + prog
-        + "\n"
-        + "\n".join(days_text)
+        "Как построено:\n"
+        "• Разминка 5–10 мин + 1–2 разминочных подхода\n"
+        f"• База: {base_sets} подхода, {reps_base} повторов, отдых 2–3 мин, RIR {rir}\n"
+        f"• Изоляция: {iso_sets} подхода, {reps_iso} повторов, отдых 60–90 сек\n"
+        "• Акцент дня — добиваем слабую группу (без дублирования упражнений)\n\n"
+        "📌 Прогрессия:\n"
+        "• дошёл до верхней границы повторов — +2.5–5% к весу\n"
+        "• техника ломается — вес не трогаем\n"
+        "• усталость копится — 1 лёгкая неделя\n\n"
+        "Ниже выбери день кнопкой 👇"
     )
 
+    days: Dict[str, str] = {}
+    for d in range(1, f + 1):
+        focus = focus_for_day(d)
+
+        push = pick_unique(PUSH_BASE, used_bases, avoid_keys)
+        pull = pick_unique(PULL_BASE, used_bases, avoid_keys)
+        legs = pick_unique(LEGS_BASE, used_bases, avoid_keys)
+
+        extra = None
+        if (not is_novice) and not (st["tired"] or st["backoff"] or st["pain"]):
+            extra_pool = ["Жим вверх", "Подтягивания", "Верхний блок", "Жим ногами"] if is_gym else ["Подтягивания", "Отжимания (усложнённые)", "Ягодичный мост (утяж.)"]
+            extra = pick_unique(extra_pool, used_bases, avoid_keys)
+
+        iso = []
+        if focus == "плечи":
+            iso += [rnd.choice(ISO_SHOULDERS), rnd.choice(ISO_SHOULDERS)]
+        elif focus == "спина":
+            iso += [rnd.choice(ISO_BACK), rnd.choice(ISO_BACK)]
+        elif focus == "руки":
+            iso += [rnd.choice(ISO_ARMS_BI), rnd.choice(ISO_ARMS_TRI)]
+        elif focus == "грудь":
+            iso += ["Сведения в тренажёре/кроссовере", "Отжимания узкие"]
+        elif focus == "ноги/ягодицы":
+            iso += [rnd.choice(ISO_LEGS), "Ягодичный мост (добивка)"]
+        else:
+            iso += [rnd.choice(ISO_SHOULDERS), rnd.choice(ISO_ARMS_BI)]
+
+        if st["tired"] or st["backoff"] or st["pain"]:
+            iso = iso[:2]
+            extra = None
+
+        lines = []
+        lines.append(f"RIR: {rir}")
+        lines.append(f"Акцент: {focus}")
+        lines.append("")
+        lines.append(f"• {fmt_base(push)}")
+        lines.append(f"• {fmt_base(pull)}")
+        lines.append(f"• {fmt_base(legs)}")
+        if extra:
+            lines.append(f"• {fmt_base(extra)}")
+
+        lines.append("")
+        lines.append("Изоляция:")
+        for it in iso:
+            lines.append(f"• {fmt_iso(it)}")
+
+        days[str(d)] = "\n".join([f"День {d}", ""] + lines)
+
+    plan_struct = {
+        "name": prog_name,
+        "where": where,
+        "freq": f,
+        "schedule": weekday_schedule(f),
+        "basis": basis,
+        "rir": rir,
+        "days": days,
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+
+    return intro, plan_struct
+
 
 # =========================
-# ✅ ПИТАНИЕ — разнообразнее + итог дня подгоняется под цель (ккал/БЖУ совпадают)
+# ✅ ПИТАНИЕ (как у тебя было)
 # =========================
 FOOD_DB = {
-    # базовые
     "oats":      {"name": "Овсянка (сухая)",              "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
     "rice":      {"name": "Рис (сухой)",                  "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
     "buckwheat": {"name": "Гречка (сухая)",               "kcal": 340, "p": 12.0, "f": 3.0,   "c": 66.0},
@@ -1253,7 +1311,6 @@ FOOD_DB = {
     "bread":     {"name": "Хлеб",                         "kcal": 250, "p": 8.0,  "f": 3.0,   "c": 49.0},
     "veg":       {"name": "Овощи (микс)",                 "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
 
-    # белки
     "chicken":   {"name": "Куриная грудка",               "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
     "turkey":    {"name": "Индейка (филе)",               "kcal": 150, "p": 29.0, "f": 2.0,   "c": 0.0},
     "fish":      {"name": "Рыба (белая)",                 "kcal": 110, "p": 22.0, "f": 2.0,   "c": 0.0},
@@ -1262,12 +1319,10 @@ FOOD_DB = {
     "curd_0_5":  {"name": "Творог 0–5%",                  "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
     "yogurt":    {"name": "Йогурт натуральный",           "kcal": 60,  "p": 5.0,  "f": 2.5,   "c": 4.0},
 
-    # жиры/добавки
     "oil":       {"name": "Оливковое масло",              "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
     "nuts":      {"name": "Орехи",                        "kcal": 600, "p": 15.0, "f": 55.0,  "c": 15.0},
     "cheese":    {"name": "Сыр",                          "kcal": 350, "p": 25.0, "f": 27.0,  "c": 1.0},
 
-    # фрукты
     "banana":    {"name": "Банан",                        "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
     "apple":     {"name": "Яблоко",                       "kcal": 52,  "p": 0.3,  "f": 0.2,   "c": 14.0},
 }
@@ -1303,23 +1358,13 @@ def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float)
             if k == key:
                 day_meals[mi][ii] = (k, max(0.0, g + delta))
                 return
-    # если нет такого продукта — добавим в последний приём
     day_meals[-1].append((key, max(0.0, float(delta))))
 
 def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str, float]) -> Dict[str, float]:
-    """
-    Подгоняем под цель:
-    - белок: курица/индейка/рыба
-    - угли: рис/гречка/макароны/овсянка/картофель
-    - жиры: масло/орехи
-    Делаем мягко и без “300г сухого риса”.
-    """
-    # приоритеты (если нет в дне — добавится)
     protein_keys = ["chicken", "turkey", "fish", "curd_0_5", "yogurt"]
     carb_keys = ["rice", "buckwheat", "pasta", "oats", "potato", "bread", "banana", "apple"]
     fat_keys = ["oil", "nuts", "cheese"]
 
-    # ограничим “шаги” чтобы не улетало
     for _ in range(60):
         t = _totals_of_day(day_meals)
         dk = target["kcal"] - t["kcal"]
@@ -1327,39 +1372,30 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
         df = target["f"] - t["f"]
         dc = target["c"] - t["c"]
 
-        # уже достаточно близко
         if abs(dk) <= 35 and abs(dp) <= 6 and abs(df) <= 4 and abs(dc) <= 8:
             return t
 
-        # 1) белок
         if dp > 6:
-            k = protein_keys[0]
-            _add_grams(day_meals, k, 30.0)  # +30г мяса/рыбы
+            _add_grams(day_meals, protein_keys[0], 30.0)
             continue
         if dp < -10:
-            # чуть уберём белок
-            k = protein_keys[0]
-            _add_grams(day_meals, k, -30.0)
+            _add_grams(day_meals, protein_keys[0], -30.0)
             continue
 
-        # 2) жиры
         if df > 4:
-            _add_grams(day_meals, "oil", 3.0)   # +3г масла
+            _add_grams(day_meals, "oil", 3.0)
             continue
         if df < -6:
             _add_grams(day_meals, "oil", -3.0)
             continue
 
-        # 3) угли / калории
         if dc > 10 or dk > 80:
-            # добавим угли небольшими порциями
             _add_grams(day_meals, "rice", 10.0)
             continue
         if dc < -12 or dk < -90:
             _add_grams(day_meals, "rice", -10.0)
             continue
 
-        # если застряли — слегка подправим овсянкой/орехами
         if dk > 60:
             _add_grams(day_meals, "oats", 10.0)
         elif dk < -60:
@@ -1368,10 +1404,6 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
     return _totals_of_day(day_meals)
 
 def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]]:
-    """
-    3 разных дня (реально разные продукты).
-    meals: 3..5
-    """
     meals = max(3, min(int(meals or 3), 5))
 
     if variant == 1:
@@ -1398,7 +1430,6 @@ def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]
             day.append([("nuts", 25.0), ("apple", 200.0)])
         return day
 
-    # variant 3
     day = [
         [("oats", 60.0), ("curd_0_5", 200.0), ("apple", 200.0)],
         [("rice", 80.0), ("turkey", 220.0), ("veg", 300.0), ("oil", 8.0)],
@@ -1411,15 +1442,10 @@ def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]
     return day
 
 def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
-    """
-    ✅ Важно: подгоняем рацион так, чтобы “Итог дня” совпадал с “Целью”.
-    Для этого считаем цель → подгоняем продукты → затем берём итоги как финальную цель (округлённую).
-    """
     target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
     day_meals = _build_day_variant(day_i, meals)
     tot = _adjust_to_target(day_meals, target)
 
-    # финальные “цели” = финальные итоги (чтобы совпадало 1-в-1 после округления)
     final_k = int(round(tot["kcal"]))
     final_p = int(round(tot["p"]))
     final_f = int(round(tot["f"]))
@@ -1654,8 +1680,8 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("freq"))
     elif step == "state":
         await state.set_state(ProfileWizard.state)
-        text = _profile_header(10) + "🙂 Как самочувствие сейчас?\nНапример: «норм», «не выспался», «после перерыва», «побаливает плечо»:"
-        await clean_edit(callback, uid, text, reply_markup=kb_text_step("limits"))
+        text = _profile_header(10) + "🙂 Как самочувствие/настроение сейчас? Можно кнопкой или текстом:"
+        await clean_edit(callback, uid, text, reply_markup=kb_state())
     else:
         await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
 
@@ -1800,21 +1826,61 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
     await update_user(message.from_user.id, limits=limits)
 
     await state.set_state(ProfileWizard.state)
-    text = _profile_header(10) + (
-        "🙂 И последний штрих.\n"
-        "Как самочувствие сейчас?\n"
-        "Например: «норм», «не выспался», «после перерыва», «побаливает плечо»."
-    )
-    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_text_step("limits"))
+    text = _profile_header(10) + "🙂 Как самочувствие/настроение сейчас? Можно кнопкой или текстом:"
+    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_state())
     await try_delete_user_message(bot, message)
 
 
-async def profile_state_text(message: Message, state: FSMContext, bot: Bot):
-    st = (message.text or "").strip()
-    if not st:
-        st = "норм"
+async def cb_profile_state_pick(callback: CallbackQuery, state: FSMContext):
+    v = callback.data.split(":", 2)[2]
 
-    await update_user(message.from_user.id, state=st)
+    if v == "text":
+        await state.set_state(ProfileWizard.state)
+        text = _profile_header(10) + (
+            "Ок, напиши самочувствие текстом 🙂\n"
+            "Например: «норм», «не выспался», «после перерыва», «побаливает плечо»."
+        )
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("limits"))
+        await callback.answer()
+        return
+
+    mapping = {
+        "отличное": "отличное, заряжен",
+        "норм": "норм",
+        "устал": "устал / мало сна",
+        "болит": "есть дискомфорт/боль",
+    }
+    st_txt = mapping.get(v, v)
+
+    await update_user(callback.from_user.id, state=st_txt)
+    await state.clear()
+
+    u = await get_user(callback.from_user.id)
+    summary = (
+        _profile_header(10) +
+        "✅ Готово! Профиль сохранил.\n\n"
+        f"Цель: {u.get('goal')}\n"
+        f"Пол: {u.get('sex')}\n"
+        f"Возраст: {u.get('age')}\n"
+        f"Рост: {u.get('height')}\n"
+        f"Вес: {u.get('weight')}\n"
+        f"Где тренишь: {u.get('place')}\n"
+        f"Опыт: {u.get('exp')}\n"
+        f"Частота: {u.get('freq')}×/нед\n"
+        f"Ограничения: {(u.get('limits') or 'нет')}\n"
+        f"Состояние: {(u.get('state') or 'норм')}\n\n"
+        "Теперь открывай питание/тренировки — всё подстрою под эти данные."
+    )
+    await clean_edit(callback, callback.from_user.id, summary, reply_markup=profile_done_kb())
+    await callback.answer()
+
+
+async def profile_state_text(message: Message, state: FSMContext, bot: Bot):
+    st_txt = (message.text or "").strip()
+    if not st_txt:
+        st_txt = "норм"
+
+    await update_user(message.from_user.id, state=st_txt)
     await state.clear()
 
     u = await get_user(message.from_user.id)
@@ -1915,7 +1981,6 @@ async def pay_receipt(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
 
-    # ✅ сумма/последние 4 цифры больше не спрашиваем
     amount = int(TARIFFS[tariff]["price"])
     last4 = "----"
     receipt_file_id = message.photo[-1].file_id
@@ -2004,14 +2069,16 @@ async def ensure_profile_ready(user_id: int) -> bool:
     return True
 
 
-async def build_plans_if_needed(user_id: int):
+async def build_plans_if_needed(user_id: int, force: bool = False):
     u = await get_user(user_id)
-    workout = generate_workout_plan(
+
+    intro, plan_struct = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"]),
         limits=u.get("limits") or "",
         state_text=u.get("state") or "",
         user_id=user_id
     )
+
     summary, cal, p, f, c, meals = generate_nutrition_summary(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
         freq=int(u["freq"]), place=u["place"]
@@ -2025,8 +2092,18 @@ async def build_plans_if_needed(user_id: int):
           "• банан ↔ яблоко\n"
     )
 
-    await save_workout_plan(user_id, workout)
-    await save_nutrition_plan(user_id, nutrition_full)
+    if force:
+        await save_workout_plan(user_id, intro, dumps_plan(plan_struct))
+        await save_nutrition_plan(user_id, nutrition_full)
+        return
+
+    plan_text, plan_json = await get_workout_plan(user_id)
+    nutr_text = await get_nutrition_plan(user_id)
+
+    if not plan_text or not plan_json:
+        await save_workout_plan(user_id, intro, dumps_plan(plan_struct))
+    if not nutr_text:
+        await save_nutrition_plan(user_id, nutrition_full)
 
 
 TRACK_EXERCISES = [
@@ -2089,21 +2166,70 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
         await clean_send(bot, chat_id, user_id, "⚠️ Сначала заполни профиль (кнопка снизу: ⚙️ Профиль).")
         return
 
-    plan = await get_workout_plan(user_id)
-    if not plan:
-        await build_plans_if_needed(user_id)
-        plan = await get_workout_plan(user_id)
+    plan_text, plan_struct = await get_workout_plan(user_id)
+    if not plan_text or not plan_struct:
+        await build_plans_if_needed(user_id, force=True)
+        plan_text, plan_struct = await get_workout_plan(user_id)
 
-    head = "🏋️ Мои тренировки\n\n"
-    txt = head + (plan or "План пока не найден.")
+    u = await get_user(user_id)
+    freq = int(u.get("freq") or plan_struct.get("freq") or 3)
+    kb = workout_days_kb(freq)
+
     if callback:
-        if len(txt) <= TG_SAFE_MSG_LEN:
-            await clean_edit(callback, user_id, txt, reply_markup=workouts_inline_kb())
-        else:
-            await clean_send(bot, chat_id, user_id, head, reply_markup=workouts_inline_kb())
-            await bot.send_message(chat_id, plan or "")
+        await clean_edit(callback, user_id, plan_text or "🏋️ План не найден.", reply_markup=kb)
     else:
-        await clean_send(bot, chat_id, user_id, txt, reply_markup=workouts_inline_kb())
+        await clean_send(bot, chat_id, user_id, plan_text or "🏋️ План не найден.", reply_markup=kb)
+
+
+async def cb_workout_day(callback: CallbackQuery, bot: Bot):
+    if not await is_access_active(callback.from_user.id):
+        await clean_edit(callback, callback.from_user.id, locked_text())
+        await callback.answer()
+        return
+
+    plan_text, plan_struct = await get_workout_plan(callback.from_user.id)
+    if not plan_struct:
+        await build_plans_if_needed(callback.from_user.id, force=True)
+        plan_text, plan_struct = await get_workout_plan(callback.from_user.id)
+
+    day = callback.data.split(":", 1)[1]
+    day_text = (plan_struct.get("days") or {}).get(str(day))
+    if not day_text:
+        await callback.answer("День не найден 😅", show_alert=True)
+        return
+
+    u = await get_user(callback.from_user.id)
+    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3))
+    await clean_edit(callback, callback.from_user.id, day_text, reply_markup=kb)
+    await callback.answer()
+
+
+async def cb_plan_refresh(callback: CallbackQuery, bot: Bot, state: FSMContext):
+    await state.clear()
+
+    if not await is_access_active(callback.from_user.id):
+        await clean_edit(callback, callback.from_user.id, locked_text())
+        await callback.answer()
+        return
+
+    if not await ensure_profile_ready(callback.from_user.id):
+        await clean_edit(callback, callback.from_user.id, "⚠️ Сначала заполни профиль (кнопка снизу: ⚙️ Профиль).")
+        await callback.answer()
+        return
+
+    await build_plans_if_needed(callback.from_user.id, force=True)
+
+    plan_text, plan_struct = await get_workout_plan(callback.from_user.id)
+    u = await get_user(callback.from_user.id)
+    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3))
+
+    await clean_edit(
+        callback,
+        callback.from_user.id,
+        (plan_text or "") + "\n\n🔁 План обновил под твой текущий профиль/самочувствие.",
+        reply_markup=kb
+    )
+    await callback.answer("Готово ✅")
 
 
 async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
@@ -2561,6 +2687,15 @@ async def forward_to_admin(message: Message, bot: Bot):
 
 
 # =========================
+# ✅ ТЕХНИКИ: callback "tech:list" уже есть, добавим корректный роутер
+# =========================
+async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await clean_edit(callback, callback.from_user.id, "📚 Техники — выбирай упражнение:", reply_markup=tech_kb())
+    await callback.answer()
+
+
+# =========================
 # РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
 # =========================
 def setup_handlers(dp: Dispatcher):
@@ -2575,6 +2710,7 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_profile_place, F.data.startswith("p:place:"))
     dp.callback_query.register(cb_profile_exp, F.data.startswith("p:exp:"))
     dp.callback_query.register(cb_profile_freq, F.data.startswith("p:freq:"))
+    dp.callback_query.register(cb_profile_state_pick, F.data.startswith("p:state:"))
 
     dp.message.register(profile_age_text, ProfileWizard.age)
     dp.message.register(profile_height_text, ProfileWizard.height)
@@ -2600,6 +2736,10 @@ def setup_handlers(dp: Dispatcher):
 
     dp.callback_query.register(cb_nutr_example, F.data.startswith("nutr:ex:"))
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
+
+    # ✅ дни тренировок + обновить план
+    dp.callback_query.register(cb_workout_day, F.data.startswith("wday:"))
+    dp.callback_query.register(cb_plan_refresh, F.data == "plan:refresh")
 
     dp.message.register(cmd_posts, Command("posts"))
     dp.callback_query.register(cb_post_new, F.data == "post:new")
