@@ -1500,10 +1500,7 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
 # МЕНЮ / START
 # =========================
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
- "welcome": {
-        "title": "привет",
-    "img": "media/tech/welcome.jpg",
-    "text" : (
+    text = (
         "👋 Привет! Я Зелёный тренер.\n\n"
         "Здесь я помогу тебе, составить индивидуальную программу тренировок и питания:\n\n"
         "• соберу тренировки под цель, будь то сушка, масса или поддержание\n"
@@ -1513,7 +1510,6 @@ async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
         "Выбирай, куда пойдём 👇\n\n"
         "ℹ️ Оплата / профиль / поддержка — всегда на кнопках снизу."
     )
-   },
     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
 
 
@@ -2825,6 +2821,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
 
