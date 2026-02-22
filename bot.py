@@ -1500,7 +1500,8 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
 # МЕНЮ / START
 # =========================
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
-    text = (
+    "img": "media/tech/welcome.jpg",
+    "text" : (
         "👋 Привет! Я Зелёный тренер.\n\n"
         "Здесь я помогу тебе, составить индивидуальную программу тренировок и питания:\n\n"
         "• соберу тренировки под цель, будь то сушка, масса или поддержание\n"
@@ -2821,6 +2822,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
 
