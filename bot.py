@@ -84,7 +84,6 @@ class ProfileWizard(StatesGroup):
     freq = State()
     meals = State()        # ✅ сколько раз в день удобно есть (кнопки)
     limits = State()       # текстом (ограничения)
-    state = State()        # текстом/кнопкой (самочувствие)
 
 
 # =========================
@@ -407,7 +406,7 @@ def admin_review_kb(payment_id: int):
 # =========================
 # ✅ Профиль: прогресс "■■■■■■■□□□ 100%"
 # =========================
-TOTAL_PROFILE_STEPS = 11
+TOTAL_PROFILE_STEPS = 10
 
 
 def _bar(step: int, total: int = TOTAL_PROFILE_STEPS, width: int = 10) -> str:
@@ -439,26 +438,24 @@ def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
          InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
-        [InlineKeyboardButton(text="🧩 Удержание", callback_data="p:goal:fit")],
+        [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength"),
+         InlineKeyboardButton(text="🏃 Выносливость", callback_data="p:goal:endurance")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
-
 
 def kb_sex():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👨 Мужчина", callback_data="p:sex:m"),
          InlineKeyboardButton(text="👩 Женщина", callback_data="p:sex:f")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:goal")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
 def kb_place():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏠 Дома", callback_data="p:place:home"),
+        [InlineKeyboardButton(text="🤸 Со своим весом", callback_data="p:place:body"),
          InlineKeyboardButton(text="🏋️ В зале", callback_data="p:place:gym")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:weight")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
@@ -468,7 +465,6 @@ def kb_exp():
         [InlineKeyboardButton(text="1–2 года", callback_data="p:exp:mid"),
          InlineKeyboardButton(text="2+ года", callback_data="p:exp:adv")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:place")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
@@ -478,7 +474,6 @@ def kb_freq():
          InlineKeyboardButton(text="4×/нед", callback_data="p:freq:4")],
         [InlineKeyboardButton(text="5×/нед", callback_data="p:freq:5")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:exp")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
@@ -488,28 +483,13 @@ def kb_meals():
          InlineKeyboardButton(text="4 раза", callback_data="p:meals:4")],
         [InlineKeyboardButton(text="5 раз", callback_data="p:meals:5")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:freq")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
 def kb_text_step(back_to: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"p:back:{back_to}")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
-
-
-def kb_state():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="😄 Отлично", callback_data="p:state:отличное"),
-         InlineKeyboardButton(text="🙂 Норм", callback_data="p:state:норм")],
-        [InlineKeyboardButton(text="😴 Устал/не выспался", callback_data="p:state:устал"),
-         InlineKeyboardButton(text="😖 Есть боль/дискомфорт", callback_data="p:state:болит")],
-        [InlineKeyboardButton(text="✍️ Напишу текстом", callback_data="p:state:text")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:limits")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
-    ])
-
 
 # =========================
 # УТИЛИТЫ
@@ -1690,7 +1670,6 @@ def _profile_summary_text(u: dict) -> str:
         f"Тренировки: {u.get('freq')}×/нед\n"
         f"Еда: {u.get('meals')}×/день\n"
         f"Ограничения: {(u.get('limits') or 'нет')}\n"
-        f"Самочувствие: {(u.get('state') or 'норм')}"
     )
 
 
@@ -1761,7 +1740,7 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("height"))
     elif step == "place":
         await state.set_state(ProfileWizard.place)
-        text = _profile_header(6) + "🏠 Где тренируешься?"
+        text = _profile_header(6) + "🏋️ Как тренируешься?"
         await clean_edit(callback, uid, text, reply_markup=kb_place())
     elif step == "exp":
         await state.set_state(ProfileWizard.exp)
@@ -1779,10 +1758,6 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await state.set_state(ProfileWizard.limits)
         text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("meals"))
-    elif step == "state":
-        await state.set_state(ProfileWizard.state)
-        text = _profile_header(11) + "🙂 Самочувствие сейчас?"
-        await clean_edit(callback, uid, text, reply_markup=kb_state())
     else:
         await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
 
@@ -1870,14 +1845,14 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
     await update_user(message.from_user.id, weight=w)
 
     await state.set_state(ProfileWizard.place)
-    text = _profile_header(6) + "🏠 Где тренируешься?"
+    text = _profile_header(6) + "🏋️ Как тренируешься?"
     await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_place())
     await try_delete_user_message(bot, message)
 
 
 async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
-    place = "дом" if v == "home" else "зал"
+    place = "свой вес" if v == "body" else "зал"
     await update_user(callback.from_user.id, place=place)
 
     await state.set_state(ProfileWizard.exp)
@@ -1937,9 +1912,22 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
 
     await update_user(message.from_user.id, limits=limits)
 
-    await state.set_state(ProfileWizard.state)
-    text = _profile_header(11) + "🙂 Самочувствие сейчас? (можно кнопкой)"
-    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_state())
+await update_user(message.from_user.id, limits=limits)
+    await state.clear()
+
+    # ✅ Авто-обновление планов после заполнения профиля
+    await build_plans_if_needed(message.from_user.id, force=True)
+
+    u = await get_user(message.from_user.id)
+    summary = (
+        _profile_header(10) +
+        "✅ Профиль сохранён. План тренировок и питание обновил.\n\n"
+        f"Цель: {u.get('goal')} • {u.get('freq')}×/нед\n"
+        f"Еда: {u.get('meals')}×/день\n"
+        f"Ограничения: {(u.get('limits') or 'нет')}\n\n"
+        "Теперь открывай «Тренировки» или «Питание» 👇"
+    )
+    await clean_send(bot, message.chat.id, message.from_user.id, summary, reply_markup=profile_done_kb())
     await try_delete_user_message(bot, message)
 
 
@@ -2155,7 +2143,7 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
 # =========================
 async def ensure_profile_ready(user_id: int) -> bool:
     u = await get_user(user_id)
-    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq", "meals", "state"]
+    need = ["goal", "sex", "age", "height", "weight", "place", "exp", "freq", "meals"]
     return not any(not u.get(k) for k in need)
 
 
@@ -2752,13 +2740,11 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_profile_exp, F.data.startswith("p:exp:"))
     dp.callback_query.register(cb_profile_freq, F.data.startswith("p:freq:"))
     dp.callback_query.register(cb_profile_meals, F.data.startswith("p:meals:"))
-    dp.callback_query.register(cb_profile_state_pick, F.data.startswith("p:state:"))
 
     dp.message.register(profile_age_text, ProfileWizard.age)
     dp.message.register(profile_height_text, ProfileWizard.height)
     dp.message.register(profile_weight_text, ProfileWizard.weight)
     dp.message.register(profile_limits_text, ProfileWizard.limits)
-    dp.message.register(profile_state_text, ProfileWizard.state)
 
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
     dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
@@ -2863,4 +2849,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
