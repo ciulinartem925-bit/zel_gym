@@ -1471,7 +1471,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     # Постоянная клавиатура снизу
     await bot.send_message(
         chat_id=message.chat.id,
-        text="<KEYBOARD_READY_TEXT>",
         reply_markup=control_reply_kb()
     )
 
@@ -2705,3 +2704,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
