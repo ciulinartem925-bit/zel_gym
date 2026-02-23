@@ -33,14 +33,18 @@ CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
 CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
-WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/tech/welcome.jpg")
+WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
-    "t1": {"title": "1 месяц", "days": 30, "price": 1150},
-    "t3": {"title": "3 месяца", "days": 90, "price": 2790},
-    "life": {"title": "Навсегда", "days": None, "price": 6990},
+    "trial": {"title": "Пробный (3 дня)", "days": 3,  "price": 1},
+    "t1":    {"title": "1 месяц",          "days": 30, "price": 299},
+    "t3":    {"title": "3 месяца",         "days": 90, "price": 2790},
+    "life":  {"title": "Навсегда",         "days": None, "price": 6990},
 }
+
+# Тарифы, дающие ПОЛНЫЙ доступ (включая питание)
+FULL_ACCESS_TARIFFS = {"t1", "t3", "life"}
 
 TG_SAFE_MSG_LEN = 3800
 
@@ -84,6 +88,14 @@ class ProfileWizard(StatesGroup):
     exp = State()
     freq = State()
     meals = State()
+    limits = State()
+
+
+class ProfileFieldEdit(StatesGroup):
+    """Редактирование одного конкретного поля профиля."""
+    age = State()
+    height = State()
+    weight = State()
     limits = State()
 
 
@@ -377,6 +389,7 @@ def workout_days_kb(freq: int):
 # =========================
 def pay_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"🟢 Пробный — {TARIFFS['trial']['price']}₽ (3 дня)", callback_data="tariff:trial")],
         [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
         [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
         [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
@@ -418,12 +431,59 @@ def _profile_header(step: int) -> str:
 
 def profile_done_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏠 Открыть меню", callback_data="nav:menu")]
+        [InlineKeyboardButton(text="🚀 Собрать программу", callback_data="p:build_program")]
+    ])
+
+
+def profile_ready_kb():
+    """После заполнения/просмотра готового профиля."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Собрать программу", callback_data="p:build_program")],
+        [InlineKeyboardButton(text="✏️ Изменить профиль", callback_data="p:edit")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+
+def profile_edit_field_kb(u: dict) -> InlineKeyboardMarkup:
+    """Меню выбора конкретного поля профиля для редактирования."""
+    def val(k, fallback="—"):
+        v = u.get(k)
+        return str(v) if v else fallback
+
+    rows = [
+        [InlineKeyboardButton(text=f"🎯 Цель: {val('goal')}", callback_data="pf:goal")],
+        [InlineKeyboardButton(text=f"👤 Пол: {val('sex')}", callback_data="pf:sex")],
+        [InlineKeyboardButton(text=f"🎂 Возраст: {val('age')}", callback_data="pf:age")],
+        [InlineKeyboardButton(text=f"📏 Рост: {val('height')} см", callback_data="pf:height")],
+        [InlineKeyboardButton(text=f"⚖️ Вес: {val('weight')} кг", callback_data="pf:weight")],
+        [InlineKeyboardButton(text=f"🏠 Место: {val('place')}", callback_data="pf:place")],
+        [InlineKeyboardButton(text=f"📈 Опыт: {val('exp')}", callback_data="pf:exp")],
+        [InlineKeyboardButton(text=f"📅 Тренировок/нед: {val('freq')}", callback_data="pf:freq")],
+        [InlineKeyboardButton(text=f"🍽 Приёмов еды: {val('meals')}", callback_data="pf:meals")],
+        [InlineKeyboardButton(text=f"⛔️ Ограничения: {val('limits', 'нет')}", callback_data="pf:limits")],
+        [InlineKeyboardButton(text="🏠 Назад", callback_data="nav:menu")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def build_program_tariff_kb():
+    """Тарифная кнопка после заполнения профиля."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"🟢 Пробный — {TARIFFS['trial']['price']}₽ (3 дня)",
+            callback_data="tariff:trial"
+        )],
+        [InlineKeyboardButton(
+            text=f"🟩 Месячный — {TARIFFS['t1']['price']}₽",
+            callback_data="tariff:t1"
+        )],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
 def profile_view_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Собрать программу", callback_data="p:build_program")],
         [InlineKeyboardButton(text="✏️ Изменить профиль", callback_data="p:edit")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -448,7 +508,7 @@ def kb_sex():
 
 def kb_place():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🤸 Со своим весом", callback_data="p:place:bodyweight"),
+        [InlineKeyboardButton(text="🏠 Дома", callback_data="p:place:bodyweight"),
          InlineKeyboardButton(text="🏋️ В зале", callback_data="p:place:gym")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:weight")],
     ])
@@ -939,6 +999,16 @@ async def is_access_active(user_id: int) -> bool:
     except Exception:
         return False
     return datetime.utcnow() < exp
+
+
+async def is_full_access_active(user_id: int) -> bool:
+    """Полный доступ: тренировки + питание (только платные тарифы, не пробный)."""
+    a = await get_access(user_id)
+    if a["paid"] != 1:
+        return False
+    if not await is_access_active(user_id):
+        return False
+    return a.get("tariff") in FULL_ACCESS_TARIFFS
 
 
 async def set_paid_tariff(user_id: int, tariff_code: str):
@@ -2018,7 +2088,7 @@ async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
 
 def welcome_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💪 Моя программа", callback_data="nav:menu")],
+        [InlineKeyboardButton(text="📋 Заполнить профиль", callback_data="p:start_wizard")],
     ])
 
 
@@ -2036,13 +2106,13 @@ async def cmd_start(message: Message, bot: Bot):
         "👋 Привет! Я твой персональный тренер-бот.\n\n"
         "🏋️ Что я умею:\n"
         "• Составляю программу тренировок под тебя — по системе Фулбади, Верх/Низ или PPL, "
-        "в зависимости от твоей цели, опыта и того, где тренируешься (зал или свой вес)\n"
+        "в зависимости от твоей цели, опыта и того, где тренируешься (зал или дома)\n"
         "• Рассчитываю питание по КБЖУ индивидуально — с учётом цели, веса, роста и активности\n"
         "• Веду дневник тренировок — записываю веса и повторения, сохраняю историю\n"
         "• Показываю технику упражнений с картинками\n\n"
         "📋 Как это работает:\n"
-        "1. Заполняешь профиль (⚙️ Профиль) — цель, параметры, опыт\n"
-        "2. Я генерирую программу лично под тебя\n"
+        "1. Заполняешь профиль — цель, параметры, опыт\n"
+        "2. Выбираешь тариф и получаешь программу лично под тебя\n"
         "3. Тренируешься, фиксируешь результат в дневнике\n\n"
         "Нажми кнопку ниже — и поехали 👇"
     )
@@ -2123,7 +2193,7 @@ def _profile_summary_text(u: dict) -> str:
         f"Возраст: {u.get('age')}\n"
         f"Рост: {u.get('height')}\n"
         f"Вес: {u.get('weight')}\n"
-        f"Как тренируешься: {u.get('place')}\n"
+        f"Где тренируешься: {u.get('place')}\n"
         f"Опыт: {u.get('exp')}\n"
         f"Тренировки: {u.get('freq')}×/нед\n"
         f"Еда: {u.get('meals')}×/день\n"
@@ -2138,7 +2208,7 @@ async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot)
 
     u = await get_user(message.from_user.id)
     if await ensure_profile_ready(message.from_user.id):
-        await clean_send(bot, message.chat.id, message.from_user.id, _profile_summary_text(u), reply_markup=profile_view_kb())
+        await clean_send(bot, message.chat.id, message.from_user.id, _profile_summary_text(u), reply_markup=profile_ready_kb())
         return
 
     await state.set_state(ProfileWizard.goal)
@@ -2147,9 +2217,33 @@ async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot)
 
 
 async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
+    """Показываем меню выбора — что именно менять в профиле."""
     await state.clear()
+    u = await get_user(callback.from_user.id)
+    text = (
+        "✏️ Что хочешь изменить?\n\n"
+        "Выбери пункт — я задам только один вопрос и сохраню."
+    )
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=profile_edit_field_kb(u))
+    await callback.answer()
+
+
+async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
+    """Запуск профиль-мастера из приветственного сообщения."""
+    await ensure_user(callback.from_user.id, callback.from_user.username or "")
+    await state.clear()
+
+    u = await get_user(callback.from_user.id)
+    # Если профиль уже заполнен — показываем его с кнопкой «Собрать программу»
+    if await ensure_profile_ready(callback.from_user.id):
+        text = _profile_summary_text(u) + "\n\n✅ Профиль уже заполнен!"
+        await clean_edit(callback, callback.from_user.id, text,
+                         reply_markup=profile_ready_kb())
+        await callback.answer()
+        return
+
     await state.set_state(ProfileWizard.goal)
-    text = _profile_header(1) + "Ок, обновим.\n\n🎯 Цель?"
+    text = _profile_header(1) + "Настроим профиль.\n\n🎯 Цель?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_goal())
     await callback.answer()
 
@@ -2172,6 +2266,153 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 # =========================
 # ПРОФИЛЬ-МАСТЕР
 # =========================
+async def cb_build_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Показываем тарифы после заполнения профиля."""
+    await state.clear()
+    uid = callback.from_user.id
+
+    if not await ensure_profile_ready(uid):
+        await clean_edit(callback, uid,
+                         "⚠️ Сначала заполни профиль полностью.",
+                         reply_markup=profile_done_kb())
+        await callback.answer()
+        return
+
+    text = (
+        "🚀 Отлично! Профиль готов.\n\n"
+        "Выбери тариф — и я сразу соберу программу тренировок под тебя:\n\n"
+        f"🟢 Пробный — {TARIFFS['trial']['price']}₽\n"
+        "   • 3 дня доступа\n"
+        "   • Блок тренировок + ответы на вопросы\n"
+        "   • Питание недоступно\n\n"
+        f"🟩 Месячный — {TARIFFS['t1']['price']}₽\n"
+        "   • 30 дней доступа\n"
+        "   • Тренировки + питание + дневник + замеры\n"
+        "   • Полный доступ ко всему\n\n"
+        "👇 Выбери:"
+    )
+    await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
+    await callback.answer()
+
+
+async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
+    """Обрабатываем нажатие на конкретное поле профиля для изменения."""
+    field = callback.data.split("pf:", 1)[1]
+    uid = callback.from_user.id
+    u = await get_user(uid)
+
+    await state.update_data(editing_field=field)
+
+    if field == "goal":
+        await state.set_state(ProfileWizard.goal)
+        text = "🎯 Выбери новую цель:"
+        await clean_edit(callback, uid, text, reply_markup=kb_goal())
+    elif field == "sex":
+        await state.set_state(ProfileWizard.sex)
+        text = "👤 Выбери пол:"
+        await clean_edit(callback, uid, text, reply_markup=kb_sex())
+    elif field == "age":
+        await state.set_state(ProfileFieldEdit.age)
+        text = f"🎂 Текущий возраст: {u.get('age')}\nВведи новый:"
+        await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")]
+        ]))
+    elif field == "height":
+        await state.set_state(ProfileFieldEdit.height)
+        text = f"📏 Текущий рост: {u.get('height')} см\nВведи новый:"
+        await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")]
+        ]))
+    elif field == "weight":
+        await state.set_state(ProfileFieldEdit.weight)
+        text = f"⚖️ Текущий вес: {u.get('weight')} кг\nВведи новый:"
+        await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")]
+        ]))
+    elif field == "place":
+        await state.set_state(ProfileWizard.place)
+        text = "🏠 Где тренируешься?"
+        await clean_edit(callback, uid, text, reply_markup=kb_place())
+    elif field == "exp":
+        await state.set_state(ProfileWizard.exp)
+        text = "📈 Опыт тренировок?"
+        await clean_edit(callback, uid, text, reply_markup=kb_exp())
+    elif field == "freq":
+        await state.set_state(ProfileWizard.freq)
+        text = "📅 Сколько тренировок в неделю?"
+        await clean_edit(callback, uid, text, reply_markup=kb_freq())
+    elif field == "meals":
+        await state.set_state(ProfileWizard.meals)
+        text = "🍽 Сколько раз в день удобно есть?"
+        await clean_edit(callback, uid, text, reply_markup=kb_meals())
+    elif field == "limits":
+        await state.set_state(ProfileFieldEdit.limits)
+        text = f"⛔️ Текущие ограничения: {u.get('limits') or 'нет'}\nВведи новые (или «нет»):"
+        await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")]
+        ]))
+
+    await callback.answer()
+
+
+async def _finish_field_edit(bot: Bot, chat_id: int, user_id: int):
+    """После изменения одного поля — обновляем план и показываем профиль."""
+    await build_plans_if_needed(user_id, force=True)
+    u = await get_user(user_id)
+    text = _profile_summary_text(u) + "\n\n✅ Изменение сохранено, план обновлён."
+    await clean_send(bot, chat_id, user_id, text, reply_markup=profile_ready_kb())
+
+
+async def profile_field_age(message: Message, state: FSMContext, bot: Bot):
+    age = _parse_int_from_text(message.text or "")
+    if age is None or age < 10 or age > 90:
+        await message.answer("Возраст числом 🙂 Например: 23")
+        await try_delete_user_message(bot, message)
+        return
+    await update_user(message.from_user.id, age=age)
+    await state.clear()
+    await try_delete_user_message(bot, message)
+    await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+
+
+async def profile_field_height(message: Message, state: FSMContext, bot: Bot):
+    h = _parse_int_from_text(message.text or "")
+    if h is None or h < 120 or h > 230:
+        await message.answer("Рост в см 🙂 Например: 178")
+        await try_delete_user_message(bot, message)
+        return
+    await update_user(message.from_user.id, height=h)
+    await state.clear()
+    await try_delete_user_message(bot, message)
+    await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+
+
+async def profile_field_weight(message: Message, state: FSMContext, bot: Bot):
+    w = _parse_float_from_text(message.text or "")
+    if w is None or w < 30 or w > 250:
+        await message.answer("Вес в кг 🙂 Например: 72.5")
+        await try_delete_user_message(bot, message)
+        return
+    await update_user(message.from_user.id, weight=w)
+    await state.clear()
+    await try_delete_user_message(bot, message)
+    await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+
+
+async def profile_field_limits(message: Message, state: FSMContext, bot: Bot):
+    limits = (message.text or "").strip()
+    if not limits:
+        await message.answer("Напиши текстом или «нет».")
+        await try_delete_user_message(bot, message)
+        return
+    if limits.lower() in ("нет", "нету", "никаких", "no"):
+        limits = ""
+    await update_user(message.from_user.id, limits=limits)
+    await state.clear()
+    await try_delete_user_message(bot, message)
+    await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+
+
 async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
     step = callback.data.split(":")[2]
     uid = callback.from_user.id
@@ -2198,7 +2439,7 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("height"))
     elif step == "place":
         await state.set_state(ProfileWizard.place)
-        text = _profile_header(6) + "🏋️ Как тренируешься?"
+        text = _profile_header(6) + "🏠 Где тренируешься?"
         await clean_edit(callback, uid, text, reply_markup=kb_place())
     elif step == "exp":
         await state.set_state(ProfileWizard.exp)
@@ -2222,7 +2463,7 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
+async def cb_profile_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     goal = {
         "mass": "масса",
@@ -2232,16 +2473,32 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
     }.get(v, v)
 
     await update_user(callback.from_user.id, goal=goal)
+
+    # Если редактируем одно поле — возвращаемся в профиль
+    data = await state.get_data()
+    if data.get("editing_field") == "goal":
+        await state.clear()
+        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+        await callback.answer()
+        return
+
     await state.set_state(ProfileWizard.sex)
     text = _profile_header(2) + "👤 Пол?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_sex())
     await callback.answer()
 
 
-async def cb_profile_sex(callback: CallbackQuery, state: FSMContext):
+async def cb_profile_sex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     sex = "м" if v == "m" else "ж"
     await update_user(callback.from_user.id, sex=sex)
+
+    data = await state.get_data()
+    if data.get("editing_field") == "sex":
+        await state.clear()
+        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+        await callback.answer()
+        return
 
     await state.set_state(ProfileWizard.age)
     text = _profile_header(3) + "🎂 Возраст (числом):"
@@ -2308,15 +2565,22 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
     await update_user(message.from_user.id, weight=w)
 
     await state.set_state(ProfileWizard.place)
-    text = _profile_header(6) + "🏋️ Как тренируешься?"
+    text = _profile_header(6) + "🏠 Где тренируешься?"
     await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_place())
     await try_delete_user_message(bot, message)
 
 
-async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
+async def cb_profile_place(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
-    place = "свой вес" if v == "bodyweight" else "зал"
+    place = "дома" if v == "bodyweight" else "зал"
     await update_user(callback.from_user.id, place=place)
+
+    data = await state.get_data()
+    if data.get("editing_field") == "place":
+        await state.clear()
+        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+        await callback.answer()
+        return
 
     await state.set_state(ProfileWizard.exp)
     text = _profile_header(7) + "📈 Опыт?"
@@ -2324,10 +2588,18 @@ async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
+async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     if v == "0":
         await update_user(callback.from_user.id, exp="0", freq=3)
+
+        data = await state.get_data()
+        if data.get("editing_field") in ("exp", "freq"):
+            await state.clear()
+            await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+            await callback.answer()
+            return
+
         await state.set_state(ProfileWizard.meals)
         text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
         await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_meals())
@@ -2337,15 +2609,29 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
     exp_text = "1-2 года" if v == "mid" else "2+ года"
     await update_user(callback.from_user.id, exp=exp_text)
 
+    data = await state.get_data()
+    if data.get("editing_field") == "exp":
+        await state.clear()
+        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+        await callback.answer()
+        return
+
     await state.set_state(ProfileWizard.freq)
     text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_freq())
     await callback.answer()
 
 
-async def cb_profile_freq(callback: CallbackQuery, state: FSMContext):
+async def cb_profile_freq(callback: CallbackQuery, state: FSMContext, bot: Bot):
     f = int(callback.data.split(":")[2])
     await update_user(callback.from_user.id, freq=f)
+
+    data = await state.get_data()
+    if data.get("editing_field") == "freq":
+        await state.clear()
+        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+        await callback.answer()
+        return
 
     await state.set_state(ProfileWizard.meals)
     text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
@@ -2353,10 +2639,17 @@ async def cb_profile_freq(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-async def cb_profile_meals(callback: CallbackQuery, state: FSMContext):
+async def cb_profile_meals(callback: CallbackQuery, state: FSMContext, bot: Bot):
     m = int(callback.data.split(":")[2])
     m = max(3, min(m, 5))
     await update_user(callback.from_user.id, meals=m)
+
+    data = await state.get_data()
+    if data.get("editing_field") == "meals":
+        await state.clear()
+        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
+        await callback.answer()
+        return
 
     await state.set_state(ProfileWizard.limits)
     text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
@@ -2376,16 +2669,14 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
     await update_user(message.from_user.id, limits=limits)
     await state.clear()
 
-    await build_plans_if_needed(message.from_user.id, force=True)
-
     u = await get_user(message.from_user.id)
     summary = (
-        _profile_header(10) +
-        "✅ Профиль сохранён. План тренировок и питание обновил.\n\n"
+        "✅ Профиль сохранён!\n\n"
         f"Цель: {u.get('goal')} • {u.get('freq')}×/нед\n"
+        f"Где тренируешься: {u.get('place')}\n"
         f"Еда: {u.get('meals')}×/день\n"
         f"Ограничения: {(u.get('limits') or 'нет')}\n\n"
-        "Теперь открывай «Тренировки» или «Питание» 👇"
+        "Теперь выбери тариф и я соберу твою программу 👇"
     )
     await clean_send(bot, message.chat.id, message.from_user.id, summary, reply_markup=profile_done_kb())
     await try_delete_user_message(bot, message)
@@ -2928,11 +3219,35 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
 
 async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
     if not await is_access_active(user_id):
-        await clean_send(bot, chat_id, user_id, locked_text())
+        text = locked_text()
+        if callback:
+            await clean_edit(callback, user_id, text)
+        else:
+            await clean_send(bot, chat_id, user_id, text)
+        return
+
+    if not await is_full_access_active(user_id):
+        text = (
+            "🍽 Раздел питания доступен только по месячной подписке.\n\n"
+            f"Пробный период включает только тренировки и ответы на вопросы.\n\n"
+            f"Месячная подписка — {TARIFFS['t1']['price']}₽ • полный доступ 👇"
+        )
+        upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"🟩 Месячный — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+        ])
+        if callback:
+            await clean_edit(callback, user_id, text, reply_markup=upgrade_kb)
+        else:
+            await clean_send(bot, chat_id, user_id, text, reply_markup=upgrade_kb)
         return
 
     if not await ensure_profile_ready(user_id):
-        await clean_send(bot, chat_id, user_id, "⚠️ Сначала заполни профиль (⚙️ Профиль).")
+        text = "⚠️ Сначала заполни профиль (⚙️ Профиль)."
+        if callback:
+            await clean_edit(callback, user_id, text)
+        else:
+            await clean_send(bot, chat_id, user_id, text)
         return
 
     u = await get_user(user_id)
@@ -3151,8 +3466,16 @@ async def measures_history(callback: CallbackQuery):
 # ПИТАНИЕ: 3 варианта с картинкой
 # =========================
 async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
-    if not await is_access_active(callback.from_user.id):
-        await clean_edit(callback, callback.from_user.id, locked_text())
+    if not await is_full_access_active(callback.from_user.id):
+        text = (
+            "🍽 Раздел питания доступен только по месячной подписке.\n\n"
+            f"Месячная подписка — {TARIFFS['t1']['price']}₽ • полный доступ 👇"
+        )
+        upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"🟩 Месячный — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+        ])
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=upgrade_kb)
         await callback.answer()
         return
 
@@ -3421,6 +3744,9 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nav, F.data.startswith("nav:"))
 
     dp.callback_query.register(cb_profile_edit, F.data == "p:edit")
+    dp.callback_query.register(cb_profile_start_wizard, F.data == "p:start_wizard")
+    dp.callback_query.register(cb_build_program, F.data == "p:build_program")
+    dp.callback_query.register(cb_profile_field_edit, F.data.startswith("pf:"))
     dp.callback_query.register(cb_profile_back, F.data.startswith("p:back:"))
     dp.callback_query.register(cb_profile_goal, F.data.startswith("p:goal:"))
     dp.callback_query.register(cb_profile_sex, F.data.startswith("p:sex:"))
@@ -3433,6 +3759,12 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_height_text, ProfileWizard.height)
     dp.message.register(profile_weight_text, ProfileWizard.weight)
     dp.message.register(profile_limits_text, ProfileWizard.limits)
+
+    # Одиночное редактирование полей
+    dp.message.register(profile_field_age, ProfileFieldEdit.age)
+    dp.message.register(profile_field_height, ProfileFieldEdit.height)
+    dp.message.register(profile_field_weight, ProfileFieldEdit.weight)
+    dp.message.register(profile_field_limits, ProfileFieldEdit.limits)
 
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
     dp.callback_query.register(cb_i_paid, F.data == "pay_i_paid")
@@ -3538,4 +3870,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
