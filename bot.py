@@ -843,6 +843,23 @@ async def init_db():
             created_at TEXT
         )
         """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS workout_completions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            day_num INTEGER,
+            completed_date TEXT,
+            created_at TEXT
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS workout_day_progress (
+            user_id INTEGER,
+            day_num INTEGER,
+            done_exercises TEXT,
+            PRIMARY KEY (user_id, day_num)
+        )
+        """)
         await conn.commit()
 
 
@@ -1158,6 +1175,140 @@ async def get_all_user_ids():
         async with conn.execute("SELECT user_id FROM users") as cur:
             rows = await cur.fetchall()
     return [r[0] for r in rows] if rows else []
+
+
+# =========================
+# ТРЕНИРОВКИ: прогресс дня
+# =========================
+
+# Маппинг части названия упражнения → ключ в TECH
+EXERCISE_TECH_MAP = [
+    ("присед", "squat"),
+    ("жим лёж", "bench"),
+    ("жим гантел", "bench"),
+    ("жим в тренаж", "bench"),
+    ("сведени", "bench"),
+    ("отжима", "row"),
+    ("верхний блок", "latpulldown"),
+    ("тяга верхн", "latpulldown"),
+    ("подтягива", "pullup"),
+    ("румынская тяга", "rdl"),
+    ("жим вверх", "ohp"),
+    ("жим в тренажёре вверх", "ohp"),
+    ("пайк-отжима", "ohp"),
+    ("разведени", "lateralraise"),
+    ("face pull", "lateralraise"),
+    ("задняя дельта", "lateralraise"),
+    ("тяга к лицу", "lateralraise"),
+    ("сгибани", "biceps"),
+    ("молотки", "biceps"),
+    ("разгибани", "triceps"),
+    ("трицепс", "triceps"),
+    ("отжима узк", "triceps"),
+    ("жим ног", "legpress"),
+    ("гоблет", "squat"),
+    ("хакк", "squat"),
+    ("болгар", "squat"),
+    ("выпад", "squat"),
+    ("ягодичный мост", "rdl"),
+    ("гиперэкстензи", "rdl"),
+    ("good-morning", "rdl"),
+    ("сгибания ног", "legpress"),
+    ("тяга резинки", "latpulldown"),
+    ("тяга гантел", "latpulldown"),
+    ("тяга в тренаж", "latpulldown"),
+    ("тяга горизонт", "latpulldown"),
+    ("тяга резинки сверху", "latpulldown"),
+    ("жим резинки вверх", "ohp"),
+    ("подъём", "legpress"),
+    ("планка", None),
+    ("скручива", None),
+    ("подъём ног", None),
+    ("икры", None),
+]
+
+
+def get_tech_key_for_exercise(name: str) -> Optional[str]:
+    """Return TECH key for exercise name, or None."""
+    n = name.lower()
+    for keyword, tech_key in EXERCISE_TECH_MAP:
+        if keyword in n:
+            return tech_key
+    return None
+
+
+def parse_exercises_from_day_text(day_text: str) -> List[str]:
+    """Extract exercise names (without sets/reps) from day plan text."""
+    exercises = []
+    for line in day_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("•"):
+            # Format: "• Название — 3×8-12"
+            content = stripped.lstrip("•").strip()
+            if " — " in content:
+                name = content.split(" — ")[0].strip()
+            else:
+                name = content
+            if name:
+                exercises.append(name)
+    return exercises
+
+
+async def get_day_done_exercises(user_id: int, day_num: int) -> List[int]:
+    """Return list of done exercise indices (0-based) for a day."""
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT done_exercises FROM workout_day_progress WHERE user_id=? AND day_num=?",
+            (user_id, day_num)
+        ) as cur:
+            row = await cur.fetchone()
+    if not row or not row[0]:
+        return []
+    try:
+        return json.loads(row[0])
+    except Exception:
+        return []
+
+
+async def set_day_done_exercises(user_id: int, day_num: int, done: List[int]):
+    async with db() as conn:
+        await conn.execute("""
+            INSERT INTO workout_day_progress (user_id, day_num, done_exercises)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id, day_num) DO UPDATE SET done_exercises=excluded.done_exercises
+        """, (user_id, day_num, json.dumps(done)))
+        await conn.commit()
+
+
+async def clear_day_progress(user_id: int, day_num: int):
+    async with db() as conn:
+        await conn.execute(
+            "DELETE FROM workout_day_progress WHERE user_id=? AND day_num=?",
+            (user_id, day_num)
+        )
+        await conn.commit()
+
+
+async def mark_day_completed(user_id: int, day_num: int):
+    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        await conn.execute("""
+            INSERT INTO workout_completions (user_id, day_num, completed_date, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, day_num, today, now))
+        await conn.commit()
+
+
+async def is_day_completed_today(user_id: int, day_num: int) -> bool:
+    today = datetime.now().strftime("%Y-%m-%d")
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT COUNT(*) FROM workout_completions
+            WHERE user_id=? AND day_num=? AND completed_date=?
+        """, (user_id, day_num, today)) as cur:
+            row = await cur.fetchone()
+    return bool(row and row[0] > 0)
 
 
 # =========================
@@ -2284,6 +2435,30 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
         await clean_send(bot, chat_id, user_id, plan_text or "🏋️ План не найден.", reply_markup=kb)
 
 
+def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
+    """Keyboard with exercise done-buttons + tech buttons."""
+    rows = []
+    for idx, name in enumerate(exercises):
+        is_done = idx in done
+        done_btn = InlineKeyboardButton(
+            text=f"{'✅' if is_done else '⬜'} {name}",
+            callback_data=f"wex:done:{day}:{idx}"
+        )
+        tech_key = get_tech_key_for_exercise(name)
+        if tech_key:
+            tech_btn = InlineKeyboardButton(
+                text="📚",
+                callback_data=f"wex:tech:{day}:{tech_key}"
+            )
+            rows.append([done_btn, tech_btn])
+        else:
+            rows.append([done_btn])
+
+    rows.append([InlineKeyboardButton(text="⬅️ К списку дней", callback_data="nav:workouts")])
+    rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 async def cb_workout_day(callback: CallbackQuery, bot: Bot):
     if not await is_access_active(callback.from_user.id):
         await clean_edit(callback, callback.from_user.id, locked_text())
@@ -2301,9 +2476,119 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
         await callback.answer("День не найден 😅", show_alert=True)
         return
 
-    u = await get_user(callback.from_user.id)
-    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3))
-    await clean_edit(callback, callback.from_user.id, day_text, reply_markup=kb)
+    day_num = int(day)
+    uid = callback.from_user.id
+
+    exercises = parse_exercises_from_day_text(day_text)
+    if not exercises:
+        # Fallback — нет упражнений для отметки, просто показываем текст
+        u = await get_user(uid)
+        kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3))
+        await clean_edit(callback, uid, day_text, reply_markup=kb)
+        await callback.answer()
+        return
+
+    done = await get_day_done_exercises(uid, day_num)
+
+    # Если день уже выполнен сегодня — сбросим прогресс для повторного прохождения
+    already_done_today = await is_day_completed_today(uid, day_num)
+
+    status_line = ""
+    if already_done_today:
+        status_line = "\n\n🎉 День уже засчитан! Можешь пройти ещё раз."
+
+    text = day_text + status_line
+    kb = workout_day_exercises_kb(day_num, exercises, done)
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+
+
+async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
+    """Toggle exercise as done/undone."""
+    parts = callback.data.split(":")
+    # wex:done:{day}:{idx}
+    day_num = int(parts[2])
+    ex_idx = int(parts[3])
+    uid = callback.from_user.id
+
+    if not await is_access_active(uid):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    plan_text, plan_struct = await get_workout_plan(uid)
+    if not plan_struct:
+        await callback.answer("Нет плана 😅", show_alert=True)
+        return
+
+    day_text = (plan_struct.get("days") or {}).get(str(day_num))
+    if not day_text:
+        await callback.answer("День не найден", show_alert=True)
+        return
+
+    exercises = parse_exercises_from_day_text(day_text)
+    done = await get_day_done_exercises(uid, day_num)
+
+    if ex_idx in done:
+        done.remove(ex_idx)
+    else:
+        done.append(ex_idx)
+
+    await set_day_done_exercises(uid, day_num, done)
+
+    # Проверяем — все ли выполнены
+    all_done = len(exercises) > 0 and all(i in done for i in range(len(exercises)))
+
+    if all_done:
+        # Засчитываем день
+        await mark_day_completed(uid, day_num)
+        await clear_day_progress(uid, day_num)
+
+        text = (
+            day_text +
+            "\n\n🎉 ОТЛИЧНО! Все упражнения выполнены!\n"
+            f"✅ День {day_num} засчитан!"
+        )
+        kb = workout_day_exercises_kb(day_num, exercises, list(range(len(exercises))))
+        await clean_edit(callback, uid, text, reply_markup=kb)
+        await callback.answer("🎉 День завершён!", show_alert=True)
+    else:
+        done_count = len(done)
+        total = len(exercises)
+        text = day_text + f"\n\n📊 Выполнено: {done_count}/{total}"
+        kb = workout_day_exercises_kb(day_num, exercises, done)
+        await clean_edit(callback, uid, text, reply_markup=kb)
+        await callback.answer(f"{'✅' if ex_idx in done else '↩️'} Отмечено")
+
+
+async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
+    """Show technique for an exercise from day view."""
+    parts = callback.data.split(":")
+    # wex:tech:{day}:{tech_key}
+    tech_key = parts[3]
+    item = TECH.get(tech_key)
+    if not item:
+        await callback.answer("Техника не найдена 😅", show_alert=True)
+        return
+
+    text = item["text"]
+    img_path = item["img"]
+    caption = text[:1024]
+    rest = text[1024:].strip()
+
+    # Back button returns to the day
+    day_num = parts[2]
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"⬅️ Назад к Дню {day_num}", callback_data=f"wday:{day_num}")]
+    ])
+
+    if os.path.exists(img_path):
+        photo = FSInputFile(img_path)
+        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=back_kb)
+        if rest:
+            await callback.message.answer(rest, reply_markup=back_kb)
+    else:
+        await callback.message.answer(text, reply_markup=back_kb)
+
     await callback.answer()
 
 
@@ -2811,6 +3096,8 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
 
     dp.callback_query.register(cb_workout_day, F.data.startswith("wday:"))
+    dp.callback_query.register(cb_workout_ex_done, F.data.startswith("wex:done:"))
+    dp.callback_query.register(cb_workout_ex_tech, F.data.startswith("wex:tech:"))
 
     dp.message.register(cmd_posts, Command("posts"))
     dp.callback_query.register(cb_post_new, F.data == "post:new")
