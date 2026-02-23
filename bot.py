@@ -33,10 +33,8 @@ CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
 CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
+WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
-# Картинка для приветствия (/start)
-START_IMAGE_PATH = os.getenv("START_IMAGE_PATH", "media/tech/welcome.jpg")
-  
 # ТАРИФЫ
 TARIFFS = {
     "t1": {"title": "1 месяц", "days": 30, "price": 1150},
@@ -76,15 +74,13 @@ class PostFlow(StatesGroup):
     waiting_confirm = State()
 
 
-# ✅ Профиль: убрали "самочувствие", убрали "удержание", добавили "сила/выносливость"
-# ✅ "Где тренируешься" -> "Как тренируешься": свой вес / зал
 class ProfileWizard(StatesGroup):
     goal = State()
     sex = State()
     age = State()
     height = State()
     weight = State()
-    place = State()        # ✅ как тренируешься: свой вес / зал
+    place = State()
     exp = State()
     freq = State()
     meals = State()
@@ -92,7 +88,7 @@ class ProfileWizard(StatesGroup):
 
 
 # =========================
-# ✅ ТЕХНИКИ ВЫПОЛНЕНИЯ (картинка + понятный текст)
+# ✅ ТЕХНИКИ ВЫПОЛНЕНИЯ
 # =========================
 TECH = {
     "squat": {
@@ -306,21 +302,15 @@ def tech_kb():
     rows = [
         [InlineKeyboardButton(text=TECH["squat"]["title"], callback_data="tech:squat"),
          InlineKeyboardButton(text=TECH["bench"]["title"], callback_data="tech:bench")],
-
         [InlineKeyboardButton(text=TECH["row"]["title"], callback_data="tech:row"),
          InlineKeyboardButton(text=TECH["latpulldown"]["title"], callback_data="tech:latpulldown")],
-
         [InlineKeyboardButton(text=TECH["pullup"]["title"], callback_data="tech:pullup"),
          InlineKeyboardButton(text=TECH["ohp"]["title"], callback_data="tech:ohp")],
-
         [InlineKeyboardButton(text=TECH["rdl"]["title"], callback_data="tech:rdl"),
          InlineKeyboardButton(text=TECH["lateralraise"]["title"], callback_data="tech:lateralraise")],
-
         [InlineKeyboardButton(text=TECH["biceps"]["title"], callback_data="tech:biceps"),
          InlineKeyboardButton(text=TECH["triceps"]["title"], callback_data="tech:triceps")],
-
         [InlineKeyboardButton(text=TECH["legpress"]["title"], callback_data="tech:legpress")],
-
         [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -348,7 +338,7 @@ def control_reply_kb():
 
 
 # =========================
-# Inline: меню разделов
+# ✅ ИЗМЕНЕНО: Inline меню разделов — новые названия кнопок
 # =========================
 def menu_main_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -359,14 +349,14 @@ def menu_main_inline_kb():
     ])
 
 
-def start_welcome_kb():
+def simple_back_to_menu_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📌 Моя программа", callback_data="nav:menu")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
 # =========================
-# ✅ Тренировки: кнопки дней (без "Обновить план")
+# ✅ Тренировки: кнопки дней
 # =========================
 def workout_days_kb(freq: int):
     freq = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
@@ -409,7 +399,7 @@ def admin_review_kb(payment_id: int):
 
 
 # =========================
-# ✅ Профиль: прогресс "■■■■■■■□□□ 100%"
+# Профиль
 # =========================
 TOTAL_PROFILE_STEPS = 10
 
@@ -439,8 +429,6 @@ def profile_view_kb():
     ])
 
 
-# ✅ Убрали "поддержание", добавили "сила/выносливость"
-# ✅ После выбора цели "меню" НЕ показываем
 def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
@@ -450,7 +438,6 @@ def kb_goal():
     ])
 
 
-# ✅ После выбора цели оставляем только "Назад", меню убрано
 def kb_sex():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👨 Мужчина", callback_data="p:sex:m"),
@@ -459,7 +446,6 @@ def kb_sex():
     ])
 
 
-# ✅ "Где тренируешься" -> "Как тренируешься": свой вес / зал
 def kb_place():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🤸 Со своим весом", callback_data="p:place:bodyweight"),
@@ -495,7 +481,6 @@ def kb_meals():
     ])
 
 
-# ✅ В мастере профиля оставляем только кнопку "Назад"
 def kb_text_step(back_to: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"p:back:{back_to}")],
@@ -556,7 +541,6 @@ def _activity_factor(freq: int, place: str) -> float:
     return 1.65 if is_gym else 1.55
 
 
-# ✅ КБЖУ индивидуально + учитываем цель (масса/сушка/сила/выносливость)
 def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "свой вес") -> int:
     sx = (sex or "м").lower()
     if sx == "м":
@@ -585,7 +569,6 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
 def calc_macros(calories: int, weight_kg: float, goal: str):
     g = (goal or "").lower()
 
-    # белок
     if "суш" in g:
         protein = int(round(weight_kg * 2.2))
     elif "вынос" in g:
@@ -595,7 +578,6 @@ def calc_macros(calories: int, weight_kg: float, goal: str):
     else:
         protein = int(round(weight_kg * 1.8))
 
-    # жир
     if "вынос" in g:
         fat = int(round(weight_kg * 0.7))
     else:
@@ -640,7 +622,7 @@ async def try_delete_user_message(bot: Bot, message: Message):
 
 
 # =========================
-# ✅ АНТИ-ЗАСОРЕНИЕ ЧАТА (основное окно)
+# АНТИ-ЗАСОРЕНИЕ ЧАТА
 # =========================
 async def get_last_bot_msg_id(user_id: int) -> Optional[int]:
     async with db() as conn:
@@ -664,7 +646,6 @@ async def set_last_bot_msg_id(user_id: int, msg_id: int):
         await conn.commit()
 
 
-# ✅ отдельное сообщение для дневника (не в clean_send)
 async def get_diary_prompt_msg_id(user_id: int) -> Optional[int]:
     async with db() as conn:
         async with conn.execute("SELECT diary_prompt_msg_id FROM bot_state WHERE user_id=?", (user_id,)) as cur:
@@ -744,10 +725,9 @@ async def init_db():
         )
         """)
 
-        # ✅ мягкая миграция users
         for col, typ in [
             ("limits", "TEXT"),
-            ("state", "TEXT"),   # оставляем для совместимости, но в мастере больше не спрашиваем
+            ("state", "TEXT"),
             ("meals", "INTEGER"),
         ]:
             try:
@@ -827,7 +807,6 @@ async def init_db():
         )
         """)
 
-        # ✅ bot_state: добавили diary_prompt_msg_id
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS bot_state (
             user_id INTEGER PRIMARY KEY,
@@ -835,7 +814,6 @@ async def init_db():
             diary_prompt_msg_id INTEGER
         )
         """)
-        # ✅ мягкая миграция bot_state
         for col, typ in [
             ("diary_prompt_msg_id", "INTEGER"),
         ]:
@@ -1183,7 +1161,7 @@ async def get_all_user_ids():
 
 
 # =========================
-# ✅ ТРЕНИРОВКИ: генерация (FB / UL / PPL) + режимы (сила/выносливость)
+# ТРЕНИРОВКИ: генерация
 # =========================
 def _limits_tags(limits: str) -> Dict[str, bool]:
     t = (limits or "").lower()
@@ -1213,7 +1191,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     f = int(freq or 3)
     f = max(MIN_DAYS, min(f, MAX_DAYS))
 
-    # ✅ на силе/выносливости меняем повторы/подходы
     if is_strength:
         reps_base = "3–6"
         reps_iso = "8–12"
@@ -1236,7 +1213,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
     rnd = random.Random(seed)
 
-    # фильтры по ограничениям
     avoid_knee = ["присед", "жим ног", "выпад", "болгар", "разгиб"]
     avoid_back = ["тяга", "станов", "наклон", "румын", "гребл"]
     avoid_shoulder = ["жим вверх", "жим лёжа", "отжим", "жим в тренаж"]
@@ -1260,7 +1236,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
     avoid_keys = avoid_keys_for_base()
 
-    # Пулы упражнений по “паттернам”
     if is_gym:
         SQUAT = ["Присед (вариант)", "Жим ногами", "Гоблет-присед", "Хакк-присед (лёгко)"]
         HINGE = ["Румынская тяга (лёгкая)", "Ягодичный мост", "Сгибания ног (тренажёр)", "Гиперэкстензия (лёгко)"]
@@ -1274,7 +1249,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         CALVES = ["Икры стоя/сидя"]
         CORE = ["Планка", "Скручивания", "Подъёмы ног в висе/упоре"]
     else:
-        # ✅ режим "со своим весом"
         SQUAT = ["Приседания", "Присед пауза (лёгко)", "Присед сумо", "Полуприсед (если колени капризны)"]
         HINGE = ["Ягодичный мост", "Гиперэкстензия (пол)", "Good-morning (очень легко, контроль)"]
         HPUSH = ["Отжимания", "Отжимания узкие", "Отжимания с паузой"]
@@ -1287,7 +1261,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         CALVES = ["Подъёмы на носки стоя"]
         CORE = ["Планка", "Скручивания", "Подъёмы ног лёжа"]
 
-    # лёгкие правки под ограничения
     if tags["elbow"]:
         TRI = [x for x in TRI if "француз" not in x.lower()]
     if tags["knee"]:
@@ -1295,7 +1268,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     if tags["back"]:
         HINGE = [x for x in HINGE if "румын" not in x.lower()]
 
-    # системы: 3=FB, 4=UL, 5=PPL+UL
     if f == 3:
         system = "Фулбади"
         template = ["FB-A", "FB-B", "FB-C"]
@@ -1324,7 +1296,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
             lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
             lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
-
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
@@ -1348,7 +1319,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
             if not tags["shoulder"]:
                 lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
-
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
@@ -1365,7 +1335,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append("База:")
             lines.append(f"• {fmt(squat, base_sets, reps_base)}")
             lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
-
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(calves, iso_sets, reps_iso)}")
@@ -1382,7 +1351,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
             if not tags["shoulder"]:
                 lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
-
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
@@ -1398,7 +1366,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append("База:")
             lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
             lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
-
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(rear, iso_sets, reps_iso)}")
@@ -1413,7 +1380,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append("База:")
             lines.append(f"• {fmt(squat, base_sets, reps_base)}")
             lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
-
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(calves, iso_sets, reps_iso)}")
@@ -1453,7 +1419,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
 
 # =========================
-# ✅ ПИТАНИЕ: индивидуально под профиль (КБЖУ/БЖУ)
+# ПИТАНИЕ
 # =========================
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",              "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
@@ -1463,7 +1429,6 @@ FOOD_DB = {
     "potato":    {"name": "Картофель",                    "kcal": 77,  "p": 2.0,  "f": 0.1,   "c": 17.0},
     "bread":     {"name": "Хлеб",                         "kcal": 250, "p": 8.0,  "f": 3.0,   "c": 49.0},
     "veg":       {"name": "Овощи (микс)",                 "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
-
     "chicken":   {"name": "Куриная грудка",               "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
     "turkey":    {"name": "Индейка (филе)",               "kcal": 150, "p": 29.0, "f": 2.0,   "c": 0.0},
     "fish":      {"name": "Рыба (белая)",                 "kcal": 110, "p": 22.0, "f": 2.0,   "c": 0.0},
@@ -1471,11 +1436,9 @@ FOOD_DB = {
     "eggs":      {"name": "Яйца",                         "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
     "curd_0_5":  {"name": "Творог 0–5%",                  "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
     "yogurt":    {"name": "Йогурт натуральный",           "kcal": 60,  "p": 5.0,  "f": 2.5,   "c": 4.0},
-
     "oil":       {"name": "Оливковое масло",              "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
     "nuts":      {"name": "Орехи",                        "kcal": 600, "p": 15.0, "f": 55.0,  "c": 15.0},
     "cheese":    {"name": "Сыр",                          "kcal": 350, "p": 25.0, "f": 27.0,  "c": 1.0},
-
     "banana":    {"name": "Банан",                        "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
     "apple":     {"name": "Яблоко",                       "kcal": 52,  "p": 0.3,  "f": 0.2,   "c": 14.0},
 }
@@ -1657,78 +1620,60 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
 # МЕНЮ / START
 # =========================
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
-     text = (
-         "🏠 Моя программа\n\n"
-         "Выбирай раздел 👇\n"
-         "• Тренировки — план по дням\n"
-         "• Питание — ккал и БЖУ + примеры\n"
-         "• Дневник — записывай веса и повторы\n\n"
-         "Оплата / профиль / поддержка — на кнопках снизу."
-     )
-     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
-  
- 
- async def send_start_welcome(bot: Bot, chat_id: int, user_id: int):
-     welcome_text = (
-         "👋 Привет! Я твой зелёный тренер.\n\n"
-         "Как я собираю программы:\n"
-         "• Беру твою цель (масса/сушка/сила/выносливость)\n"
-         "• Учитываю где тренируешься (зал/свой вес)\n"
-         "• Смотрю опыт и частоту тренировок\n"
-         "• Если есть ограничения — подбираю более безопасные варианты\n\n"
-         "Что умею:\n"
-         "🏋️ План тренировок по дням\n"
-         "🍽 Питание по калориям и БЖУ + примеры\n"
-         "📓 Дневник (вес×повторы) + история\n\n"
-         "Жми «Моя программа» 👇"
-     )
- 
-     # анти-засорение: удаляем прошлое главное сообщение
-     last_id = await get_last_bot_msg_id(user_id)
-     if last_id:
-         try:
-             await bot.delete_message(chat_id=chat_id, message_id=last_id)
-         except Exception:
-             pass
- 
-     if os.path.exists(START_IMAGE_PATH):
-         photo = FSInputFile(START_IMAGE_PATH)
-         caption = welcome_text
-         if len(caption) > 1024:
-             caption = caption[:1020] + "…"
-         m = await bot.send_photo(
-             chat_id=chat_id,
-             photo=photo,
-             caption=caption,
-             reply_markup=start_welcome_kb()
-         )
-         await set_last_bot_msg_id(user_id, m.message_id)
-     else:
-         mid = await clean_send(bot, chat_id, user_id, welcome_text, reply_markup=start_welcome_kb())
-         await set_last_bot_msg_id(user_id, mid)
+    text = (
+        "🏠 Главное меню\n\n"
+        "Выбери раздел 👇\n"
+        "Профиль / оплата / поддержка — на кнопках снизу."
+    )
+    await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
+
+
+def welcome_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💪 Моя программа", callback_data="nav:menu")],
+    ])
 
 
 async def cmd_start(message: Message, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
-     # Включаем постоянную клавиатуру снизу — и удаляем это служебное сообщение
-     try:
-         tmp = await bot.send_message(
-             chat_id=message.chat.id,
-             text="✅ Кнопки снизу активированы 👇",
-             reply_markup=control_reply_kb()
-         )
-         try:
-             await bot.delete_message(chat_id=message.chat.id, message_id=tmp.message_id)
-         except Exception:
-             pass
-     except Exception:
-         pass
- 
-     # Одно приветственное сообщение с картинкой + кнопкой "Моя программа"
-     await send_start_welcome(bot, message.chat.id, message.from_user.id)
- 
-     # Удалим /start пользователя (если можно)
-     await try_delete_user_message(bot, message)
+    await try_delete_user_message(bot, message)
+
+    # Постоянная клавиатура снизу
+    await bot.send_message(
+        chat_id=message.chat.id,
+        text="✅ Я на месте. Кнопки снизу 👇",
+        reply_markup=control_reply_kb()
+    )
+
+    welcome_text = (
+        "👋 Привет! Я твой персональный тренер-бот.\n\n"
+        "🏋️ Что я умею:\n"
+        "• Составляю программу тренировок под тебя — по системе Фулбади, Верх/Низ или PPL, "
+        "в зависимости от твоей цели, опыта и того, где тренируешься (зал или свой вес)\n"
+        "• Рассчитываю питание по КБЖУ индивидуально — с учётом цели, веса, роста и активности\n"
+        "• Веду дневник тренировок — записываю веса и повторения, сохраняю историю\n"
+        "• Показываю технику упражнений с картинками\n\n"
+        "📋 Как это работает:\n"
+        "1. Заполняешь профиль (⚙️ Профиль) — цель, параметры, опыт\n"
+        "2. Я генерирую программу лично под тебя\n"
+        "3. Тренируешься, фиксируешь результат в дневнике\n\n"
+        "Нажми кнопку ниже — и поехали 👇"
+    )
+
+    if os.path.exists(WELCOME_IMAGE):
+        photo = FSInputFile(WELCOME_IMAGE)
+        await bot.send_photo(
+            chat_id=message.chat.id,
+            photo=photo,
+            caption=welcome_text,
+            reply_markup=welcome_kb()
+        )
+    else:
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=welcome_text,
+            reply_markup=welcome_kb()
+        )
 
 
 # =========================
@@ -1941,7 +1886,7 @@ def _parse_int_from_text(s: str) -> Optional[int]:
 
 def _parse_float_from_text(s: str) -> Optional[float]:
     s = (s or "").strip().replace(",", ".")
-    m = re.search(r"(\d+(\.\d+)?)", s)
+    m = re.search(r"(\d+(\.*\d+)?)", s)
     if not m:
         return None
     try:
@@ -2055,7 +2000,6 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
     await update_user(message.from_user.id, limits=limits)
     await state.clear()
 
-    # ✅ Авто-обновление планов после заполнения профиля
     await build_plans_if_needed(message.from_user.id, force=True)
 
     u = await get_user(message.from_user.id)
@@ -2424,7 +2368,6 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
 # =========================
 # ✅ ДНЕВНИК
 # =========================
-# ✅ При выборе упражнения — отдельное сообщение (не правим текущее окно)
 async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     exercise = callback.data.split("d:ex:", 1)[1].strip()
     await state.update_data(exercise=exercise)
@@ -2488,7 +2431,6 @@ async def diary_enter_sets(message: Message, state: FSMContext, bot: Bot):
     await clean_send(bot, message.chat.id, message.from_user.id, msg, reply_markup=diary_exercises_kb())
     await try_delete_user_message(bot, message)
 
-    # ✅ удалим отдельное сообщение-подсказку (чтобы не висело)
     prompt_id = await get_diary_prompt_msg_id(message.from_user.id)
     if prompt_id:
         try:
@@ -2951,5 +2893,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
