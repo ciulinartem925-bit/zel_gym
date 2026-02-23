@@ -35,7 +35,7 @@ CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 DB_PATH = os.getenv("DB_PATH", "bot.db")
 
 # Картинка для приветствия (/start)
-START_IMAGE_PATH = os.getenv("START_IMAGE_PATH", "media/start.jpg")
+START_IMAGE_PATH = os.getenv("START_IMAGE_PATH", "media/tech/welcome.jpg")
   
 # ТАРИФЫ
 TARIFFS = {
@@ -2951,4 +2951,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
