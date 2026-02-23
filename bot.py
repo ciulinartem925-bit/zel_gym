@@ -73,17 +73,19 @@ class PostFlow(StatesGroup):
     waiting_confirm = State()
 
 
+# ✅ Профиль: убрали "самочувствие", убрали "удержание", добавили "сила/выносливость"
+# ✅ "Где тренируешься" -> "Как тренируешься": свой вес / зал
 class ProfileWizard(StatesGroup):
     goal = State()
     sex = State()
-    age = State()          # текстом
-    height = State()       # текстом
-    weight = State()       # текстом
-    place = State()
+    age = State()
+    height = State()
+    weight = State()
+    place = State()        # ✅ как тренируешься: свой вес / зал
     exp = State()
     freq = State()
-    meals = State()        # ✅ сколько раз в день удобно есть (кнопки)
-    limits = State()       # текстом (ограничения)
+    meals = State()
+    limits = State()
 
 
 # =========================
@@ -434,15 +436,18 @@ def profile_view_kb():
     ])
 
 
+# ✅ Убрали "поддержание", добавили "сила/выносливость"
+# ✅ После выбора цели "меню" НЕ показываем
 def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
          InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
         [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength"),
          InlineKeyboardButton(text="🏃 Выносливость", callback_data="p:goal:endurance")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
+
+# ✅ После выбора цели оставляем только "Назад", меню убрано
 def kb_sex():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="👨 Мужчина", callback_data="p:sex:m"),
@@ -451,9 +456,10 @@ def kb_sex():
     ])
 
 
+# ✅ "Где тренируешься" -> "Как тренируешься": свой вес / зал
 def kb_place():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🤸 Со своим весом", callback_data="p:place:body"),
+        [InlineKeyboardButton(text="🤸 Со своим весом", callback_data="p:place:bodyweight"),
          InlineKeyboardButton(text="🏋️ В зале", callback_data="p:place:gym")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:weight")],
     ])
@@ -486,10 +492,12 @@ def kb_meals():
     ])
 
 
+# ✅ В мастере профиля оставляем только кнопку "Назад"
 def kb_text_step(back_to: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"p:back:{back_to}")],
     ])
+
 
 # =========================
 # УТИЛИТЫ
@@ -545,7 +553,8 @@ def _activity_factor(freq: int, place: str) -> float:
     return 1.65 if is_gym else 1.55
 
 
-def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "дом") -> int:
+# ✅ КБЖУ индивидуально + учитываем цель (масса/сушка/сила/выносливость)
+def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "свой вес") -> int:
     sx = (sex or "м").lower()
     if sx == "м":
         bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
@@ -560,6 +569,10 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
         target = tdee * 1.10
     elif "суш" in g:
         target = tdee * 0.82
+    elif "сил" in g:
+        target = tdee * 1.05
+    elif "вынос" in g:
+        target = tdee * 0.98
     else:
         target = tdee * 1.00
 
@@ -568,8 +581,23 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
 
 def calc_macros(calories: int, weight_kg: float, goal: str):
     g = (goal or "").lower()
-    protein = int(round(weight_kg * (2.2 if "суш" in g else 1.8)))
-    fat = int(round(weight_kg * 0.8))
+
+    # белок
+    if "суш" in g:
+        protein = int(round(weight_kg * 2.2))
+    elif "вынос" in g:
+        protein = int(round(weight_kg * 1.7))
+    elif "сил" in g:
+        protein = int(round(weight_kg * 1.9))
+    else:
+        protein = int(round(weight_kg * 1.8))
+
+    # жир
+    if "вынос" in g:
+        fat = int(round(weight_kg * 0.7))
+    else:
+        fat = int(round(weight_kg * 0.8))
+
     carbs_kcal = max(calories - (protein * 4 + fat * 9), 0)
     carbs = int(round(carbs_kcal / 4))
     return protein, fat, carbs
@@ -609,7 +637,7 @@ async def try_delete_user_message(bot: Bot, message: Message):
 
 
 # =========================
-# ✅ АНТИ-ЗАСОРЕНИЕ ЧАТА
+# ✅ АНТИ-ЗАСОРЕНИЕ ЧАТА (основное окно)
 # =========================
 async def get_last_bot_msg_id(user_id: int) -> Optional[int]:
     async with db() as conn:
@@ -630,6 +658,29 @@ async def set_last_bot_msg_id(user_id: int, msg_id: int):
             VALUES (?, ?)
             ON CONFLICT(user_id) DO UPDATE SET last_bot_msg_id=excluded.last_bot_msg_id
         """, (user_id, int(msg_id)))
+        await conn.commit()
+
+
+# ✅ отдельное сообщение для дневника (не в clean_send)
+async def get_diary_prompt_msg_id(user_id: int) -> Optional[int]:
+    async with db() as conn:
+        async with conn.execute("SELECT diary_prompt_msg_id FROM bot_state WHERE user_id=?", (user_id,)) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return None
+    try:
+        return int(row[0]) if row[0] is not None else None
+    except Exception:
+        return None
+
+
+async def set_diary_prompt_msg_id(user_id: int, msg_id: Optional[int]):
+    async with db() as conn:
+        await conn.execute("""
+            INSERT INTO bot_state (user_id, diary_prompt_msg_id)
+            VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET diary_prompt_msg_id=excluded.diary_prompt_msg_id
+        """, (user_id, int(msg_id) if msg_id else None))
         await conn.commit()
 
 
@@ -690,10 +741,10 @@ async def init_db():
         )
         """)
 
-        # ✅ мягкая миграция
+        # ✅ мягкая миграция users
         for col, typ in [
             ("limits", "TEXT"),
-            ("state", "TEXT"),
+            ("state", "TEXT"),   # оставляем для совместимости, но в мастере больше не спрашиваем
             ("meals", "INTEGER"),
         ]:
             try:
@@ -772,12 +823,24 @@ async def init_db():
             created_at TEXT
         )
         """)
+
+        # ✅ bot_state: добавили diary_prompt_msg_id
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS bot_state (
             user_id INTEGER PRIMARY KEY,
-            last_bot_msg_id INTEGER
+            last_bot_msg_id INTEGER,
+            diary_prompt_msg_id INTEGER
         )
         """)
+        # ✅ мягкая миграция bot_state
+        for col, typ in [
+            ("diary_prompt_msg_id", "INTEGER"),
+        ]:
+            try:
+                await conn.execute(f"ALTER TABLE bot_state ADD COLUMN {col} {typ}")
+            except Exception:
+                pass
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -814,7 +877,7 @@ async def ensure_user(user_id: int, username: str):
             (user_id,)
         )
         await conn.execute(
-            "INSERT OR IGNORE INTO bot_state (user_id, last_bot_msg_id) VALUES (?, NULL)",
+            "INSERT OR IGNORE INTO bot_state (user_id, last_bot_msg_id, diary_prompt_msg_id) VALUES (?, NULL, NULL)",
             (user_id,)
         )
         await conn.commit()
@@ -1117,7 +1180,7 @@ async def get_all_user_ids():
 
 
 # =========================
-# ✅ ТРЕНИРОВКИ: “проверенные системы” (FB / UL / Split / PPL)
+# ✅ ТРЕНИРОВКИ: генерация (FB / UL / PPL) + режимы (сила/выносливость)
 # =========================
 def _limits_tags(limits: str) -> Dict[str, bool]:
     t = (limits or "").lower()
@@ -1129,42 +1192,43 @@ def _limits_tags(limits: str) -> Dict[str, bool]:
     }
 
 
-def _state_tags(state: str) -> Dict[str, bool]:
-    s = (state or "").lower()
-    return {
-        "tired": any(x in s for x in ["устал", "устав", "мало сна", "не высп", "стресс"]),
-        "backoff": any(x in s for x in ["перерыв", "давно не", "возвращаюсь", "только начал"]),
-        "pain": any(x in s for x in ["болит", "боль", "дискомфорт", "тянет", "щелк"]),
-        "good": any(x in s for x in ["норм", "хорош", "отлич", "заряж"]),
-    }
-
-
-def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: str, state_text: str, user_id: int = 0) -> Tuple[str, dict]:
+def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: str, user_id: int = 0) -> Tuple[str, dict]:
     pl = (place or "").lower()
     is_gym = ("зал" in pl) or (pl == "gym") or ("gym" in pl)
-    where = "ЗАЛ" if is_gym else "ДОМ"
+    where = "ЗАЛ" if is_gym else "СВОЙ ВЕС"
 
     lvl = exp_level(exp)
     is_novice = (lvl == "novice")
     g = (goal or "").lower()
+
     is_cut = ("суш" in g)
+    is_strength = ("сил" in g)
+    is_endurance = ("вынос" in g)
 
     tags = _limits_tags(limits)
-    st = _state_tags(state_text)
 
     f = int(freq or 3)
     f = max(MIN_DAYS, min(f, MAX_DAYS))
-    if (st["tired"] or st["backoff"]) and f >= 5:
-        f = 4
-    if st["backoff"] and f >= 4:
-        f = 3
 
-    # цель: масса/удержание — средние повторы; сушка — чуть выше объём, легче суставам
-    reps_base = "6–10" if not is_cut else "8–12"
-    reps_iso = "10–15" if not is_cut else "12–20"
-    base_sets = "3" if is_novice else "3–4"
-    iso_sets = "2–3" if is_novice else "3"
-    rir = "2–3" if (st["tired"] or st["backoff"] or st["pain"]) else "1–2"
+    # ✅ на силе/выносливости меняем повторы/подходы
+    if is_strength:
+        reps_base = "3–6"
+        reps_iso = "8–12"
+        base_sets = "3" if is_novice else "4–5"
+        iso_sets = "2" if is_novice else "2–3"
+        rir = "1–2"
+    elif is_endurance:
+        reps_base = "12–20"
+        reps_iso = "15–25"
+        base_sets = "2–3"
+        iso_sets = "2–3"
+        rir = "2–3"
+    else:
+        reps_base = "6–10" if not is_cut else "8–12"
+        reps_iso = "10–15" if not is_cut else "12–20"
+        base_sets = "3" if is_novice else "3–4"
+        iso_sets = "2–3" if is_novice else "3"
+        rir = "1–2"
 
     seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
     rnd = random.Random(seed)
@@ -1177,13 +1241,13 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
     def avoid_keys_for_base():
         keys = []
-        if tags["knee"] or st["pain"]:
+        if tags["knee"]:
             keys += avoid_knee
-        if tags["back"] or st["pain"]:
+        if tags["back"]:
             keys += avoid_back
-        if tags["shoulder"] or st["pain"]:
+        if tags["shoulder"]:
             keys += avoid_shoulder
-        if tags["elbow"] or st["pain"]:
+        if tags["elbow"]:
             keys += avoid_elbow
         return keys
 
@@ -1207,12 +1271,13 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         CALVES = ["Икры стоя/сидя"]
         CORE = ["Планка", "Скручивания", "Подъёмы ног в висе/упоре"]
     else:
-        SQUAT = ["Приседания", "Гоблет-присед", "Болгарские (лёгко)", "Присед пауза (лёгко)"]
-        HINGE = ["Румынская тяга (гантели)", "Ягодичный мост", "Гиперэкстензия (пол)"]
-        HPUSH = ["Отжимания", "Жим гантелей лёжа", "Отжимания узкие"]
-        HPULL = ["Тяга гантели одной рукой", "Тяга резинки к поясу", "Тяга в наклоне (лёгко)"]
+        # ✅ режим "со своим весом"
+        SQUAT = ["Приседания", "Присед пауза (лёгко)", "Присед сумо", "Полуприсед (если колени капризны)"]
+        HINGE = ["Ягодичный мост", "Гиперэкстензия (пол)", "Good-morning (очень легко, контроль)"]
+        HPUSH = ["Отжимания", "Отжимания узкие", "Отжимания с паузой"]
+        HPULL = ["Тяга резинки к поясу", "Тяга в наклоне (лёгко)", "Тяга гантели одной рукой (если есть)"]
         VPULL = ["Подтягивания (резинка/негативы)", "Тяга резинки сверху", "Подтягивания нейтр. хват (если есть)"]
-        VPUSH = ["Жим гантелей вверх", "Отжимания (ноги на опоре)", "Жим резинки вверх"]
+        VPUSH = ["Жим резинки вверх", "Пайк-отжимания (лёгко)", "Отжимания (ноги на опоре)"]
         SHOULD = ["Разведения в стороны (гантели)", "Тяга резинки к лицу", "Задняя дельта (гантели)"]
         BI = ["Сгибания гантелей", "Молотки"]
         TRI = ["Отжимания узкие", "Разгибание гантели из-за головы (лёгко)"]
@@ -1220,11 +1285,11 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         CORE = ["Планка", "Скручивания", "Подъёмы ног лёжа"]
 
     # лёгкие правки под ограничения
-    if tags["elbow"] or st["pain"]:
+    if tags["elbow"]:
         TRI = [x for x in TRI if "француз" not in x.lower()]
-    if tags["knee"] or st["pain"]:
+    if tags["knee"]:
         SQUAT = [x for x in SQUAT if "выпад" not in x.lower() and "болгар" not in x.lower()]
-    if tags["back"] or st["pain"]:
+    if tags["back"]:
         HINGE = [x for x in HINGE if "румын" not in x.lower()]
 
     # системы: 3=FB, 4=UL, 5=PPL+UL
@@ -1242,11 +1307,8 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         return f"{name} — {sets}×{reps}"
 
     def day_block(kind: str) -> List[str]:
-        lines = [f"RIR: {rir}"]
-        lines.append("")
-
+        lines = [f"RIR: {rir}", ""]
         if kind.startswith("FB"):
-            # 2 базы (ноги + жим/тяга) + 2 изоляции
             squat = pick(SQUAT, avoid_keys)
             hinge = pick(HINGE, avoid_keys)
             hpush = pick(HPUSH, avoid_keys)
@@ -1258,14 +1320,13 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append(f"• {fmt(squat, base_sets, reps_base)}")
             lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
             lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
-            if not (st["tired"] or st["backoff"] or st["pain"]):
-                lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
+            lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
 
             lines.append("")
             lines.append("Изоляция:")
             lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
             lines.append(f"• {fmt(arms, iso_sets, reps_iso)}")
-            if not is_novice and not (st["tired"] or st["pain"]):
+            if not is_novice:
                 lines.append(f"• {fmt(pick(CORE, avoid_keys), '2', '30–60 сек')}")
             return lines
 
@@ -1282,7 +1343,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
             lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
             lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
-            if not (tags["shoulder"] or st["pain"]):
+            if not tags["shoulder"]:
                 lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
 
             lines.append("")
@@ -1316,7 +1377,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
             lines.append("База:")
             lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
-            if not (tags["shoulder"] or st["pain"]):
+            if not tags["shoulder"]:
                 lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
 
             lines.append("")
@@ -1358,14 +1419,13 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         return ["—"]
 
     limits_line = (limits or "").strip() or "нет"
-    state_line = (state_text or "").strip() or "норм"
 
     intro = (
         f"🏋️ Тренировки ({where})\n"
         f"Система: {system}\n"
         f"Частота: {f}×/нед • {weekday_schedule(f)}\n"
         f"Цель: {goal} • Уровень: {'новичок' if is_novice else 'средний+'}\n"
-        f"Огр.: {limits_line} • Самочувствие: {state_line}\n\n"
+        f"Огр.: {limits_line}\n\n"
         f"Правило: техника > вес • RIR {rir}\n"
         "Выбери день кнопкой 👇"
     )
@@ -1390,7 +1450,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
 
 # =========================
-# ✅ ПИТАНИЕ (как было) + учитываем meals из профиля
+# ✅ ПИТАНИЕ: индивидуально под профиль (КБЖУ/БЖУ)
 # =========================
 FOOD_DB = {
     "oats":      {"name": "Овсянка (сухая)",              "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
@@ -1417,10 +1477,12 @@ FOOD_DB = {
     "apple":     {"name": "Яблоко",                       "kcal": 52,  "p": 0.3,  "f": 0.2,   "c": 14.0},
 }
 
+
 def _nutr_of(item_key: str, grams: float):
     it = FOOD_DB[item_key]
     k = grams / 100.0
     return {"kcal": it["kcal"] * k, "p": it["p"] * k, "f": it["f"] * k, "c": it["c"] * k}
+
 
 def _sum_nutr(items: List[Tuple[str, float]]):
     tot = {"kcal": 0.0, "p": 0.0, "f": 0.0, "c": 0.0}
@@ -1430,14 +1492,18 @@ def _sum_nutr(items: List[Tuple[str, float]]):
             tot[kk] += n[kk]
     return tot
 
+
 def _fmt_tot(t):
     return f"{int(round(t['kcal']))} ккал | Б {int(round(t['p']))}г Ж {int(round(t['f']))}г У {int(round(t['c']))}г"
+
 
 def _flatten(day_meals: List[List[Tuple[str, float]]]) -> List[Tuple[str, float]]:
     return [x for m in day_meals for x in m]
 
+
 def _totals_of_day(day_meals: List[List[Tuple[str, float]]]) -> Dict[str, float]:
     return _sum_nutr(_flatten(day_meals))
+
 
 def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float):
     if delta == 0:
@@ -1449,6 +1515,7 @@ def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float)
                 day_meals[mi][ii] = (k, max(0.0, g + delta))
                 return
     day_meals[-1].append((key, max(0.0, float(delta))))
+
 
 def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str, float]) -> Dict[str, float]:
     protein_keys = ["chicken", "turkey", "fish", "curd_0_5", "yogurt"]
@@ -1483,6 +1550,7 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
             _add_grams(day_meals, "oats", -10.0)
 
     return _totals_of_day(day_meals)
+
 
 def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]]:
     meals = max(3, min(int(meals or 3), 5))
@@ -1522,6 +1590,7 @@ def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]
         day.append([("banana", 120.0), ("nuts", 20.0)])
     return day
 
+
 def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
     target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
     day_meals = _build_day_variant(day_i, meals)
@@ -1547,6 +1616,7 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
     lines.append("⚠️ Крупы/макароны — в сухом виде. Овощи можно больше.")
     return "\n".join(lines)
 
+
 def nutrition_examples_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🥣 Пример 1", callback_data="nutr:ex:1")],
@@ -1555,21 +1625,23 @@ def nutrition_examples_kb():
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
+
 def nutrition_back_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="nutr:back")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
+
 def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weight: float, exp: str,
-                             freq: int = 3, place: str = "дом", meals_pref: Optional[int] = None) -> Tuple[str, int, int, int, int, int]:
+                             freq: int = 3, place: str = "свой вес", meals_pref: Optional[int] = None) -> Tuple[str, int, int, int, int, int]:
     calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
     p, f, c = calc_macros(calories, weight, goal)
     meals = int(meals_pref or 0) if meals_pref else suggest_meals_count(calories)
     meals = max(3, min(meals, 5))
 
     summary = (
-        "🍽 Питание\n\n"
+        "🍽 Питание (индивидуально)\n\n"
         f"Ориентир: ~{calories} ккал\n"
         f"БЖУ: Б {p}г / Ж {f}г / У {c}г\n"
         f"Приёмов: {meals}\n\n"
@@ -1665,11 +1737,11 @@ def _profile_summary_text(u: dict) -> str:
         f"Возраст: {u.get('age')}\n"
         f"Рост: {u.get('height')}\n"
         f"Вес: {u.get('weight')}\n"
-        f"Где: {u.get('place')}\n"
+        f"Как тренируешься: {u.get('place')}\n"
         f"Опыт: {u.get('exp')}\n"
         f"Тренировки: {u.get('freq')}×/нед\n"
         f"Еда: {u.get('meals')}×/день\n"
-        f"Ограничения: {(u.get('limits') or 'нет')}\n"
+        f"Ограничения: {(u.get('limits') or 'нет')}"
     )
 
 
@@ -1722,42 +1794,52 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await state.set_state(ProfileWizard.goal)
         text = _profile_header(1) + "🎯 Цель?"
         await clean_edit(callback, uid, text, reply_markup=kb_goal())
+
     elif step == "sex":
         await state.set_state(ProfileWizard.sex)
         text = _profile_header(2) + "👤 Пол?"
         await clean_edit(callback, uid, text, reply_markup=kb_sex())
+
     elif step == "age":
         await state.set_state(ProfileWizard.age)
         text = _profile_header(3) + "🎂 Возраст (числом):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("sex"))
+
     elif step == "height":
         await state.set_state(ProfileWizard.height)
         text = _profile_header(4) + "📏 Рост в см:"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("age"))
+
     elif step == "weight":
         await state.set_state(ProfileWizard.weight)
         text = _profile_header(5) + "⚖️ Вес в кг:"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("height"))
+
     elif step == "place":
         await state.set_state(ProfileWizard.place)
         text = _profile_header(6) + "🏋️ Как тренируешься?"
         await clean_edit(callback, uid, text, reply_markup=kb_place())
+
     elif step == "exp":
         await state.set_state(ProfileWizard.exp)
         text = _profile_header(7) + "📈 Опыт?"
         await clean_edit(callback, uid, text, reply_markup=kb_exp())
+
     elif step == "freq":
         await state.set_state(ProfileWizard.freq)
         text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
         await clean_edit(callback, uid, text, reply_markup=kb_freq())
+
     elif step == "meals":
         await state.set_state(ProfileWizard.meals)
         text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
         await clean_edit(callback, uid, text, reply_markup=kb_meals())
+
     elif step == "limits":
         await state.set_state(ProfileWizard.limits)
         text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("meals"))
+
     else:
         await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
 
@@ -1766,7 +1848,13 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
 
 async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
-    goal = {"mass": "масса", "cut": "сушка", "fit": "удержание"}.get(v, v)
+    goal = {
+        "mass": "масса",
+        "cut": "сушка",
+        "strength": "сила",
+        "endurance": "выносливость",
+    }.get(v, v)
+
     await update_user(callback.from_user.id, goal=goal)
 
     await state.set_state(ProfileWizard.sex)
@@ -1852,7 +1940,7 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
 
 async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
-    place = "свой вес" if v == "body" else "зал"
+    place = "свой вес" if v == "bodyweight" else "зал"
     await update_user(callback.from_user.id, place=place)
 
     await state.set_state(ProfileWizard.exp)
@@ -1911,8 +1999,6 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
         limits = ""
 
     await update_user(message.from_user.id, limits=limits)
-
-await update_user(message.from_user.id, limits=limits)
     await state.clear()
 
     # ✅ Авто-обновление планов после заполнения профиля
@@ -1925,66 +2011,6 @@ await update_user(message.from_user.id, limits=limits)
         f"Цель: {u.get('goal')} • {u.get('freq')}×/нед\n"
         f"Еда: {u.get('meals')}×/день\n"
         f"Ограничения: {(u.get('limits') or 'нет')}\n\n"
-        "Теперь открывай «Тренировки» или «Питание» 👇"
-    )
-    await clean_send(bot, message.chat.id, message.from_user.id, summary, reply_markup=profile_done_kb())
-    await try_delete_user_message(bot, message)
-
-
-async def cb_profile_state_pick(callback: CallbackQuery, state: FSMContext):
-    v = callback.data.split(":", 2)[2]
-
-    if v == "text":
-        await state.set_state(ProfileWizard.state)
-        text = _profile_header(11) + "Напиши самочувствие коротко.\nНапример: «норм», «не выспался», «побаливает плечо»."
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("limits"))
-        await callback.answer()
-        return
-
-    mapping = {
-        "отличное": "отличное",
-        "норм": "норм",
-        "устал": "устал/мало сна",
-        "болит": "есть боль/дискомфорт",
-    }
-    st_txt = mapping.get(v, v)
-
-    await update_user(callback.from_user.id, state=st_txt)
-    await state.clear()
-
-    # ✅ Авто-обновление планов после заполнения профиля
-    await build_plans_if_needed(callback.from_user.id, force=True)
-
-    u = await get_user(callback.from_user.id)
-    summary = (
-        _profile_header(11) +
-        "✅ Профиль сохранён. План тренировок и питание обновил.\n\n"
-        f"Цель: {u.get('goal')} • {u.get('freq')}×/нед\n"
-        f"Еда: {u.get('meals')}×/день\n"
-        f"Ограничения: {(u.get('limits') or 'нет')}\n"
-        f"Самочувствие: {(u.get('state') or 'норм')}\n\n"
-        "Теперь открывай «Тренировки» или «Питание» 👇"
-    )
-    await clean_edit(callback, callback.from_user.id, summary, reply_markup=profile_done_kb())
-    await callback.answer()
-
-
-async def profile_state_text(message: Message, state: FSMContext, bot: Bot):
-    st_txt = (message.text or "").strip() or "норм"
-    await update_user(message.from_user.id, state=st_txt)
-    await state.clear()
-
-    # ✅ Авто-обновление планов после заполнения профиля
-    await build_plans_if_needed(message.from_user.id, force=True)
-
-    u = await get_user(message.from_user.id)
-    summary = (
-        _profile_header(11) +
-        "✅ Профиль сохранён. План тренировок и питание обновил.\n\n"
-        f"Цель: {u.get('goal')} • {u.get('freq')}×/нед\n"
-        f"Еда: {u.get('meals')}×/день\n"
-        f"Ограничения: {(u.get('limits') or 'нет')}\n"
-        f"Самочувствие: {(u.get('state') or 'норм')}\n\n"
         "Теперь открывай «Тренировки» или «Питание» 👇"
     )
     await clean_send(bot, message.chat.id, message.from_user.id, summary, reply_markup=profile_done_kb())
@@ -2153,7 +2179,6 @@ async def build_plans_if_needed(user_id: int, force: bool = False):
     intro, plan_struct = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"]),
         limits=u.get("limits") or "",
-        state_text=u.get("state") or "",
         user_id=user_id
     )
 
@@ -2196,6 +2221,7 @@ TRACK_EXERCISES = [
     "Жим ногами",
 ]
 
+
 def diary_exercises_kb():
     rows = []
     for i in range(0, len(TRACK_EXERCISES), 2):
@@ -2218,6 +2244,7 @@ MEASURE_TYPES = [
     ("chest", "Грудь (см)"),
     ("thigh", "Бедро (см)"),
 ]
+
 
 def measures_kb():
     rows = []
@@ -2343,10 +2370,18 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
 # =========================
 # ✅ ДНЕВНИК
 # =========================
+# ✅ При выборе упражнения — отдельное сообщение (не правим текущее окно)
 async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     exercise = callback.data.split("d:ex:", 1)[1].strip()
     await state.update_data(exercise=exercise)
     await state.set_state(DiaryFlow.enter_sets)
+
+    old_prompt_id = await get_diary_prompt_msg_id(callback.from_user.id)
+    if old_prompt_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=old_prompt_id)
+        except Exception:
+            pass
 
     today = datetime.now().strftime("%Y-%m-%d")
     text = (
@@ -2355,7 +2390,10 @@ async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
         "Напиши подходы: весxповторы\n"
         "Пример: 60x8, 60x8, 60x7"
     )
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=diary_exercises_kb())
+
+    m = await bot.send_message(chat_id=callback.message.chat.id, text=text)
+    await set_diary_prompt_msg_id(callback.from_user.id, m.message_id)
+
     await callback.answer()
 
 
@@ -2395,6 +2433,16 @@ async def diary_enter_sets(message: Message, state: FSMContext, bot: Bot):
     msg = f"✅ Записал.\n🗓 {today}\n🏷 {exercise}\nПодходов: {len(parsed)}"
     await clean_send(bot, message.chat.id, message.from_user.id, msg, reply_markup=diary_exercises_kb())
     await try_delete_user_message(bot, message)
+
+    # ✅ удалим отдельное сообщение-подсказку (чтобы не висело)
+    prompt_id = await get_diary_prompt_msg_id(message.from_user.id)
+    if prompt_id:
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=prompt_id)
+        except Exception:
+            pass
+        await set_diary_prompt_msg_id(message.from_user.id, None)
+
     await state.set_state(DiaryFlow.choosing_exercise)
 
 
@@ -2508,6 +2556,7 @@ async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     day_text = build_meal_day_text(day_i, calories, p, f, c, meals)
     await clean_edit(callback, callback.from_user.id, day_text, reply_markup=nutrition_back_kb())
     await callback.answer()
+
 
 async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
     await open_nutrition(callback.from_user.id, callback.message.chat.id, bot, callback=callback)
@@ -2765,7 +2814,6 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_example, F.data.startswith("nutr:ex:"))
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
 
-    # ✅ дни тренировок (без refresh)
     dp.callback_query.register(cb_workout_day, F.data.startswith("wday:"))
 
     dp.message.register(cmd_posts, Command("posts"))
@@ -2849,5 +2897,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
