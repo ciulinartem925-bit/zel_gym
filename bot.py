@@ -33,7 +33,6 @@ CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
 CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
-WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/tech/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
@@ -822,6 +821,18 @@ async def init_db():
             except Exception:
                 pass
 
+        # ✅ воронка: мягкая миграция users
+        for col, typ in [
+            ("funnel_step",    "INTEGER DEFAULT 0"),
+            ("trial_until",    "TEXT DEFAULT NULL"),
+            ("paid_until",     "TEXT DEFAULT NULL"),
+            ("last_funnel_at", "TEXT DEFAULT NULL"),
+        ]:
+            try:
+                await conn.execute(f"ALTER TABLE users ADD COLUMN {col} {typ}")
+            except Exception:
+                pass
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -907,7 +918,8 @@ async def get_access(user_id: int):
     return {"paid": row[0], "tariff": row[1], "expires_at": row[2], "paid_at": row[3]}
 
 
-async def is_access_active(user_id: int) -> bool:
+async def is_access_active_db(user_id: int) -> bool:
+    """Paid-доступ из таблицы access (тарифы)."""
     a = await get_access(user_id)
     if a["paid"] != 1:
         return False
@@ -920,6 +932,14 @@ async def is_access_active(user_id: int) -> bool:
     except Exception:
         return False
     return datetime.utcnow() < exp
+
+
+async def is_access_active(user_id: int) -> bool:
+    """Единая проверка: paid-доступ ИЛИ активный trial воронки."""
+    if await is_access_active_db(user_id):
+        return True
+    funnel = await get_user_funnel(user_id)
+    return is_active_access(funnel["trial_until"], funnel["paid_until"])
 
 
 async def set_paid_tariff(user_id: int, tariff_code: str):
@@ -1621,63 +1641,326 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
 # =========================
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
     text = (
-        "🏠 Главное меню\n\n"
-        "Выбери раздел 👇\n"
-        "Профиль / оплата / поддержка — на кнопках снизу."
+        "👋 Привет! Я зелёный тренер, и здесь помогу тебе.\n\n"
+        "Что я сделаю для тебя:\n"
+        "• Тренировки по системе (фулбади / верх-низ / PPL) — под твою цель и условия\n"
+        "• Питание без «кулинарного цирка» — по калориям и БЖУ\n"
+        "• Дневник + замеры — чтобы прогресс был в цифрах\n\n"
+        "Хочешь результат — жми раздел 👇\n"
+        "Оплата / профиль / поддержка — всегда на кнопках снизу."
     )
     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
 
 
+# =========================
+# ✅ НОВОЕ: Кнопка приветственного экрана
+# =========================
 def welcome_kb():
+    """Кнопка на приветственном экране — ведёт в главное меню с разделами."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 Моя программа", callback_data="nav:menu")],
     ])
 
 
+# =========================
+# ✅ ИЗМЕНЕНО: /start — приветственный экран с картинкой
+# =========================
+WELCOME_CAPTION = (
+    "👋 Привет! Я твой персональный тренер-бот.\n\n"
+    "🏋️ <b>Что я умею:</b>\n"
+    "• Составляю программу тренировок под тебя — по системе фулбади, верх/низ или PPL\n"
+    "• Учитываю цель (масса, сушка, сила, выносливость), уровень подготовки и травмы\n"
+    "• Считаю КБЖУ и даю готовый план питания по дням\n"
+    "• Веду дневник тренировок и историю замеров\n"
+    "• Показываю технику выполнения упражнений с картинками\n\n"
+    "⚙️ <b>Как составляется программа:</b>\n"
+    "Ты заполняешь профиль (цель, пол, возраст, вес, рост, опыт, частота тренировок) — "
+    "и я автоматически генерирую твой план тренировок и питания.\n\n"
+    "Нажми кнопку ниже, чтобы начать 👇"
+)
+
+# Путь к картинке для приветственного экрана.
+# Положи файл welcome.jpg в папку media/ рядом с bot.py.
+# Если файла нет — бот отправит просто текст.
+WELCOME_IMAGE = "media/welcome.jpg"
+
+
 async def cmd_start(message: Message, bot: Bot):
-    await ensure_user(message.from_user.id, message.from_user.username or "")
+    uid = message.from_user.id
+    await ensure_user(uid, message.from_user.username or "")
     await try_delete_user_message(bot, message)
 
-    # Постоянная клавиатура снизу
+    # Постоянная reply-клавиатура снизу
     await bot.send_message(
         chat_id=message.chat.id,
-        text="✅ Я на месте. Кнопки снизу 👇",
+        text="✅ Я на месте. Кнопки управления снизу 👇",
         reply_markup=control_reply_kb()
     )
 
-    welcome_text = (
-        "👋 Привет! Я твой персональный тренер-бот.\n\n"
-        "🏋️ Что я умею:\n"
-        "• Составляю программу тренировок под тебя — по системе Фулбади, Верх/Низ или PPL, "
-        "в зависимости от твоей цели, опыта и того, где тренируешься (зал или свой вес)\n"
-        "• Рассчитываю питание по КБЖУ индивидуально — с учётом цели, веса, роста и активности\n"
-        "• Веду дневник тренировок — записываю веса и повторения, сохраняю историю\n"
-        "• Показываю технику упражнений с картинками\n\n"
-        "📋 Как это работает:\n"
-        "1. Заполняешь профиль (⚙️ Профиль) — цель, параметры, опыт\n"
-        "2. Я генерирую программу лично под тебя\n"
-        "3. Тренируешься, фиксируешь результат в дневнике\n\n"
-        "Нажми кнопку ниже — и поехали 👇"
+    # Для вернувшихся пользователей — сразу меню
+    # Для новых — конверсионный экран с 1 кнопкой
+    funnel = await get_user_funnel(uid)
+    has_access = (
+        is_active_access(funnel["trial_until"], funnel["paid_until"])
+        or await is_access_active_db(uid)
     )
+    reply_kb = menu_main_inline_kb() if has_access else kb_start()
 
     if os.path.exists(WELCOME_IMAGE):
         photo = FSInputFile(WELCOME_IMAGE)
-        await bot.send_photo(
+        m = await bot.send_photo(
             chat_id=message.chat.id,
             photo=photo,
-            caption=welcome_text,
-            reply_markup=welcome_kb()
+            caption=WELCOME_CAPTION,
+            parse_mode="HTML",
+            reply_markup=reply_kb
         )
     else:
-        await bot.send_message(
+        m = await bot.send_message(
             chat_id=message.chat.id,
-            text=welcome_text,
-            reply_markup=welcome_kb()
+            text=WELCOME_CAPTION,
+            parse_mode="HTML",
+            reply_markup=reply_kb
         )
+
+    await set_last_bot_msg_id(uid, m.message_id)
 
 
 # =========================
-# ✅ Навигация
+# ✅ ВОРОНКА: утилиты + хелперы
+# =========================
+from aiogram.exceptions import TelegramBadRequest
+
+
+async def upsert_menu_message(bot: Bot, user_id: int, text: str, reply_markup=None):
+    """Редактирует существующее главное сообщение или шлёт новое."""
+    last_id = await get_last_bot_msg_id(user_id)
+    if last_id:
+        try:
+            await bot.edit_message_text(
+                chat_id=user_id,
+                message_id=last_id,
+                text=text,
+                reply_markup=reply_markup,
+            )
+            return last_id
+        except TelegramBadRequest:
+            pass
+
+    msg = await bot.send_message(user_id, text, reply_markup=reply_markup)
+    await set_last_bot_msg_id(user_id, msg.message_id)
+    return msg.message_id
+
+
+def is_active_access(trial_until: Optional[str], paid_until: Optional[str]) -> bool:
+    """True если trial или paid ещё активны (по дате)."""
+    now = datetime.utcnow()
+
+    def _parse(dt):
+        try:
+            return datetime.fromisoformat(dt) if dt else None
+        except Exception:
+            return None
+
+    t = _parse(trial_until)
+    p = _parse(paid_until)
+    return bool((t and t > now) or (p and p > now))
+
+
+async def get_user_funnel(user_id: int) -> dict:
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT funnel_step, trial_until, paid_until, last_funnel_at FROM users WHERE user_id=?",
+            (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return {"funnel_step": 0, "trial_until": None, "paid_until": None, "last_funnel_at": None}
+    return {
+        "funnel_step": row[0] or 0,
+        "trial_until": row[1],
+        "paid_until": row[2],
+        "last_funnel_at": row[3],
+    }
+
+
+async def set_user_funnel(user_id: int, **fields):
+    if not fields:
+        return
+    keys = [f"{k}=?" for k in fields]
+    vals = list(fields.values()) + [user_id]
+    async with db() as conn:
+        await conn.execute("UPDATE users SET " + ", ".join(keys) + " WHERE user_id=?", vals)
+        await conn.commit()
+
+
+FUNNEL_TEXTS = {
+    0: (
+        "💪 День 1/3 — бесплатный доступ активен\n\n"
+        "Главная ошибка новичков: хаос.\n\n"
+        "Сегодня: сделай 1 тренировку и запиши её в дневник.\n"
+        "Кнопка «Дневник» внизу — попробуй прямо сейчас 👇"
+    ),
+    1: (
+        "📈 День 2/3\n\n"
+        "Рост = прогрессия + восстановление.\n\n"
+        "Не делай всё «в отказ» — оставляй 1–2 повтора в запасе.\n"
+        "Сегодня: открой «Тренировки» и изучи свой план 👇"
+    ),
+    2: (
+        "🔔 День 3/3 — последний день бесплатного доступа\n\n"
+        "Ты уже видел, как работает система.\n\n"
+        "Хочешь продолжить — тренировки, питание, дневник и замеры.\n"
+        "Нажми кнопку ниже, чтобы открыть полный доступ 👇"
+    ),
+}
+
+
+# =========================
+# ✅ ВОРОНКА: клавиатуры
+# =========================
+def kb_start():
+    """Единственная кнопка на Welcome-экране (конверсионный вход)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚀 Начать бесплатно — 3 дня", callback_data="funnel:start_free")]
+    ])
+
+
+def kb_pay_offer():
+    """Оффер оплаты в конце trial."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Открыть полный доступ", callback_data="nav:payment")],
+        [InlineKeyboardButton(text="⬅️ В меню", callback_data="nav:menu")],
+    ])
+
+
+# =========================
+# ✅ ВОРОНКА: колбэки онбординга
+# =========================
+async def cb_funnel_start_free(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    user_id = callback.from_user.id
+    now = datetime.utcnow()
+    trial_until = (now + timedelta(days=3)).isoformat()
+
+    await set_user_funnel(user_id,
+        trial_until=trial_until,
+        funnel_step=0,
+        last_funnel_at=now.isoformat()
+    )
+
+    text = (
+        "🔥 Бесплатный доступ активирован на 3 дня.\n\n"
+        "Пара быстрых вопросов (30 сек) — собирём план под тебя.\n\n"
+        "1) Какая цель?"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💪 Набор массы", callback_data="onb:goal:mass"),
+         InlineKeyboardButton(text="🔥 Сушка", callback_data="onb:goal:cut")],
+        [InlineKeyboardButton(text="🏋️ Сила", callback_data="onb:goal:strength"),
+         InlineKeyboardButton(text="🏃 Выносливость", callback_data="onb:goal:endurance")],
+    ])
+    await upsert_menu_message(bot, user_id, text, kb)
+    await callback.answer()
+
+
+async def cb_onb_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    user_id = callback.from_user.id
+    v = callback.data.split(":")[2]
+    goal_map = {
+        "mass": "масса", "cut": "сушка",
+        "strength": "сила", "endurance": "выносливость",
+    }
+    goal = goal_map.get(v, v)
+    await update_user(user_id, goal=goal)
+
+    text = (
+        f"Цель: {goal} ✅\n\n"
+        "2) Как тренируешься?"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🤸 Со своим весом", callback_data="onb:place:bodyweight"),
+         InlineKeyboardButton(text="🏋️ В зале", callback_data="onb:place:gym")],
+    ])
+    await upsert_menu_message(bot, user_id, text, kb)
+    await callback.answer()
+
+
+async def cb_onb_place(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    user_id = callback.from_user.id
+    v = callback.data.split(":")[2]
+    place = "свой вес" if v == "bodyweight" else "зал"
+    await update_user(user_id, place=place, exp="0", freq=3, meals=3)
+
+    if await ensure_profile_ready(user_id):
+        await build_plans_if_needed(user_id, force=True)
+
+    text = (
+        "✅ Готово! Собрал базу под тебя.\n\n"
+        "В течение 3 бесплатных дней буду вести тебя шаг за шагом.\n\n"
+        "Выбирай раздел 👇"
+    )
+    await upsert_menu_message(bot, user_id, text, menu_main_inline_kb())
+    await callback.answer()
+
+
+# =========================
+# ✅ ВОРОНКА: фоновая рассылка
+# =========================
+async def funnel_worker(bot: Bot):
+    """Отправляет дрип-сообщения воронки раз в 24ч."""
+    logger.info("funnel_worker started")
+    while True:
+        try:
+            async with db() as conn:
+                now = datetime.utcnow()
+                async with conn.execute("""
+                    SELECT user_id, funnel_step, trial_until, paid_until, last_funnel_at
+                    FROM users
+                    WHERE trial_until IS NOT NULL
+                """) as cur:
+                    rows = await cur.fetchall()
+
+                for row in rows:
+                    user_id, step, trial_until, paid_until, last_at = row
+                    step = step or 0
+
+                    if not is_active_access(trial_until, paid_until):
+                        continue
+
+                    if last_at:
+                        try:
+                            if (now - datetime.fromisoformat(last_at)) < timedelta(hours=24):
+                                continue
+                        except Exception:
+                            pass
+
+                    if step not in FUNNEL_TEXTS:
+                        continue
+
+                    markup = kb_pay_offer() if step == 2 else menu_main_inline_kb()
+                    try:
+                        await upsert_menu_message(bot, user_id, FUNNEL_TEXTS[step], markup)
+                    except Exception as e:
+                        logger.warning("funnel_worker: user %s: %s", user_id, e)
+                        continue
+
+                    await conn.execute("""
+                        UPDATE users
+                        SET funnel_step = funnel_step + 1,
+                            last_funnel_at = ?
+                        WHERE user_id = ?
+                    """, (now.isoformat(), user_id))
+
+                await conn.commit()
+
+        except Exception:
+            logger.exception("funnel_worker error")
+
+        await asyncio.sleep(60 * 15)
+
+
+# =========================
+# Навигация
 # =========================
 async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await ensure_user(callback.from_user.id, callback.from_user.username or "")
@@ -1704,7 +1987,7 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ✅ Панель управления (ReplyKeyboard)
+# Панель управления (ReplyKeyboard)
 # =========================
 async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
@@ -1793,52 +2076,42 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await state.set_state(ProfileWizard.goal)
         text = _profile_header(1) + "🎯 Цель?"
         await clean_edit(callback, uid, text, reply_markup=kb_goal())
-
     elif step == "sex":
         await state.set_state(ProfileWizard.sex)
         text = _profile_header(2) + "👤 Пол?"
         await clean_edit(callback, uid, text, reply_markup=kb_sex())
-
     elif step == "age":
         await state.set_state(ProfileWizard.age)
         text = _profile_header(3) + "🎂 Возраст (числом):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("sex"))
-
     elif step == "height":
         await state.set_state(ProfileWizard.height)
         text = _profile_header(4) + "📏 Рост в см:"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("age"))
-
     elif step == "weight":
         await state.set_state(ProfileWizard.weight)
         text = _profile_header(5) + "⚖️ Вес в кг:"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("height"))
-
     elif step == "place":
         await state.set_state(ProfileWizard.place)
         text = _profile_header(6) + "🏋️ Как тренируешься?"
         await clean_edit(callback, uid, text, reply_markup=kb_place())
-
     elif step == "exp":
         await state.set_state(ProfileWizard.exp)
         text = _profile_header(7) + "📈 Опыт?"
         await clean_edit(callback, uid, text, reply_markup=kb_exp())
-
     elif step == "freq":
         await state.set_state(ProfileWizard.freq)
         text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
         await clean_edit(callback, uid, text, reply_markup=kb_freq())
-
     elif step == "meals":
         await state.set_state(ProfileWizard.meals)
         text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
         await clean_edit(callback, uid, text, reply_markup=kb_meals())
-
     elif step == "limits":
         await state.set_state(ProfileWizard.limits)
         text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("meals"))
-
     else:
         await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
 
@@ -1855,7 +2128,6 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
     }.get(v, v)
 
     await update_user(callback.from_user.id, goal=goal)
-
     await state.set_state(ProfileWizard.sex)
     text = _profile_header(2) + "👤 Пол?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_sex())
@@ -1866,7 +2138,6 @@ async def cb_profile_sex(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
     sex = "м" if v == "m" else "ж"
     await update_user(callback.from_user.id, sex=sex)
-
     await state.set_state(ProfileWizard.age)
     text = _profile_header(3) + "🎂 Возраст (числом):"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("sex"))
@@ -1886,7 +2157,7 @@ def _parse_int_from_text(s: str) -> Optional[int]:
 
 def _parse_float_from_text(s: str) -> Optional[float]:
     s = (s or "").strip().replace(",", ".")
-    m = re.search(r"(\d+(\.*\d+)?)", s)
+    m = re.search(r"(\d+(\. \d+)?)", s)
     if not m:
         return None
     try:
@@ -1902,7 +2173,6 @@ async def profile_age_text(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     await update_user(message.from_user.id, age=age)
-
     await state.set_state(ProfileWizard.height)
     text = _profile_header(4) + "📏 Рост в см:"
     await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_text_step("age"))
@@ -1916,7 +2186,6 @@ async def profile_height_text(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     await update_user(message.from_user.id, height=h)
-
     await state.set_state(ProfileWizard.weight)
     text = _profile_header(5) + "⚖️ Вес в кг:"
     await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_text_step("height"))
@@ -1930,7 +2199,6 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     await update_user(message.from_user.id, weight=w)
-
     await state.set_state(ProfileWizard.place)
     text = _profile_header(6) + "🏋️ Как тренируешься?"
     await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_place())
@@ -1941,7 +2209,6 @@ async def cb_profile_place(callback: CallbackQuery, state: FSMContext):
     v = callback.data.split(":")[2]
     place = "свой вес" if v == "bodyweight" else "зал"
     await update_user(callback.from_user.id, place=place)
-
     await state.set_state(ProfileWizard.exp)
     text = _profile_header(7) + "📈 Опыт?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_exp())
@@ -1960,7 +2227,6 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
 
     exp_text = "1-2 года" if v == "mid" else "2+ года"
     await update_user(callback.from_user.id, exp=exp_text)
-
     await state.set_state(ProfileWizard.freq)
     text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_freq())
@@ -1970,7 +2236,6 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext):
 async def cb_profile_freq(callback: CallbackQuery, state: FSMContext):
     f = int(callback.data.split(":")[2])
     await update_user(callback.from_user.id, freq=f)
-
     await state.set_state(ProfileWizard.meals)
     text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_meals())
@@ -1981,7 +2246,6 @@ async def cb_profile_meals(callback: CallbackQuery, state: FSMContext):
     m = int(callback.data.split(":")[2])
     m = max(3, min(m, 5))
     await update_user(callback.from_user.id, meals=m)
-
     await state.set_state(ProfileWizard.limits)
     text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("meals"))
@@ -2016,7 +2280,7 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ОПЛАТА — только скрин
+# ОПЛАТА
 # =========================
 def access_status_str(a: dict) -> str:
     if not a or a.get("paid") != 1:
@@ -2366,7 +2630,7 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
 
 
 # =========================
-# ✅ ДНЕВНИК
+# ДНЕВНИК
 # =========================
 async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     exercise = callback.data.split("d:ex:", 1)[1].strip()
@@ -2390,7 +2654,6 @@ async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     m = await bot.send_message(chat_id=callback.message.chat.id, text=text)
     await set_diary_prompt_msg_id(callback.from_user.id, m.message_id)
-
     await callback.answer()
 
 
@@ -2471,7 +2734,7 @@ async def diary_history(callback: CallbackQuery):
 
 
 # =========================
-# ✅ ЗАМЕРЫ
+# ЗАМЕРЫ
 # =========================
 async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
     mtype = callback.data.split(":")[1]
@@ -2530,7 +2793,7 @@ async def measures_history(callback: CallbackQuery):
 
 
 # =========================
-# ✅ ПИТАНИЕ: 3 кнопки
+# ПИТАНИЕ: примеры
 # =========================
 async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     if not await is_access_active(callback.from_user.id):
@@ -2560,7 +2823,7 @@ async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
 
 
 # =========================
-# ✅ ТЕХНИКИ: ХЕНДЛЕРЫ (с картинками)
+# ТЕХНИКИ
 # =========================
 async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -2593,7 +2856,7 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
 
 
 # =========================
-# ✅ ПОСТЫ С КАРТИНКАМИ (АДМИН)
+# ПОСТЫ (АДМИН)
 # =========================
 def admin_posts_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -2753,7 +3016,7 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
 
 
 # =========================
-# ПОДДЕРЖКА: любой текст -> админу
+# ПОДДЕРЖКА
 # =========================
 async def forward_to_admin(message: Message, bot: Bot):
     if message.from_user.id == ADMIN_ID:
@@ -2825,9 +3088,14 @@ def setup_handlers(dp: Dispatcher):
 
     dp.message.register(forward_to_admin)
 
+    # ✅ ВОРОНКА
+    dp.callback_query.register(cb_funnel_start_free, F.data == "funnel:start_free")
+    dp.callback_query.register(cb_onb_goal, F.data.startswith("onb:goal:"))
+    dp.callback_query.register(cb_onb_place, F.data.startswith("onb:place:"))
+
 
 # =========================
-# WEB SERVER (Render/health)
+# WEB SERVER
 # =========================
 async def run_web_server():
     app = web.Application()
@@ -2886,6 +3154,7 @@ async def main():
     await asyncio.gather(
         bot_loop(),
         run_web_server(),
+        funnel_worker(bot),
     )
 
 if __name__ == "__main__":
@@ -2893,4 +3162,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
