@@ -34,6 +34,9 @@ CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
 
+# Картинка для приветствия (/start)
+START_IMAGE_PATH = os.getenv("START_IMAGE_PATH", "media/start.jpg")
+  
 # ТАРИФЫ
 TARIFFS = {
     "t1": {"title": "1 месяц", "days": 30, "price": 1150},
@@ -349,16 +352,16 @@ def control_reply_kb():
 # =========================
 def menu_main_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏋️ Тренировки", callback_data="nav:workouts")],
-        [InlineKeyboardButton(text="🍽 Питание", callback_data="nav:nutrition")],
-        [InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures")],
+        [InlineKeyboardButton(text="🏋️ Мои тренировки", callback_data="nav:workouts")],
+        [InlineKeyboardButton(text="🍽 Моё питание", callback_data="nav:nutrition")],
         [InlineKeyboardButton(text="📓 Дневник", callback_data="nav:diary")],
+        [InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures")],
     ])
 
 
-def simple_back_to_menu_inline_kb():
+def start_welcome_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+        [InlineKeyboardButton(text="📌 Моя программа", callback_data="nav:menu")],
     ])
 
 
@@ -1654,27 +1657,78 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
 # МЕНЮ / START
 # =========================
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
-    text = (
-        "👋 Привет! Я зелёный тренер, и здесь помогу тебе.\n\n"
-        "Что я сделаю для тебя:\n"
-        "• Тренировки по системе (фулбади / верх-низ / PPL) — под твою цель и условия\n"
-        "• Питание без «кулинарного цирка» — по калориям и БЖУ\n"
-        "• Дневник + замеры — чтобы прогресс был в цифрах\n\n"
-        "Хочешь результат — жми раздел 👇\n"
-        "Оплата / профиль / поддержка — всегда на кнопках снизу."
-    )
-    await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
+     text = (
+         "🏠 Моя программа\n\n"
+         "Выбирай раздел 👇\n"
+         "• Тренировки — план по дням\n"
+         "• Питание — ккал и БЖУ + примеры\n"
+         "• Дневник — записывай веса и повторы\n\n"
+         "Оплата / профиль / поддержка — на кнопках снизу."
+     )
+     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
+  
+ 
+ async def send_start_welcome(bot: Bot, chat_id: int, user_id: int):
+     welcome_text = (
+         "👋 Привет! Я твой зелёный тренер.\n\n"
+         "Как я собираю программы:\n"
+         "• Беру твою цель (масса/сушка/сила/выносливость)\n"
+         "• Учитываю где тренируешься (зал/свой вес)\n"
+         "• Смотрю опыт и частоту тренировок\n"
+         "• Если есть ограничения — подбираю более безопасные варианты\n\n"
+         "Что умею:\n"
+         "🏋️ План тренировок по дням\n"
+         "🍽 Питание по калориям и БЖУ + примеры\n"
+         "📓 Дневник (вес×повторы) + история\n\n"
+         "Жми «Моя программа» 👇"
+     )
+ 
+     # анти-засорение: удаляем прошлое главное сообщение
+     last_id = await get_last_bot_msg_id(user_id)
+     if last_id:
+         try:
+             await bot.delete_message(chat_id=chat_id, message_id=last_id)
+         except Exception:
+             pass
+ 
+     if os.path.exists(START_IMAGE_PATH):
+         photo = FSInputFile(START_IMAGE_PATH)
+         caption = welcome_text
+         if len(caption) > 1024:
+             caption = caption[:1020] + "…"
+         m = await bot.send_photo(
+             chat_id=chat_id,
+             photo=photo,
+             caption=caption,
+             reply_markup=start_welcome_kb()
+         )
+         await set_last_bot_msg_id(user_id, m.message_id)
+     else:
+         mid = await clean_send(bot, chat_id, user_id, welcome_text, reply_markup=start_welcome_kb())
+         await set_last_bot_msg_id(user_id, mid)
 
 
 async def cmd_start(message: Message, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
-    await bot.send_message(
-        chat_id=message.chat.id,
-        text="✅ Я на месте. Кнопки снизу 👇",
-        reply_markup=control_reply_kb()
-    )
-    await show_main_menu(bot, message.chat.id, message.from_user.id)
-    await try_delete_user_message(bot, message)
+     # Включаем постоянную клавиатуру снизу — и удаляем это служебное сообщение
+     try:
+         tmp = await bot.send_message(
+             chat_id=message.chat.id,
+             text="✅ Кнопки снизу активированы 👇",
+             reply_markup=control_reply_kb()
+         )
+         try:
+             await bot.delete_message(chat_id=message.chat.id, message_id=tmp.message_id)
+         except Exception:
+             pass
+     except Exception:
+         pass
+ 
+     # Одно приветственное сообщение с картинкой + кнопкой "Моя программа"
+     await send_start_welcome(bot, message.chat.id, message.from_user.id)
+ 
+     # Удалим /start пользователя (если можно)
+     await try_delete_user_message(bot, message)
 
 
 # =========================
@@ -2897,3 +2951,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
