@@ -1237,7 +1237,91 @@ def get_tech_key_for_exercise(name: str) -> Optional[str]:
     return None
 
 
+# =========================
+# Примерные калории на упражнение (ккал за весь подход × сеты, для 70кг человека)
+# =========================
+EXERCISE_KCAL_MAP = [
+    ("присед",          55),
+    ("жим ног",         40),
+    ("выпад",           45),
+    ("болгар",          45),
+    ("гоблет",          40),
+    ("хакк",            38),
+    ("румынская",       42),
+    ("ягодичный мост",  30),
+    ("гиперэкстензи",   25),
+    ("сгибания ног",    28),
+    ("подъём на носки", 20),
+    ("икры",            18),
+    ("жим лёж",         38),
+    ("жим гантел",      36),
+    ("жим в тренаж",    34),
+    ("сведени",         28),
+    ("отжима",          32),
+    ("подтягива",       40),
+    ("верхний блок",    32),
+    ("тяга верхн",      32),
+    ("тяга горизонт",   30),
+    ("тяга гантел",     28),
+    ("тяга в тренаж",   28),
+    ("тяга резинки",    22),
+    ("жим вверх",       35),
+    ("разведени",       20),
+    ("face pull",       18),
+    ("задняя дельта",   18),
+    ("тяга к лицу",     18),
+    ("сгибани",         22),
+    ("молотки",         20),
+    ("разгибани",       20),
+    ("трицепс",         20),
+    ("планка",          15),
+    ("скручива",        18),
+    ("подъём ног",      22),
+    ("пайк",            28),
+    ("good-morning",    30),
+]
+
+
+def get_exercise_kcal(name: str) -> int:
+    """Примерные ккал на упражнение (все подходы суммарно)."""
+    n = name.lower()
+    for keyword, kcal in EXERCISE_KCAL_MAP:
+        if keyword in n:
+            return kcal
+    return 25  # default
+
+
+# Название дня по типу
+DAY_NAMES = {
+    "FB-A": "Фулбади А",
+    "FB-B": "Фулбади Б",
+    "FB-C": "Фулбади В",
+    "UPPER": "Верх тела",
+    "LOWER": "Низ тела • Ноги",
+    "PUSH": "Толчок • Грудь-Плечи",
+    "PULL": "Тяга • Спина-Бицепс",
+    "LEGS": "Ноги",
+}
+
+
+def get_day_kind_from_text(day_text: str) -> str:
+    """Извлекаем тип дня из текста плана."""
+    t = day_text.lower()
+    if "фулбади" in t or "fullbody" in t:
+        return "FB"
+    if "верх" in t and "тела" in t:
+        return "UPPER"
+    if "низ" in t or "ноги" in t:
+        return "LOWER"
+    if "толчок" in t or "push" in t:
+        return "PUSH"
+    if "тяга" in t or "pull" in t:
+        return "PULL"
+    return "FB"
+
+
 def parse_exercises_from_day_text(day_text: str) -> List[str]:
+    """Возвращает список названий упражнений (без подходов/повторов)."""
     exercises = []
     for line in day_text.splitlines():
         stripped = line.strip()
@@ -1249,6 +1333,25 @@ def parse_exercises_from_day_text(day_text: str) -> List[str]:
                 name = content
             if name:
                 exercises.append(name)
+    return exercises
+
+
+def parse_exercises_full(day_text: str) -> List[Tuple[str, str]]:
+    """Возвращает список (название, 'подходы×повторы') для отображения."""
+    exercises = []
+    for line in day_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("•"):
+            content = stripped.lstrip("•").strip()
+            if " — " in content:
+                parts = content.split(" — ", 1)
+                name = parts[0].strip()
+                sets_reps = parts[1].strip()
+            else:
+                name = content
+                sets_reps = ""
+            if name:
+                exercises.append((name, sets_reps))
     return exercises
 
 
@@ -1318,15 +1421,72 @@ def workout_progress_bar(done: int, total: int, width: int = 10) -> str:
     pct = int(round(done / total * 100))
     filled = int(round(done / total * width))
     filled = max(0, min(filled, width))
-    bar = "█" * filled + "░" * (width - filled)
+    bar = "■" * filled + "□" * (width - filled)
     return f"{bar} {pct}%"
 
 
-def workout_day_header(day_num: int, done: int, total: int) -> str:
-    """Заголовок дня с прогресс-баром."""
-    bar = workout_progress_bar(done, total)
-    status = "🎉 Завершён!" if done == total and total > 0 else f"{done}/{total} упр."
-    return f"📅 День {day_num}  |  {status}\n{bar}\n\n"
+def calc_day_total_kcal(exercises: List[str]) -> int:
+    """Считаем суммарные ккал за тренировку."""
+    return sum(get_exercise_kcal(ex) for ex in exercises)
+
+
+def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
+                            done: List[int], all_done: bool = False) -> str:
+    """Строит красивый текст дня тренировки в стиле скриншота."""
+    total = len(exercises)
+    done_count = len(done)
+    total_kcal = calc_day_total_kcal(exercises)
+    done_kcal = sum(get_exercise_kcal(exercises[i]) for i in done if i < len(exercises))
+    afterburn_kcal = int(total_kcal * 0.09)  # ~9% afterburn эффект
+
+    # Определяем название дня
+    day_kind = get_day_kind_from_text(day_text)
+    day_name_map = {
+        "UPPER": "Верх тела",
+        "LOWER": "Низ тела • Ноги",
+        "PUSH":  "Толчок • Грудь, Плечи",
+        "PULL":  "Тяга • Спина, Бицепс",
+        "LEGS":  "Ноги",
+        "FB":    "Фулбади",
+    }
+    day_name = day_name_map.get(day_kind, "Тренировка")
+
+    lines = []
+    lines.append(f"💪 День {day_num}: {day_name}")
+    lines.append("")
+    lines.append("⚠️ Перед тренировкой обязательно разомнись 5–10 минут")
+    lines.append("⏱ Отдых между подходами: ~1.5–2 минуты")
+    lines.append("")
+
+    # Список упражнений с галочками и ккал
+    ex_full = parse_exercises_full(day_text)
+    for idx, (name, sets_reps) in enumerate(ex_full):
+        is_done = idx in done
+        ex_kcal = get_exercise_kcal(name)
+        mark = "✅" if is_done else "🔸"
+        kcal_str = f"  |  🔥 {ex_kcal} ккал" if is_done else ""
+        if sets_reps:
+            lines.append(f"{mark} {name} {sets_reps}{kcal_str}")
+        else:
+            lines.append(f"{mark} {name}{kcal_str}")
+
+    lines.append("")
+    lines.append("🏁 После тренировки выполни заминку и растяжку 5–10 минут")
+    lines.append(f"🔥 Итого: ~{total_kcal} ккал (в т.ч. ~{afterburn_kcal} ккал дожигание)")
+    lines.append("")
+
+    # Прогресс-бар
+    bar = workout_progress_bar(done_count, total)
+    if all_done:
+        lines.append(f"{bar}")
+        lines.append(f"✅ {done_count}/{total} упражнений выполнено | 🔥 {done_kcal} ккал сожжено")
+        lines.append("")
+        lines.append("🎉 ОТЛИЧНО! День засчитан!")
+    else:
+        lines.append(f"{bar}")
+        lines.append(f"✅ {done_count}/{total} упражнений выполнено | 🔥 {done_kcal} ккал сожжено")
+
+    return "\n".join(lines)
 
 
 # =========================
@@ -2505,17 +2665,24 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
 # ✅ ИЗМЕНЕНИЕ 4: Прогресс-бар в заголовке дня
 # =========================
 def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
-    """Клавиатура упражнений дня с чекбоксами и кнопкой техники."""
+    """Клавиатура упражнений дня с чекбоксами, ккал и кнопкой техники."""
     rows = []
     for idx, name in enumerate(exercises):
         is_done = idx in done
+        ex_kcal = get_exercise_kcal(name)
+        # Обрезаем длинные имена для кнопки
+        short_name = name[:20] + "…" if len(name) > 20 else name
+        if is_done:
+            btn_text = f"✅ {short_name}"
+        else:
+            btn_text = f"⬜️ {short_name}"
+
         done_btn = InlineKeyboardButton(
-            text=f"{'✅' if is_done else '⬜️'} {name}",
+            text=btn_text,
             callback_data=f"wex:done:{day}:{idx}"
         )
         tech_key = get_tech_key_for_exercise(name)
         if tech_key:
-            # ✅ ИЗМЕНЕНИЕ 1: надпись «Техника выполнения» вместо «📚»
             tech_btn = InlineKeyboardButton(
                 text="📚 Техника",
                 callback_data=f"wex:tech:{day}:{tech_key}"
@@ -2524,12 +2691,21 @@ def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) ->
         else:
             rows.append([done_btn])
 
-    rows.append([InlineKeyboardButton(text="⬅️ К списку дней", callback_data="nav:workouts")])
+    rows.append([
+        InlineKeyboardButton(text="📊 Статистика", callback_data=f"wday:stats:{day}"),
+        InlineKeyboardButton(text="📋 Полная программа", callback_data="nav:workouts"),
+    ])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 async def cb_workout_day(callback: CallbackQuery, bot: Bot):
+    # Обработка кнопки статистики
+    parts = callback.data.split(":")
+    if len(parts) == 3 and parts[1] == "stats":
+        await cb_workout_stats(callback, bot)
+        return
+
     if not await is_access_active(callback.from_user.id):
         await clean_edit(callback, callback.from_user.id, locked_text())
         await callback.answer()
@@ -2558,23 +2734,18 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
         return
 
     done = await get_day_done_exercises(uid, day_num)
-    total = len(exercises)
-    done_count = len(done)
-
-    # ✅ ИЗМЕНЕНИЕ 4: Добавляем заголовок с прогресс-баром
-    header = workout_day_header(day_num, done_count, total)
-    
     already_done_today = await is_day_completed_today(uid, day_num)
-    congrats = "\n🎉 День уже засчитан сегодня! Можешь пройти снова." if already_done_today else ""
 
-    text = header + day_text + congrats
+    text = build_day_display_text(day_num, day_text, exercises, done)
+    if already_done_today:
+        text += "\n\n🎉 День уже засчитан сегодня! Можешь пройти снова."
     kb = workout_day_exercises_kb(day_num, exercises, done)
     await clean_edit(callback, uid, text, reply_markup=kb)
     await callback.answer()
 
 
 async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
-    """Отмечаем/снимаем выполнение упражнения, обновляем прогресс-бар."""
+    """Отмечаем/снимаем выполнение упражнения, обновляем прогресс и ккал."""
     parts = callback.data.split(":")
     day_num = int(parts[2])
     ex_idx = int(parts[3])
@@ -2608,28 +2779,89 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
     done_count = len(done)
     all_done = total > 0 and done_count == total
 
-    # ✅ ИЗМЕНЕНИЕ 4: Прогресс-бар всегда в заголовке
-    header = workout_day_header(day_num, done_count, total)
-
     if all_done:
         await mark_day_completed(uid, day_num)
         await clear_day_progress(uid, day_num)
-
-        text = (
-            header +
-            day_text +
-            "\n\n🎉 ОТЛИЧНО! Все упражнения выполнены!\n"
-            f"✅ День {day_num} засчитан!"
-        )
+        text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True)
         kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer("🎉 День завершён!", show_alert=True)
     else:
-        text = header + day_text
+        text = build_day_display_text(day_num, day_text, exercises, done)
         kb = workout_day_exercises_kb(day_num, exercises, done)
         await clean_edit(callback, uid, text, reply_markup=kb)
-        action = "✅" if ex_idx in done else "↩️"
-        await callback.answer(f"{action} Прогресс: {done_count}/{total}")
+        ex_name = exercises[ex_idx] if ex_idx < len(exercises) else ""
+        ex_kcal = get_exercise_kcal(ex_name)
+        if ex_idx in done:
+            await callback.answer(f"✅ +{ex_kcal} ккал | {done_count}/{total}")
+        else:
+            await callback.answer(f"↩️ Снято | {done_count}/{total}")
+
+
+async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
+    """Статистика выполненных тренировок."""
+    uid = callback.from_user.id
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT day_num, completed_date, created_at
+            FROM workout_completions
+            WHERE user_id=?
+            ORDER BY id DESC LIMIT 30
+        """, (uid,)) as cur:
+            rows = await cur.fetchall()
+
+    if not rows:
+        await callback.answer("Пока нет завершённых тренировок 💪", show_alert=True)
+        return
+
+    # Группируем по неделям
+    total = len(rows)
+    # Считаем ккал за тренировки (примерно, из плана)
+    plan_text, plan_struct = await get_workout_plan(uid)
+
+    lines = ["📊 Статистика тренировок\n"]
+    lines.append(f"Всего выполнено: {total} тренировок\n")
+
+    # Последние 10
+    lines.append("🗓 Последние тренировки:")
+    for day_num, completed_date, _ in rows[:10]:
+        day_label = f"День {day_num}"
+        if plan_struct:
+            day_text = (plan_struct.get("days") or {}).get(str(day_num), "")
+            day_kind = get_day_kind_from_text(day_text)
+            day_name_map = {
+                "UPPER": "Верх тела", "LOWER": "Низ тела",
+                "PUSH": "Толчок", "PULL": "Тяга",
+                "LEGS": "Ноги", "FB": "Фулбади",
+            }
+            day_label = f"День {day_num} • {day_name_map.get(day_kind, 'Тренировка')}"
+        lines.append(f"✅ {completed_date}  —  {day_label}")
+
+    # Серия (streak)
+    dates = sorted(set(r[1] for r in rows), reverse=True)
+    streak = 0
+    prev = None
+    for d in dates:
+        try:
+            dt = datetime.strptime(d, "%Y-%m-%d").date()
+        except Exception:
+            continue
+        if prev is None:
+            streak = 1
+        elif (prev - dt).days == 1:
+            streak += 1
+        else:
+            break
+        prev = dt
+
+    lines.append(f"\n🔥 Текущая серия: {streak} дн. подряд")
+
+    text = "\n".join(lines)
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:workouts")],
+    ])
+    await clean_edit(callback, uid, text, reply_markup=back_kb)
+    await callback.answer()
 
 
 # =========================
