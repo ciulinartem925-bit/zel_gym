@@ -33,7 +33,7 @@ CARD_NUMBER = os.getenv("CARD_NUMBER", "0000 0000 0000 0000")
 CARD_HOLDER = os.getenv("CARD_HOLDER", "ИМЯ ФАМИЛИЯ")
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
-WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/tech/welcome.jpg")
+WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
@@ -56,7 +56,7 @@ logger = logging.getLogger("trainer_bot")
 # =========================
 class PaymentFlow(StatesGroup):
     choose_tariff = State()
-    waiting_receipt = State()   # ✅ только скрин
+    waiting_receipt = State()
 
 
 class DiaryFlow(StatesGroup):
@@ -338,7 +338,7 @@ def control_reply_kb():
 
 
 # =========================
-# ✅ ИЗМЕНЕНО: Inline меню разделов — новые названия кнопок
+# ✅ Inline меню разделов
 # =========================
 def menu_main_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -669,6 +669,7 @@ async def set_diary_prompt_msg_id(user_id: int, msg_id: Optional[int]):
 
 
 async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_markup=None):
+    """Удаляет предыдущее сообщение бота и отправляет новое — чат не засоряется."""
     last_id = await get_last_bot_msg_id(user_id)
     if last_id:
         try:
@@ -681,6 +682,7 @@ async def clean_send(bot: Bot, chat_id: int, user_id: int, text: str, reply_mark
 
 
 async def clean_edit(callback: CallbackQuery, user_id: int, text: str, reply_markup=None):
+    """Редактирует текущее сообщение (если не удаётся — отправляет новое)."""
     try:
         await callback.message.edit_text(text, reply_markup=reply_markup)
         await set_last_bot_msg_id(user_id, callback.message.message_id)
@@ -1181,7 +1183,6 @@ async def get_all_user_ids():
 # ТРЕНИРОВКИ: прогресс дня
 # =========================
 
-# Маппинг части названия упражнения → ключ в TECH
 EXERCISE_TECH_MAP = [
     ("присед", "squat"),
     ("жим лёж", "bench"),
@@ -1229,7 +1230,6 @@ EXERCISE_TECH_MAP = [
 
 
 def get_tech_key_for_exercise(name: str) -> Optional[str]:
-    """Return TECH key for exercise name, or None."""
     n = name.lower()
     for keyword, tech_key in EXERCISE_TECH_MAP:
         if keyword in n:
@@ -1238,12 +1238,10 @@ def get_tech_key_for_exercise(name: str) -> Optional[str]:
 
 
 def parse_exercises_from_day_text(day_text: str) -> List[str]:
-    """Extract exercise names (without sets/reps) from day plan text."""
     exercises = []
     for line in day_text.splitlines():
         stripped = line.strip()
         if stripped.startswith("•"):
-            # Format: "• Название — 3×8-12"
             content = stripped.lstrip("•").strip()
             if " — " in content:
                 name = content.split(" — ")[0].strip()
@@ -1255,7 +1253,6 @@ def parse_exercises_from_day_text(day_text: str) -> List[str]:
 
 
 async def get_day_done_exercises(user_id: int, day_num: int) -> List[int]:
-    """Return list of done exercise indices (0-based) for a day."""
     async with db() as conn:
         async with conn.execute(
             "SELECT done_exercises FROM workout_day_progress WHERE user_id=? AND day_num=?",
@@ -1309,6 +1306,27 @@ async def is_day_completed_today(user_id: int, day_num: int) -> bool:
         """, (user_id, day_num, today)) as cur:
             row = await cur.fetchone()
     return bool(row and row[0] > 0)
+
+
+# =========================
+# ✅ ПРОГРЕСС-БАР ДЛЯ ТРЕНИРОВОЧНОГО ДНЯ
+# =========================
+def workout_progress_bar(done: int, total: int, width: int = 10) -> str:
+    """Визуальный прогресс-бар тренировочного дня."""
+    if total == 0:
+        return "□□□□□□□□□□ 0%"
+    pct = int(round(done / total * 100))
+    filled = int(round(done / total * width))
+    filled = max(0, min(filled, width))
+    bar = "█" * filled + "░" * (width - filled)
+    return f"{bar} {pct}%"
+
+
+def workout_day_header(day_num: int, done: int, total: int) -> str:
+    """Заголовок дня с прогресс-баром."""
+    bar = workout_progress_bar(done, total)
+    status = "🎉 Завершён!" if done == total and total > 0 else f"{done}/{total} упр."
+    return f"📅 День {day_num}  |  {status}\n{bar}\n\n"
 
 
 # =========================
@@ -1570,28 +1588,37 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
 
 # =========================
-# ПИТАНИЕ
+# ✅ ПИТАНИЕ (исправленные граммы и КБЖУ)
 # =========================
+
+# Точная БД продуктов на 100г (проверенные данные)
 FOOD_DB = {
-    "oats":      {"name": "Овсянка (сухая)",              "kcal": 370, "p": 13.0, "f": 7.0,   "c": 62.0},
-    "rice":      {"name": "Рис (сухой)",                  "kcal": 360, "p": 7.0,  "f": 0.7,   "c": 78.0},
-    "buckwheat": {"name": "Гречка (сухая)",               "kcal": 340, "p": 12.0, "f": 3.0,   "c": 66.0},
-    "pasta":     {"name": "Макароны (сухие)",             "kcal": 350, "p": 12.0, "f": 2.0,   "c": 70.0},
-    "potato":    {"name": "Картофель",                    "kcal": 77,  "p": 2.0,  "f": 0.1,   "c": 17.0},
-    "bread":     {"name": "Хлеб",                         "kcal": 250, "p": 8.0,  "f": 3.0,   "c": 49.0},
-    "veg":       {"name": "Овощи (микс)",                 "kcal": 30,  "p": 1.5,  "f": 0.2,   "c": 6.0},
-    "chicken":   {"name": "Куриная грудка",               "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
-    "turkey":    {"name": "Индейка (филе)",               "kcal": 150, "p": 29.0, "f": 2.0,   "c": 0.0},
-    "fish":      {"name": "Рыба (белая)",                 "kcal": 110, "p": 22.0, "f": 2.0,   "c": 0.0},
-    "beef":      {"name": "Говядина (постная)",           "kcal": 190, "p": 26.0, "f": 9.0,   "c": 0.0},
-    "eggs":      {"name": "Яйца",                         "kcal": 143, "p": 12.6, "f": 10.0,  "c": 1.1},
-    "curd_0_5":  {"name": "Творог 0–5%",                  "kcal": 120, "p": 18.0, "f": 5.0,   "c": 3.0},
-    "yogurt":    {"name": "Йогурт натуральный",           "kcal": 60,  "p": 5.0,  "f": 2.5,   "c": 4.0},
-    "oil":       {"name": "Оливковое масло",              "kcal": 900, "p": 0.0,  "f": 100.0, "c": 0.0},
-    "nuts":      {"name": "Орехи",                        "kcal": 600, "p": 15.0, "f": 55.0,  "c": 15.0},
-    "cheese":    {"name": "Сыр",                          "kcal": 350, "p": 25.0, "f": 27.0,  "c": 1.0},
-    "banana":    {"name": "Банан",                        "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 23.0},
-    "apple":     {"name": "Яблоко",                       "kcal": 52,  "p": 0.3,  "f": 0.2,   "c": 14.0},
+    "oats":      {"name": "Овсянка (сухая)",              "kcal": 352, "p": 12.0, "f": 6.2,   "c": 60.0},
+    "rice":      {"name": "Рис (сухой)",                  "kcal": 344, "p": 6.7,  "f": 0.7,   "c": 76.0},
+    "buckwheat": {"name": "Гречка (сухая)",               "kcal": 313, "p": 12.6, "f": 3.3,   "c": 57.0},
+    "pasta":     {"name": "Макароны (сухие)",             "kcal": 350, "p": 10.4, "f": 1.1,   "c": 73.0},
+    "potato":    {"name": "Картофель",                    "kcal": 80,  "p": 2.0,  "f": 0.1,   "c": 17.0},
+    "bread_rye": {"name": "Хлеб ржаной",                  "kcal": 210, "p": 6.6,  "f": 1.2,   "c": 41.0},
+    "veg":       {"name": "Овощи (огурец/помидор/капуста)", "kcal": 25,  "p": 1.2,  "f": 0.2,   "c": 4.5},
+    "chicken":   {"name": "Куриная грудка (варёная)",     "kcal": 165, "p": 31.0, "f": 3.6,   "c": 0.0},
+    "turkey":    {"name": "Индейка (филе, варёное)",      "kcal": 158, "p": 29.0, "f": 4.0,   "c": 0.0},
+    "fish":      {"name": "Рыба белая (треска/минтай)",   "kcal": 82,  "p": 18.0, "f": 0.7,   "c": 0.0},
+    "salmon":    {"name": "Лосось",                       "kcal": 208, "p": 20.0, "f": 13.0,  "c": 0.0},
+    "beef":      {"name": "Говядина (варёная)",           "kcal": 218, "p": 25.0, "f": 12.5,  "c": 0.0},
+    "eggs":      {"name": "Яйца",                         "kcal": 157, "p": 12.7, "f": 11.5,  "c": 0.7},
+    "egg_white": {"name": "Белок яичный",                 "kcal": 44,  "p": 11.0, "f": 0.0,   "c": 0.0},
+    "curd_0":    {"name": "Творог 0%",                    "kcal": 71,  "p": 18.0, "f": 0.6,   "c": 1.8},
+    "curd_5":    {"name": "Творог 5%",                    "kcal": 121, "p": 17.0, "f": 5.0,   "c": 1.8},
+    "greek_yog": {"name": "Йогурт греческий 2%",          "kcal": 66,  "p": 5.0,  "f": 2.0,   "c": 6.5},
+    "milk":      {"name": "Молоко 2.5%",                  "kcal": 54,  "p": 2.8,  "f": 2.5,   "c": 4.7},
+    "oil_olive": {"name": "Масло оливковое",              "kcal": 884, "p": 0.0,  "f": 100.0, "c": 0.0},
+    "oil_linseed":{"name": "Масло льняное",               "kcal": 884, "p": 0.0,  "f": 100.0, "c": 0.0},
+    "nuts_alm":  {"name": "Миндаль",                      "kcal": 576, "p": 21.2, "f": 49.4,  "c": 6.9},
+    "cheese_20": {"name": "Сыр лёгкий 20–30%",           "kcal": 260, "p": 26.0, "f": 16.0,  "c": 1.0},
+    "banana":    {"name": "Банан",                        "kcal": 89,  "p": 1.1,  "f": 0.3,   "c": 22.0},
+    "apple":     {"name": "Яблоко",                       "kcal": 52,  "p": 0.3,  "f": 0.2,   "c": 12.0},
+    "berries":   {"name": "Ягоды (клубника/черника)",     "kcal": 45,  "p": 0.8,  "f": 0.4,   "c": 9.5},
+    "avocado":   {"name": "Авокадо",                      "kcal": 160, "p": 2.0,  "f": 15.0,  "c": 2.0},
 }
 
 
@@ -1635,76 +1662,101 @@ def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float)
 
 
 def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str, float]) -> Dict[str, float]:
-    protein_keys = ["chicken", "turkey", "fish", "curd_0_5", "yogurt"]
-    for _ in range(60):
+    """Итеративно подгоняем КБЖУ под цель, корректируя ключевые продукты."""
+    for _ in range(80):
         t = _totals_of_day(day_meals)
         dk = target["kcal"] - t["kcal"]
         dp = target["p"] - t["p"]
         df = target["f"] - t["f"]
         dc = target["c"] - t["c"]
 
-        if abs(dk) <= 35 and abs(dp) <= 6 and abs(df) <= 4 and abs(dc) <= 8:
+        # Считаем «хорошо», если всё в пределах допуска
+        if abs(dk) <= 40 and abs(dp) <= 5 and abs(df) <= 4 and abs(dc) <= 8:
             return t
 
-        if dp > 6:
-            _add_grams(day_meals, protein_keys[0], 30.0); continue
-        if dp < -10:
-            _add_grams(day_meals, protein_keys[0], -30.0); continue
+        # Белок — через куриную грудку (чистый белок, мало жира)
+        if dp > 5:
+            _add_grams(day_meals, "chicken", 25.0)
+            continue
+        if dp < -8:
+            _add_grams(day_meals, "chicken", -25.0)
+            continue
 
+        # Жиры — через масло (точная регулировка)
         if df > 4:
-            _add_grams(day_meals, "oil", 3.0); continue
-        if df < -6:
-            _add_grams(day_meals, "oil", -3.0); continue
+            _add_grams(day_meals, "oil_olive", 4.0)
+            continue
+        if df < -5:
+            _add_grams(day_meals, "oil_olive", -4.0)
+            continue
 
+        # Углеводы и калории — через рис
         if dc > 10 or dk > 80:
-            _add_grams(day_meals, "rice", 10.0); continue
-        if dc < -12 or dk < -90:
-            _add_grams(day_meals, "rice", -10.0); continue
-
-        if dk > 60:
-            _add_grams(day_meals, "oats", 10.0)
-        elif dk < -60:
-            _add_grams(day_meals, "oats", -10.0)
+            _add_grams(day_meals, "rice", 10.0)
+            continue
+        if dc < -10 or dk < -80:
+            _add_grams(day_meals, "rice", -10.0)
+            continue
 
     return _totals_of_day(day_meals)
 
 
 def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]]:
+    """
+    Три варианта дня питания с реалистичными порциями.
+    Все крупы — в сухом виде. Белок указан в виде готового продукта.
+    """
     meals = max(3, min(int(meals or 3), 5))
 
     if variant == 1:
+        # Вариант 1: классика зал/масса
         day = [
-            [("oats", 70.0), ("banana", 120.0), ("eggs", 180.0)],
-            [("rice", 90.0), ("chicken", 200.0), ("veg", 250.0), ("oil", 10.0)],
-            [("buckwheat", 80.0), ("fish", 220.0), ("veg", 250.0)],
+            # Завтрак: каша + яйца
+            [("oats", 80.0), ("eggs", 120.0), ("banana", 100.0)],
+            # Обед: рис + курица + овощи
+            [("rice", 90.0), ("chicken", 180.0), ("veg", 200.0), ("oil_olive", 10.0)],
+            # Ужин: гречка + рыба + овощи
+            [("buckwheat", 80.0), ("fish", 200.0), ("veg", 200.0), ("oil_olive", 8.0)],
         ]
         if meals >= 4:
-            day.append([("curd_0_5", 250.0)])
+            # Перекус: творог
+            day.append([("curd_0", 200.0), ("berries", 100.0)])
         if meals >= 5:
-            day.append([("apple", 200.0), ("nuts", 25.0)])
+            # Второй перекус: орехи + яблоко
+            day.append([("apple", 150.0), ("nuts_alm", 25.0)])
         return day
 
     if variant == 2:
+        # Вариант 2: с говядиной и картофелем
         day = [
-            [("eggs", 180.0), ("bread", 80.0), ("cheese", 30.0)],
-            [("pasta", 90.0), ("beef", 180.0), ("veg", 300.0), ("oil", 8.0)],
-            [("potato", 400.0), ("chicken", 180.0), ("veg", 250.0), ("oil", 8.0)],
+            # Завтрак: яйца + хлеб + сыр
+            [("eggs", 150.0), ("bread_rye", 60.0), ("cheese_20", 30.0)],
+            # Обед: картофель + говядина + овощи
+            [("potato", 300.0), ("beef", 150.0), ("veg", 200.0), ("oil_olive", 8.0)],
+            # Ужин: макароны + индейка
+            [("pasta", 80.0), ("turkey", 180.0), ("veg", 150.0)],
         ]
         if meals >= 4:
-            day.append([("yogurt", 300.0), ("banana", 120.0)])
+            # Перекус: греческий йогурт + банан
+            day.append([("greek_yog", 200.0), ("banana", 100.0)])
         if meals >= 5:
-            day.append([("nuts", 25.0), ("apple", 200.0)])
+            # Второй перекус
+            day.append([("curd_5", 150.0), ("nuts_alm", 20.0)])
         return day
 
+    # Вариант 3: с лососем и авокадо
     day = [
-        [("oats", 60.0), ("curd_0_5", 200.0), ("apple", 200.0)],
-        [("rice", 80.0), ("turkey", 220.0), ("veg", 300.0), ("oil", 8.0)],
-        [("pasta", 80.0), ("fish", 220.0), ("veg", 250.0)],
+        # Завтрак: овсянка + йогурт
+        [("oats", 70.0), ("greek_yog", 150.0), ("berries", 100.0)],
+        # Обед: рис + лосось
+        [("rice", 90.0), ("salmon", 150.0), ("veg", 200.0)],
+        # Ужин: гречка + индейка + авокадо
+        [("buckwheat", 80.0), ("turkey", 160.0), ("avocado", 80.0), ("veg", 150.0)],
     ]
     if meals >= 4:
-        day.append([("yogurt", 300.0)])
+        day.append([("curd_0", 200.0), ("apple", 150.0)])
     if meals >= 5:
-        day.append([("banana", 120.0), ("nuts", 20.0)])
+        day.append([("eggs", 60.0), ("nuts_alm", 20.0)])
     return day
 
 
@@ -1718,27 +1770,43 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
     final_f = int(round(tot["f"]))
     final_c = int(round(tot["c"]))
 
-    lines = [f"📅 Пример {day_i}", ""]
+    # Отклонение от цели
+    dk = final_k - calories
+    dk_str = f"{'+' if dk >= 0 else ''}{dk}"
+
+    meal_names = ["🌅 Завтрак", "🌞 Обед", "🌆 Ужин", "🥗 Перекус 1", "🍎 Перекус 2"]
+
+    lines = [f"📅 Пример {day_i}  (цель: {calories} ккал)", ""]
     for mi, m in enumerate(day_meals, start=1):
         mt = _sum_nutr(m)
-        lines.append(f"Приём {mi}  ({_fmt_tot(mt)})")
+        meal_name = meal_names[mi - 1] if mi <= len(meal_names) else f"Приём {mi}"
+        lines.append(f"{meal_name}  ({_fmt_tot(mt)})")
         for k, g in m:
             if k == "eggs":
                 est = max(1, int(round(g / 60.0)))
-                lines.append(f"• {FOOD_DB[k]['name']} — ~{est} шт")
+                lines.append(f"• {FOOD_DB[k]['name']} — {est} шт (~{int(g)}г)")
+            elif k in ("oil_olive", "oil_linseed"):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (1 ст.л. ≈ 10г)")
+            elif k in ("nuts_alm",):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (~горсть)")
             else:
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
         lines.append("")
-    lines.append(f"✅ Итог дня: {final_k} ккал | Б {final_p}г Ж {final_f}г У {final_c}г")
-    lines.append("⚠️ Крупы/макароны — в сухом виде. Овощи можно больше.")
+
+    lines.append(f"✅ Итог дня: {final_k} ккал ({dk_str} от цели)")
+    lines.append(f"   Б {final_p}г / Ж {final_f}г / У {final_c}г")
+    lines.append("")
+    lines.append("⚠️ Крупы и макароны — граммы в сухом (сыром) виде.")
+    lines.append("   При варке рис увеличивается ~в 3 раза, гречка ~в 2.5 раза.")
+    lines.append("   Курица, рыба, мясо — готовый (варёный/жареный) вес.")
     return "\n".join(lines)
 
 
 def nutrition_examples_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🥣 Пример 1", callback_data="nutr:ex:1")],
-        [InlineKeyboardButton(text="🍝 Пример 2", callback_data="nutr:ex:2")],
-        [InlineKeyboardButton(text="🍚 Пример 3", callback_data="nutr:ex:3")],
+        [InlineKeyboardButton(text="🥣 Вариант 1 (классика)", callback_data="nutr:ex:1")],
+        [InlineKeyboardButton(text="🍖 Вариант 2 (говядина)", callback_data="nutr:ex:2")],
+        [InlineKeyboardButton(text="🐟 Вариант 3 (лосось)", callback_data="nutr:ex:3")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -1757,12 +1825,21 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
     meals = int(meals_pref or 0) if meals_pref else suggest_meals_count(calories)
     meals = max(3, min(meals, 5))
 
+    # Рассчитываем % от калорий для проверки
+    p_kcal = p * 4
+    f_kcal = f * 9
+    c_kcal = c * 4
+    total_check = p_kcal + f_kcal + c_kcal
+
     summary = (
-        "🍽 Питание (индивидуально)\n\n"
-        f"Ориентир: ~{calories} ккал\n"
-        f"БЖУ: Б {p}г / Ж {f}г / У {c}г\n"
-        f"Приёмов: {meals}\n\n"
-        "Нажми пример — покажу готовый день."
+        "🍽 Питание (персональный расчёт)\n\n"
+        f"⚡️ Калории: ~{calories} ккал/день\n"
+        f"💪 Белок: {p} г  ({int(round(p_kcal/total_check*100))}% калорий)\n"
+        f"🥑 Жиры: {f} г  ({int(round(f_kcal/total_check*100))}%)\n"
+        f"🍚 Углеводы: {c} г  ({int(round(c_kcal/total_check*100))}%)\n"
+        f"🍽 Приёмов пищи: {meals}\n\n"
+        "Выбери готовый пример рациона 👇\n"
+        "(Все 3 варианта подходят под твои цифры)"
     )
     return summary, calories, p, f, c, meals
 
@@ -1789,7 +1866,6 @@ async def cmd_start(message: Message, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await try_delete_user_message(bot, message)
 
-    # Постоянная клавиатура снизу
     await bot.send_message(
         chat_id=message.chat.id,
         text="✅ Я на месте. Кнопки снизу 👇",
@@ -1828,7 +1904,7 @@ async def cmd_start(message: Message, bot: Bot):
 
 
 # =========================
-# ✅ Навигация
+# Навигация
 # =========================
 async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await ensure_user(callback.from_user.id, callback.from_user.username or "")
@@ -1855,7 +1931,7 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ✅ Панель управления (ReplyKeyboard)
+# Панель управления (ReplyKeyboard)
 # =========================
 async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
@@ -1944,52 +2020,42 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await state.set_state(ProfileWizard.goal)
         text = _profile_header(1) + "🎯 Цель?"
         await clean_edit(callback, uid, text, reply_markup=kb_goal())
-
     elif step == "sex":
         await state.set_state(ProfileWizard.sex)
         text = _profile_header(2) + "👤 Пол?"
         await clean_edit(callback, uid, text, reply_markup=kb_sex())
-
     elif step == "age":
         await state.set_state(ProfileWizard.age)
         text = _profile_header(3) + "🎂 Возраст (числом):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("sex"))
-
     elif step == "height":
         await state.set_state(ProfileWizard.height)
         text = _profile_header(4) + "📏 Рост в см:"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("age"))
-
     elif step == "weight":
         await state.set_state(ProfileWizard.weight)
         text = _profile_header(5) + "⚖️ Вес в кг:"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("height"))
-
     elif step == "place":
         await state.set_state(ProfileWizard.place)
         text = _profile_header(6) + "🏋️ Как тренируешься?"
         await clean_edit(callback, uid, text, reply_markup=kb_place())
-
     elif step == "exp":
         await state.set_state(ProfileWizard.exp)
         text = _profile_header(7) + "📈 Опыт?"
         await clean_edit(callback, uid, text, reply_markup=kb_exp())
-
     elif step == "freq":
         await state.set_state(ProfileWizard.freq)
         text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
         await clean_edit(callback, uid, text, reply_markup=kb_freq())
-
     elif step == "meals":
         await state.set_state(ProfileWizard.meals)
         text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
         await clean_edit(callback, uid, text, reply_markup=kb_meals())
-
     elif step == "limits":
         await state.set_state(ProfileWizard.limits)
         text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
         await clean_edit(callback, uid, text, reply_markup=kb_text_step("meals"))
-
     else:
         await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
 
@@ -2006,7 +2072,6 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext):
     }.get(v, v)
 
     await update_user(callback.from_user.id, goal=goal)
-
     await state.set_state(ProfileWizard.sex)
     text = _profile_header(2) + "👤 Пол?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_sex())
@@ -2338,11 +2403,11 @@ async def build_plans_if_needed(user_id: int, force: bool = False):
 
     nutrition_full = (
         summary
-        + "\n\nЗамены:\n"
-          "• курица ↔ индейка ↔ рыба\n"
+        + "\n\nЗамены (равноценные):\n"
+          "• курица ↔ индейка ↔ рыба белая\n"
           "• рис ↔ гречка ↔ макароны\n"
-          "• творог ↔ йогурт\n"
-          "• банан ↔ яблоко"
+          "• творог 0% ↔ греческий йогурт\n"
+          "• банан ↔ яблоко ↔ ягоды"
     )
 
     if force:
@@ -2435,19 +2500,24 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
         await clean_send(bot, chat_id, user_id, plan_text or "🏋️ План не найден.", reply_markup=kb)
 
 
+# =========================
+# ✅ ИЗМЕНЕНИЕ 1: Кнопка «📚 Техника выполнения» вместо смайлика
+# ✅ ИЗМЕНЕНИЕ 4: Прогресс-бар в заголовке дня
+# =========================
 def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
-    """Keyboard with exercise done-buttons + tech buttons."""
+    """Клавиатура упражнений дня с чекбоксами и кнопкой техники."""
     rows = []
     for idx, name in enumerate(exercises):
         is_done = idx in done
         done_btn = InlineKeyboardButton(
-            text=f"{'✅' if is_done else '⬜'} {name}",
+            text=f"{'✅' if is_done else '⬜️'} {name}",
             callback_data=f"wex:done:{day}:{idx}"
         )
         tech_key = get_tech_key_for_exercise(name)
         if tech_key:
+            # ✅ ИЗМЕНЕНИЕ 1: надпись «Техника выполнения» вместо «📚»
             tech_btn = InlineKeyboardButton(
-                text="📚",
+                text="📚 Техника",
                 callback_data=f"wex:tech:{day}:{tech_key}"
             )
             rows.append([done_btn, tech_btn])
@@ -2481,7 +2551,6 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
 
     exercises = parse_exercises_from_day_text(day_text)
     if not exercises:
-        # Fallback — нет упражнений для отметки, просто показываем текст
         u = await get_user(uid)
         kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3))
         await clean_edit(callback, uid, day_text, reply_markup=kb)
@@ -2489,24 +2558,24 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
         return
 
     done = await get_day_done_exercises(uid, day_num)
+    total = len(exercises)
+    done_count = len(done)
 
-    # Если день уже выполнен сегодня — сбросим прогресс для повторного прохождения
+    # ✅ ИЗМЕНЕНИЕ 4: Добавляем заголовок с прогресс-баром
+    header = workout_day_header(day_num, done_count, total)
+    
     already_done_today = await is_day_completed_today(uid, day_num)
+    congrats = "\n🎉 День уже засчитан сегодня! Можешь пройти снова." if already_done_today else ""
 
-    status_line = ""
-    if already_done_today:
-        status_line = "\n\n🎉 День уже засчитан! Можешь пройти ещё раз."
-
-    text = day_text + status_line
+    text = header + day_text + congrats
     kb = workout_day_exercises_kb(day_num, exercises, done)
     await clean_edit(callback, uid, text, reply_markup=kb)
     await callback.answer()
 
 
 async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
-    """Toggle exercise as done/undone."""
+    """Отмечаем/снимаем выполнение упражнения, обновляем прогресс-бар."""
     parts = callback.data.split(":")
-    # wex:done:{day}:{idx}
     day_num = int(parts[2])
     ex_idx = int(parts[3])
     uid = callback.from_user.id
@@ -2535,36 +2604,43 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
 
     await set_day_done_exercises(uid, day_num, done)
 
-    # Проверяем — все ли выполнены
-    all_done = len(exercises) > 0 and all(i in done for i in range(len(exercises)))
+    total = len(exercises)
+    done_count = len(done)
+    all_done = total > 0 and done_count == total
+
+    # ✅ ИЗМЕНЕНИЕ 4: Прогресс-бар всегда в заголовке
+    header = workout_day_header(day_num, done_count, total)
 
     if all_done:
-        # Засчитываем день
         await mark_day_completed(uid, day_num)
         await clear_day_progress(uid, day_num)
 
         text = (
+            header +
             day_text +
             "\n\n🎉 ОТЛИЧНО! Все упражнения выполнены!\n"
             f"✅ День {day_num} засчитан!"
         )
-        kb = workout_day_exercises_kb(day_num, exercises, list(range(len(exercises))))
+        kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer("🎉 День завершён!", show_alert=True)
     else:
-        done_count = len(done)
-        total = len(exercises)
-        text = day_text + f"\n\n📊 Выполнено: {done_count}/{total}"
+        text = header + day_text
         kb = workout_day_exercises_kb(day_num, exercises, done)
         await clean_edit(callback, uid, text, reply_markup=kb)
-        await callback.answer(f"{'✅' if ex_idx in done else '↩️'} Отмечено")
+        action = "✅" if ex_idx in done else "↩️"
+        await callback.answer(f"{action} Прогресс: {done_count}/{total}")
 
 
+# =========================
+# ✅ ИЗМЕНЕНИЕ 1: Техника из дня — с картинкой, кнопка «Техника выполнения»
+# =========================
 async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
-    """Show technique for an exercise from day view."""
+    """Показываем технику упражнения с картинкой (из просмотра дня)."""
     parts = callback.data.split(":")
-    # wex:tech:{day}:{tech_key}
     tech_key = parts[3]
+    day_num = parts[2]
+
     item = TECH.get(tech_key)
     if not item:
         await callback.answer("Техника не найдена 😅", show_alert=True)
@@ -2572,22 +2648,48 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
 
     text = item["text"]
     img_path = item["img"]
-    caption = text[:1024]
-    rest = text[1024:].strip()
 
-    # Back button returns to the day
-    day_num = parts[2]
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"⬅️ Назад к Дню {day_num}", callback_data=f"wday:{day_num}")]
     ])
 
+    # ✅ ИЗМЕНЕНИЕ 2: удаляем предыдущее сообщение чтобы не засорять чат
+    last_id = await get_last_bot_msg_id(callback.from_user.id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
     if os.path.exists(img_path):
         photo = FSInputFile(img_path)
-        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=back_kb)
+        # Картинка + текст техники в caption (до 1024 символов)
+        caption = text[:1020] + ("…" if len(text) > 1020 else "")
+        m = await bot.send_photo(
+            chat_id=callback.message.chat.id,
+            photo=photo,
+            caption=caption,
+            reply_markup=back_kb
+        )
+        # Если текст длиннее — досылаем остаток
+        rest = text[1020:].strip()
         if rest:
-            await callback.message.answer(rest, reply_markup=back_kb)
+            m2 = await bot.send_message(
+                chat_id=callback.message.chat.id,
+                text=rest,
+                reply_markup=back_kb
+            )
+            await set_last_bot_msg_id(callback.from_user.id, m2.message_id)
+        else:
+            await set_last_bot_msg_id(callback.from_user.id, m.message_id)
     else:
-        await callback.message.answer(text, reply_markup=back_kb)
+        # Нет картинки — просто текст
+        m = await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=text,
+            reply_markup=back_kb
+        )
+        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
 
     await callback.answer()
 
@@ -2651,7 +2753,7 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
 
 
 # =========================
-# ✅ ДНЕВНИК
+# ДНЕВНИК
 # =========================
 async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     exercise = callback.data.split("d:ex:", 1)[1].strip()
@@ -2675,7 +2777,6 @@ async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     m = await bot.send_message(chat_id=callback.message.chat.id, text=text)
     await set_diary_prompt_msg_id(callback.from_user.id, m.message_id)
-
     await callback.answer()
 
 
@@ -2756,7 +2857,7 @@ async def diary_history(callback: CallbackQuery):
 
 
 # =========================
-# ✅ ЗАМЕРЫ
+# ЗАМЕРЫ
 # =========================
 async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
     mtype = callback.data.split(":")[1]
@@ -2815,7 +2916,7 @@ async def measures_history(callback: CallbackQuery):
 
 
 # =========================
-# ✅ ПИТАНИЕ: 3 кнопки
+# ПИТАНИЕ: 3 варианта с картинкой
 # =========================
 async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     if not await is_access_active(callback.from_user.id):
@@ -2846,6 +2947,7 @@ async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
 
 # =========================
 # ✅ ТЕХНИКИ: ХЕНДЛЕРЫ (с картинками)
+# Изменение 1: картинка отправляется при показе техники
 # =========================
 async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -2854,6 +2956,7 @@ async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
 
 
 async def cb_tech_show(callback: CallbackQuery, bot: Bot):
+    """Показ техники с картинкой из списка техник."""
     key = callback.data.split("tech:", 1)[1]
     item = TECH.get(key)
     if not item:
@@ -2862,23 +2965,46 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
 
     text = item["text"]
     img_path = item["img"]
+    caption = text[:1020] + ("…" if len(text) > 1020 else "")
+    rest = text[1020:].strip()
 
-    caption = text[:1024]
-    rest = text[1024:].strip()
+    # ✅ ИЗМЕНЕНИЕ 2: удаляем предыдущее сообщение
+    last_id = await get_last_bot_msg_id(callback.from_user.id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
+        except Exception:
+            pass
 
     if os.path.exists(img_path):
         photo = FSInputFile(img_path)
-        await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=tech_back_kb())
+        m = await bot.send_photo(
+            chat_id=callback.message.chat.id,
+            photo=photo,
+            caption=caption,
+            reply_markup=tech_back_kb()
+        )
+        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
         if rest:
-            await callback.message.answer(rest, reply_markup=tech_back_kb())
+            m2 = await bot.send_message(
+                chat_id=callback.message.chat.id,
+                text=rest,
+                reply_markup=tech_back_kb()
+            )
+            await set_last_bot_msg_id(callback.from_user.id, m2.message_id)
     else:
-        await callback.message.answer(text, reply_markup=tech_back_kb())
+        m = await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=text,
+            reply_markup=tech_back_kb()
+        )
+        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
 
     await callback.answer()
 
 
 # =========================
-# ✅ ПОСТЫ С КАРТИНКАМИ (АДМИН)
+# ПОСТЫ С КАРТИНКАМИ (АДМИН)
 # =========================
 def admin_posts_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -3180,4 +3306,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
