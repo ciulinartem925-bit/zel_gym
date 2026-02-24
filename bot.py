@@ -36,7 +36,7 @@ YUKASSA_SECRET   = os.getenv("YUKASSA_SECRET", "")
 BOT_PUBLIC_URL = os.getenv("BOT_PUBLIC_URL", "https://t.me/")  # https://t.me/your_bot
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
-WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
+WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/tech/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
@@ -5302,3 +5302,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
