@@ -2985,10 +2985,10 @@ def access_status_str(a: dict) -> str:
     return f"Статус: ✅ до {exp[:10]}" if exp else "Статус: ✅ активен"
 
 
-async def yukassa_create_payment(tariff_code: str, user_id: int) -> Optional[dict]:
+async def yukassa_create_payment(tariff_code: str, user_id: int):
     """
     Создаём платёж через ЮКасса REST API.
-    Возвращает dict с ключами: id, confirmation_url или None при ошибке.
+    Возвращает (data_dict, error_str). При успехе error_str == None.
     """
     import uuid
     import base64
@@ -3005,23 +3005,16 @@ async def yukassa_create_payment(tariff_code: str, user_id: int) -> Optional[dic
     return_url = BOT_PUBLIC_URL if BOT_PUBLIC_URL else "https://t.me/"
 
     payload = {
-        "amount": {
-            "value": amount_str,
-            "currency": "RUB"
-        },
-        "confirmation": {
-            "type": "redirect",
-            "return_url": return_url
-        },
+        "amount": {"value": amount_str, "currency": "RUB"},
+        "confirmation": {"type": "redirect", "return_url": return_url},
         "capture": True,
-        "description": f"Тариф «{t['title']}» — тренер-бот (user_id={user_id})",
-        "metadata": {
-            "tariff": tariff_code,
-            "user_id": str(user_id),
-        }
+        "description": f"Tarif {tariff_code} user_id={user_id}",
+        "metadata": {"tariff": tariff_code, "user_id": str(user_id)},
     }
 
     try:
+        logger.info(f"YooKassa: creating payment user={user_id} tariff={tariff_code} amount={amount_str}")
+        logger.info(f"YooKassa: shop_id={YUKASSA_SHOP_ID[:4]}**** return_url={return_url}")
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 "https://api.yookassa.ru/v3/payments",
@@ -3031,17 +3024,22 @@ async def yukassa_create_payment(tariff_code: str, user_id: int) -> Optional[dic
                     "Idempotence-Key": idempotence_key,
                     "Content-Type": "application/json",
                 },
-                timeout=aiohttp.ClientTimeout(total=15),
+                timeout=aiohttp.ClientTimeout(total=20),
             ) as resp:
                 data = await resp.json()
                 if resp.status == 200:
-                    return data
+                    logger.info(f"YooKassa: payment created id={data.get('id')}")
+                    return data, None
                 else:
-                    logger.error(f"YooKassa API error {resp.status}: {data}")
-                    return None
+                    err_code = data.get("code", "?")
+                    err_desc = data.get("description", "?")
+                    err_msg = f"HTTP {resp.status} | code={err_code} | {err_desc}"
+                    logger.error(f"YooKassa API error: {err_msg} | full={data}")
+                    return None, err_msg
     except Exception as e:
-        logger.error(f"YooKassa request failed: {e}")
-        return None
+        err_msg = f"{type(e).__name__}: {e}"
+        logger.error(f"YooKassa request failed: {err_msg}")
+        return None, err_msg
 
 
 async def yukassa_get_payment(payment_id: str) -> Optional[dict]:
@@ -3103,11 +3101,23 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer("⏳ Создаю ссылку на оплату…")
 
     # Создаём платёж в ЮКасса
-    yk_data = await yukassa_create_payment(tariff_code, uid)
+    yk_data, yk_err = await yukassa_create_payment(tariff_code, uid)
 
     if not yk_data:
+        # Показываем детали ошибки чтобы можно было диагностировать
+        err_detail = f"\n\n🔍 Детали: {yk_err}" if yk_err else ""
+        # Уведомляем админа об ошибке
+        if ADMIN_ID:
+            try:
+                await bot.send_message(
+                    ADMIN_ID,
+                    f"⚠️ Ошибка создания платежа\nuser={uid} tariff={tariff_code}\n{yk_err}"
+                )
+            except Exception:
+                pass
         await clean_edit(callback, uid,
-            "❌ Не удалось создать счёт.\nПопробуй позже или напиши в поддержку.",
+            f"❌ Не удалось создать счёт на оплату.{err_detail}\n\n"
+            "Напиши в поддержку или попробуй позже.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")]
             ])
@@ -4171,6 +4181,47 @@ async def forward_to_admin(message: Message, bot: Bot):
 
 
 # =========================
+# ДИАГНОСТИКА ОПЛАТЫ (АДМИН)
+# =========================
+async def cmd_testpay(message: Message, bot: Bot):
+    """Команда /testpay — проверяет соединение с ЮКасса API (только для админа)."""
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    lines = ["🔍 Диагностика ЮКасса\n"]
+    lines.append(f"YUKASSA_SHOP_ID: {'✅ ' + YUKASSA_SHOP_ID[:4] + '****' if YUKASSA_SHOP_ID else '❌ не задан'}")
+    lines.append(f"YUKASSA_SECRET: {'✅ задан' if YUKASSA_SECRET else '❌ не задан'}")
+    lines.append(f"BOT_PUBLIC_URL: {BOT_PUBLIC_URL or '❌ не задан'}\n")
+
+    if not YUKASSA_SHOP_ID or not YUKASSA_SECRET:
+        lines.append("❌ Переменные окружения не заданы!")
+        await message.answer("\n".join(lines))
+        return
+
+    lines.append("⏳ Пробую создать тестовый платёж (1₽)...")
+    await message.answer("\n".join(lines))
+
+    yk_data, yk_err = await yukassa_create_payment("trial", message.from_user.id)
+
+    if yk_data:
+        pay_id = yk_data.get("id", "?")
+        conf_url = (yk_data.get("confirmation") or {}).get("confirmation_url", "?")
+        await message.answer(
+            f"✅ Успешно! Платёж создан.\n"
+            f"ID: {pay_id}\n"
+            f"URL: {conf_url[:60]}..."
+        )
+    else:
+        await message.answer(
+            f"❌ Ошибка создания платежа:\n{yk_err}\n\n"
+            "Проверь:\n"
+            "1. YUKASSA_SHOP_ID и YUKASSA_SECRET правильные\n"
+            "2. Магазин активирован в yukassa.ru\n"
+            "3. IP сервера не заблокирован ЮКасса"
+        )
+
+
+# =========================
 # РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
 # =========================
 def setup_handlers(dp: Dispatcher):
@@ -4228,6 +4279,7 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_workout_ex_done, F.data.startswith("wex:done:"))
     dp.callback_query.register(cb_workout_ex_tech, F.data.startswith("wex:tech:"))
 
+    dp.message.register(cmd_testpay, Command("testpay"))
     dp.message.register(cmd_posts, Command("posts"))
     dp.callback_query.register(cb_post_new, F.data == "post:new")
     dp.callback_query.register(cb_post_cancel, F.data == "post:cancel")
