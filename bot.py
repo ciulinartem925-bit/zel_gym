@@ -17,7 +17,7 @@ from aiogram.types import (
     Message, CallbackQuery,
     InlineKeyboardMarkup, InlineKeyboardButton,
     ReplyKeyboardMarkup, KeyboardButton,
-    FSInputFile, LabeledPrice,
+    FSInputFile,
 )
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
@@ -28,11 +28,15 @@ from aiogram.fsm.context import FSMContext
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PASTE_NEW_TOKEN_HERE")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
-# ЮКасса — провайдер-токен из BotFather (@BotFather → /mybots → Payments)
-PAYMENT_PROVIDER_TOKEN = os.getenv("PAYMENT_PROVIDER_TOKEN", "")
+# ЮКасса — API через REST (shop_id + secret_key из личного кабинета yukassa.ru)
+YUKASSA_SHOP_ID  = os.getenv("YUKASSA_SHOP_ID", "")
+YUKASSA_SECRET   = os.getenv("YUKASSA_SECRET", "")
+
+# Публичный URL бота (Render/ngrok) для return_url после оплаты
+BOT_PUBLIC_URL = os.getenv("BOT_PUBLIC_URL", "https://t.me/")  # https://t.me/your_bot
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
-WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/tech/welcome.jpg")
+WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
@@ -2466,8 +2470,8 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
         text = (
             "💳 Оплата / Доступ\n\n"
             f"{access_status_str(a)}\n\n"
-            "Выбери тариф — оплата через ЮКасса прямо в Telegram.\n"
-            "Быстро и безопасно 👇"
+            "Выбери тариф — перейдёшь на страницу ЮКасса.\n"
+            "Оплата банковской картой или ЮMoney 👇"
         )
         await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=pay_tariff_kb())
 
@@ -2970,7 +2974,7 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
 
 
 # =========================
-# ✅ ОПЛАТА ЧЕРЕЗ ЮКАССА
+# ✅ ОПЛАТА ЧЕРЕЗ ЮКАССА REST API
 # =========================
 def access_status_str(a: dict) -> str:
     if not a or a.get("paid") != 1:
@@ -2981,8 +2985,104 @@ def access_status_str(a: dict) -> str:
     return f"Статус: ✅ до {exp[:10]}" if exp else "Статус: ✅ активен"
 
 
+async def yukassa_create_payment(tariff_code: str, user_id: int) -> Optional[dict]:
+    """
+    Создаём платёж через ЮКасса REST API.
+    Возвращает dict с ключами: id, confirmation_url или None при ошибке.
+    """
+    import uuid
+    import base64
+    import aiohttp
+
+    t = TARIFFS[tariff_code]
+    amount_str = f"{t['price']:.2f}"
+    idempotence_key = str(uuid.uuid4())
+
+    credentials = base64.b64encode(
+        f"{YUKASSA_SHOP_ID}:{YUKASSA_SECRET}".encode()
+    ).decode()
+
+    return_url = BOT_PUBLIC_URL if BOT_PUBLIC_URL else "https://t.me/"
+
+    payload = {
+        "amount": {
+            "value": amount_str,
+            "currency": "RUB"
+        },
+        "confirmation": {
+            "type": "redirect",
+            "return_url": return_url
+        },
+        "capture": True,
+        "description": f"Тариф «{t['title']}» — тренер-бот (user_id={user_id})",
+        "metadata": {
+            "tariff": tariff_code,
+            "user_id": str(user_id),
+        }
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.yookassa.ru/v3/payments",
+                json=payload,
+                headers={
+                    "Authorization": f"Basic {credentials}",
+                    "Idempotence-Key": idempotence_key,
+                    "Content-Type": "application/json",
+                },
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                data = await resp.json()
+                if resp.status == 200:
+                    return data
+                else:
+                    logger.error(f"YooKassa API error {resp.status}: {data}")
+                    return None
+    except Exception as e:
+        logger.error(f"YooKassa request failed: {e}")
+        return None
+
+
+async def yukassa_get_payment(payment_id: str) -> Optional[dict]:
+    """Получаем статус платежа из ЮКасса."""
+    import base64
+    import aiohttp
+
+    credentials = base64.b64encode(
+        f"{YUKASSA_SHOP_ID}:{YUKASSA_SECRET}".encode()
+    ).decode()
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"https://api.yookassa.ru/v3/payments/{payment_id}",
+                headers={"Authorization": f"Basic {credentials}"},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                return None
+    except Exception as e:
+        logger.error(f"YooKassa get_payment failed: {e}")
+        return None
+
+
+async def save_yukassa_payment_id(payment_db_id: int, yukassa_id: str):
+    """Сохраняем ЮКасса payment_id в колонку receipt_file_id."""
+    async with db() as conn:
+        await conn.execute(
+            "UPDATE payments SET receipt_file_id=? WHERE id=?",
+            (yukassa_id, payment_db_id)
+        )
+        await conn.commit()
+
+
 async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    """Отправляем инвойс ЮКасса через Telegram Payments."""
+    """
+    Создаём платёж через ЮКасса REST API и отправляем кнопку со ссылкой.
+    Пользователь оплачивает на странице ЮКасса, бот проверяет статус.
+    """
     tariff_code = callback.data.split(":")[1]
     if tariff_code not in TARIFFS:
         await callback.answer("Не понял тариф 😅", show_alert=True)
@@ -2991,110 +3091,161 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
     t = TARIFFS[tariff_code]
     uid = callback.from_user.id
 
-    # Сохраняем выбранный тариф в state
-    await state.update_data(tariff=tariff_code)
-
-    if not PAYMENT_PROVIDER_TOKEN:
-        # Если токен не настроен — сообщаем
+    if not YUKASSA_SHOP_ID or not YUKASSA_SECRET:
         await callback.message.answer(
-            "⚠️ Оплата через ЮКасса не настроена.\n"
-            "Свяжитесь с администратором бота."
+            "⚠️ Оплата временно недоступна.\n"
+            "Свяжитесь с поддержкой."
         )
         await callback.answer()
         return
 
-    # Цена в копейках (ЮКасса работает с минимальными единицами валюты)
-    price_kopecks = t["price"] * 100
+    # Показываем сообщение "создаём платёж"
+    await callback.answer("⏳ Создаю ссылку на оплату…")
 
-    try:
-        await bot.send_invoice(
-            chat_id=uid,
-            title=f"Тренер-бот: {t['title']}",
-            description=(
-                f"Тариф «{t['title']}» — доступ к персональной программе тренировок.\n"
-                + ("Включает питание, дневник и замеры." if tariff_code in FULL_ACCESS_TARIFFS
-                   else "Тренировки и ответы на вопросы (без питания).")
-            ),
-            payload=f"tariff:{tariff_code}:{uid}",
-            provider_token=PAYMENT_PROVIDER_TOKEN,
-            currency="RUB",
-            prices=[LabeledPrice(label=t["title"], amount=price_kopecks)],
-            start_parameter=f"pay_{tariff_code}",
-            protect_content=False,
+    # Создаём платёж в ЮКасса
+    yk_data = await yukassa_create_payment(tariff_code, uid)
+
+    if not yk_data:
+        await clean_edit(callback, uid,
+            "❌ Не удалось создать счёт.\nПопробуй позже или напиши в поддержку.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")]
+            ])
         )
-        await callback.answer()
-    except Exception as e:
-        logger.error(f"Invoice send error: {e}")
-        await callback.message.answer(
-            "❌ Не удалось создать счёт на оплату.\n"
-            "Попробуй позже или напиши в поддержку."
-        )
-        await callback.answer()
-
-
-async def cb_pre_checkout(pre_checkout_query):
-    """ЮКасса: подтверждаем готовность принять оплату."""
-    await pre_checkout_query.bot.answer_pre_checkout_query(
-        pre_checkout_query.id,
-        ok=True
-    )
-
-
-async def cb_successful_payment(message: Message, bot: Bot):
-    """ЮКасса: оплата прошла успешно — выдаём доступ автоматически."""
-    payment = message.successful_payment
-    payload = payment.invoice_payload  # "tariff:t1:123456"
-
-    try:
-        parts = payload.split(":")
-        tariff_code = parts[1]
-        paid_user_id = int(parts[2])
-    except Exception:
-        logger.error(f"Bad payment payload: {payload}")
-        await message.answer("✅ Оплата получена! Свяжитесь с поддержкой для активации.")
         return
 
-    if tariff_code not in TARIFFS:
-        await message.answer("✅ Оплата получена! Свяжитесь с поддержкой.")
+    yk_payment_id = yk_data.get("id", "")
+    confirmation_url = (yk_data.get("confirmation") or {}).get("confirmation_url", "")
+
+    if not confirmation_url:
+        await clean_edit(callback, uid,
+            "❌ Не получил ссылку на оплату.\nПопробуй позже.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")]
+            ])
+        )
         return
 
-    await set_paid_tariff(paid_user_id, tariff_code)
-    t = TARIFFS[tariff_code]
-    a = await get_access(paid_user_id)
-
-    # Записываем в таблицу payments для истории
+    # Записываем в БД для последующей проверки
     now = datetime.utcnow().isoformat()
     async with db() as conn:
-        await conn.execute("""
+        cur = await conn.execute("""
             INSERT INTO payments (user_id, tariff, amount, last4, code, status, receipt_file_id, created_at)
-            VALUES (?, ?, ?, ?, ?, 'approved', '', ?)
-        """, (paid_user_id, tariff_code, t["price"], "юкасса",
-              f"YK{paid_user_id}", now))
+            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+        """, (uid, tariff_code, t["price"], "yukassa", yk_payment_id, yk_payment_id, now))
         await conn.commit()
+        payment_db_id = cur.lastrowid
 
-    await message.answer(
-        f"✅ Оплата прошла успешно!\n"
-        f"Тариф: {t['title']}\n"
-        f"{access_status_str(a)}\n\n"
-        "Теперь иди тренироваться 💪",
-        reply_markup=menu_main_inline_kb()
+    # Текст сообщения
+    desc = (
+        "Тренировки + питание + дневник + замеры"
+        if tariff_code in FULL_ACCESS_TARIFFS
+        else "Тренировки и ответы на вопросы"
+    )
+    days_str = f"{t['days']} дн." if t["days"] else "навсегда"
+
+    text = (
+        f"💳 Оплата: {t['title']}\n\n"
+        f"💰 Сумма: {t['price']}₽\n"
+        f"📦 Включает: {desc}\n"
+        f"⏳ Доступ: {days_str}\n\n"
+        "Нажми кнопку ниже для перехода на страницу оплаты.\n"
+        "После оплаты вернись в бот — подписка активируется автоматически."
     )
 
-    # Уведомляем админа
-    if ADMIN_ID:
-        try:
-            await bot.send_message(
-                chat_id=ADMIN_ID,
-                text=(
-                    f"💰 Новая оплата (ЮКасса)\n"
-                    f"user_id: {paid_user_id}\n"
-                    f"tariff: {tariff_code} ({t['title']})\n"
-                    f"amount: {t['price']}₽\n"
-                    f"telegram_payment_id: {payment.telegram_payment_charge_id}"
+    pay_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Перейти к оплате", url=confirmation_url)],
+        [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_pay:{yk_payment_id}:{tariff_code}")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")],
+    ])
+
+    await clean_edit(callback, uid, text, reply_markup=pay_kb)
+
+
+async def cb_check_payment(callback: CallbackQuery, bot: Bot):
+    """
+    Пользователь нажал «Я оплатил» — проверяем статус в ЮКасса API.
+    """
+    parts = callback.data.split(":")
+    yk_payment_id = parts[1]
+    tariff_code = parts[2] if len(parts) > 2 else ""
+    uid = callback.from_user.id
+
+    await callback.answer("🔍 Проверяю оплату…")
+
+    yk_data = await yukassa_get_payment(yk_payment_id)
+
+    if not yk_data:
+        await callback.message.answer(
+            "❌ Не удалось проверить статус.\nПопробуй через минуту или напиши в поддержку."
+        )
+        return
+
+    status = yk_data.get("status", "")
+    metadata = yk_data.get("metadata") or {}
+
+    if not tariff_code:
+        tariff_code = metadata.get("tariff", "")
+
+    if status == "succeeded":
+        # Оплата прошла — выдаём доступ
+        if tariff_code and tariff_code in TARIFFS:
+            await set_paid_tariff(uid, tariff_code)
+            # Обновляем статус в БД
+            async with db() as conn:
+                await conn.execute(
+                    "UPDATE payments SET status='approved' WHERE receipt_file_id=? AND user_id=?",
+                    (yk_payment_id, uid)
                 )
+                await conn.commit()
+
+            t = TARIFFS[tariff_code]
+            a = await get_access(uid)
+
+            await clean_edit(callback, uid,
+                f"✅ Оплата подтверждена!\n"
+                f"Тариф: {t['title']}\n"
+                f"{access_status_str(a)}\n\n"
+                "Теперь иди тренироваться 💪",
+                reply_markup=menu_main_inline_kb()
             )
-        except Exception:
-            pass
+
+            # Уведомляем админа
+            if ADMIN_ID:
+                try:
+                    await bot.send_message(
+                        chat_id=ADMIN_ID,
+                        text=(
+                            f"💰 Оплата подтверждена (ЮКасса)\n"
+                            f"user_id: {uid}\n"
+                            f"tariff: {tariff_code} ({t['title']})\n"
+                            f"amount: {t['price']}₽\n"
+                            f"yukassa_id: {yk_payment_id}"
+                        )
+                    )
+                except Exception:
+                    pass
+        else:
+            await clean_edit(callback, uid,
+                "✅ Оплата прошла! Свяжитесь с поддержкой для активации.",
+                reply_markup=menu_main_inline_kb()
+            )
+
+    elif status == "pending":
+        await callback.message.answer(
+            "⏳ Платёж ещё обрабатывается.\n"
+            "Подожди 1–2 минуты и нажми «Я оплатил» снова."
+        )
+    elif status in ("canceled", "cancelled"):
+        await callback.message.answer(
+            "❌ Платёж отменён.\n"
+            "Нажми «⬅️ Назад» и попробуй снова."
+        )
+    else:
+        await callback.message.answer(
+            f"⚠️ Статус платежа: {status}\n"
+            "Если деньги списались — напиши в поддержку."
+        )
 
 
 async def admin_actions(callback: CallbackQuery, bot: Bot):
@@ -4052,10 +4203,9 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_field_weight, ProfileFieldEdit.weight)
     dp.message.register(profile_field_limits, ProfileFieldEdit.limits)
 
-    # ЮКасса
+    # ЮКасса REST API
     dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
-    dp.pre_checkout_query.register(cb_pre_checkout)
-    dp.message.register(cb_successful_payment, F.successful_payment)
+    dp.callback_query.register(cb_check_payment, F.data.startswith("check_pay:"))
 
     # Ручное одобрение (запасной вариант)
     dp.callback_query.register(admin_actions, F.data.startswith("admin_approve:") | F.data.startswith("admin_reject:"))
@@ -4126,8 +4276,8 @@ async def main():
     if ADMIN_ID == 0:
         logger.warning("ADMIN_ID не задан. Уведомления об оплатах не будут отправляться.")
 
-    if not PAYMENT_PROVIDER_TOKEN:
-        logger.warning("PAYMENT_PROVIDER_TOKEN не задан. Оплата через ЮКасса не будет работать.")
+    if not YUKASSA_SHOP_ID or not YUKASSA_SECRET:
+        logger.warning("YUKASSA_SHOP_ID или YUKASSA_SECRET не заданы. Оплата через ЮКасса не будет работать.")
 
     await init_db()
 
