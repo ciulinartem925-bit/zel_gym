@@ -40,14 +40,14 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
-    "trial": {"title": "Пробный (3 дня)", "days": 3,  "price": 1},
-    "t1":    {"title": "1 месяц",          "days": 30, "price": 299},
-    "t3":    {"title": "3 месяца",         "days": 90, "price": 2790},
-    "life":  {"title": "Навсегда",         "days": None, "price": 6990},
+    "trial": {"title": "Пробный (3 дня)", "days": 3,  "price": 99},
+    "t1":    {"title": "1 месяц",         "days": 30, "price": 399},
+    "t3":    {"title": "3 месяца",        "days": 90, "price": 899},
+    "life":  {"title": "Навсегда",        "days": None, "price": 1990},
 }
 
-# Тарифы, дающие ПОЛНЫЙ доступ (включая питание)
-FULL_ACCESS_TARIFFS = {"t1", "t3", "life"}
+# Полный доступ (питание + все цели + смена программы) только на t3 и life
+FULL_ACCESS_TARIFFS = {"t3", "life"}
 
 TG_SAFE_MSG_LEN = 3800
 
@@ -816,6 +816,7 @@ def menu_main_inline_kb():
             InlineKeyboardButton(text="📓 Дневник", callback_data="nav:diary"),
             InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures"),
         ],
+        [InlineKeyboardButton(text="🔥 Улучшить доступ", callback_data="nav:upgrade")],
         [InlineKeyboardButton(text="❓ Ответы на вопросы", callback_data="nav:faq")],
     ])
 
@@ -839,6 +840,8 @@ def workout_days_kb(freq: int, has_full_access: bool = False):
     rows.append([InlineKeyboardButton(text="📊 Статистика", callback_data="wday:stats:0")])
     if has_full_access:
         rows.append([InlineKeyboardButton(text="🔄 Сменить программу", callback_data="p:edit")])
+    else:
+        rows.append([InlineKeyboardButton(text="🔥 Открыть полный доступ (3 мес)", callback_data="nav:upgrade")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -849,9 +852,9 @@ def workout_days_kb(freq: int, has_full_access: bool = False):
 def pay_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"🟢 Пробный — {TARIFFS['trial']['price']}₽ (3 дня)", callback_data="tariff:trial")],
-        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽ (попробовать)", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽ (лучший выбор)", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -3153,6 +3156,33 @@ async def cmd_start(message: Message, bot: Bot):
         )
 
 
+async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
+    text = (
+        "🔥 Улучшить доступ\n\n"
+        "Выбирай формат:\n\n"
+        f"🟩 1 месяц — {TARIFFS['t1']['price']}₽\n"
+        "• чтобы попробовать\n\n"
+        f"🔥 3 месяца — {TARIFFS['t3']['price']}₽ (ЛУЧШИЙ ВЫБОР)\n"
+        "• реальный результат за 90 дней\n"
+        "• питание + все цели + обновления\n\n"
+        f"🏆 Навсегда — {TARIFFS['life']['price']}₽\n"
+        "• один раз оплатил и забыл\n"
+        "• все будущие обновления\n"
+    )
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽ (выгодно)", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+    if callback:
+        await clean_edit(callback, user_id, text, reply_markup=kb)
+    else:
+        await clean_send(bot, chat_id, user_id, text, reply_markup=kb)
+
+
 # =========================
 # Навигация
 # =========================
@@ -3176,6 +3206,8 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await open_diary(user_id=uid, chat_id=chat_id, bot=bot, state=state, callback=callback)
     elif key == "faq":
         await open_faq(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
+    elif key == "upgrade":
+        await open_upgrade(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
     else:
         await show_main_menu(bot, chat_id, uid)
 
@@ -3189,11 +3221,26 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
 
-    a = await get_access(message.from_user.id)
+    uid = message.from_user.id
+    a = await get_access(uid)
 
-    if await is_access_active(message.from_user.id):
-        text = f"✅ Доступ активен.\n{access_status_str(a)}"
-        await clean_send(bot, message.chat.id, message.from_user.id, text)
+    if await is_access_active(uid):
+        tariff = a.get("tariff", "")
+        if tariff in FULL_ACCESS_TARIFFS:
+            text = f"✅ У тебя полный доступ.\n{access_status_str(a)}"
+            await clean_send(bot, message.chat.id, uid, text)
+        else:
+            # Базовый тариф (trial или t1) — предлагаем апгрейд
+            text = (
+                f"✅ У тебя базовый доступ.\n{access_status_str(a)}\n\n"
+                "🔥 Хочешь получить питание, смену программы и полный доступ?\n"
+                "Улучши тариф до 3 месяцев или Навсегда 👇"
+            )
+            upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔥 Улучшить доступ", callback_data="nav:upgrade")],
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+            ])
+            await clean_send(bot, message.chat.id, uid, text, reply_markup=upgrade_kb)
     else:
         text = (
             "💳 Оплата / Доступ\n\n"
@@ -3201,7 +3248,7 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
             "Выбери тариф — перейдёшь на страницу ЮКасса.\n"
             "Оплата банковской картой или ЮMoney 👇"
         )
-        await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=pay_tariff_kb())
+        await clean_send(bot, message.chat.id, uid, text, reply_markup=pay_tariff_kb())
 
     await try_delete_user_message(bot, message)
 
@@ -3255,7 +3302,7 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
     uid = callback.from_user.id
     if not await is_full_access_active(uid):
         await callback.answer(
-            "🔒 Смена программы доступна при месячной подписке.",
+            "🔒 Смена программы доступна на тарифах 3 месяца и Навсегда.",
             show_alert=True
         )
         return
@@ -4448,12 +4495,14 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
 
     if not await is_full_access_active(user_id):
         text = (
-            "🍽 Раздел питания доступен только по месячной подписке.\n\n"
-            f"Пробный период включает только тренировки и ответы на вопросы.\n\n"
-            f"Месячная подписка — {TARIFFS['t1']['price']}₽ • полный доступ 👇"
+            "🍽 Моё питание\n\n"
+            "Питание открывается на тарифах 3 месяца и Навсегда.\n"
+            "90 дней — минимальный срок, чтобы реально увидеть результат.\n\n"
+            "Выбери тариф 👇"
         )
         upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=f"🟩 Месячный — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+            [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+            [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
             [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
         ])
         if callback:
@@ -4778,11 +4827,12 @@ def build_shopping_basket(goal: str, calories: int, protein_g: int, fat_g: int, 
 async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     if not await is_full_access_active(callback.from_user.id):
         text = (
-            "🍽 Раздел питания доступен только по месячной подписке.\n\n"
-            f"Месячная подписка — {TARIFFS['t1']['price']}₽ • полный доступ 👇"
+            "🍽 Питание открывается на тарифах 3 месяца и Навсегда.\n\n"
+            f"Выбери тариф 👇"
         )
         upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=f"🟩 Месячный — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+            [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+            [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
             [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
         ])
         await clean_edit(callback, callback.from_user.id, text, reply_markup=upgrade_kb)
@@ -4813,7 +4863,7 @@ async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
 async def cb_nutr_basket(callback: CallbackQuery, bot: Bot):
     """Корзина продуктов на неделю."""
     if not await is_full_access_active(callback.from_user.id):
-        await callback.answer("🔒 Доступно при месячной подписке.", show_alert=True)
+        await callback.answer("🔒 Доступно на тарифах 3 месяца и Навсегда.", show_alert=True)
         return
 
     if not await ensure_profile_ready(callback.from_user.id):
@@ -5077,7 +5127,7 @@ async def cb_workout_rebuild(callback: CallbackQuery, bot: Bot):
     uid = callback.from_user.id
     if not await is_full_access_active(uid):
         await callback.answer(
-            "🔒 Смена программы доступна при месячной подписке.",
+            "🔒 Смена программы доступна на тарифах 3 месяца и Навсегда.",
             show_alert=True
         )
         return
