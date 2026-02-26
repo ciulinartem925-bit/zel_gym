@@ -42,7 +42,7 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 TARIFFS = {
     "trial": {"title": "Пробный (3 дня)", "days": 3,  "price": 1},
     "t1":    {"title": "1 месяц",         "days": 30, "price": 2},
-    "t3":    {"title": "3 месяца",        "days": 90, "price": 899},
+    "t3":    {"title": "3 месяца",        "days": 90, "price": 2},
     "life":  {"title": "Навсегда",        "days": None, "price": 1490},
 }
 
@@ -5352,5 +5352,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
