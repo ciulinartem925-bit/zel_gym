@@ -37,13 +37,14 @@ BOT_PUBLIC_URL = os.getenv("BOT_PUBLIC_URL", "https://t.me/")  # https://t.me/yo
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
 WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # ТАРИФЫ
 TARIFFS = {
-    "trial": {"title": "Пробный (3 дня)", "days": 3,  "price": 1},
-    "t1":    {"title": "1 месяц",         "days": 30, "price": 2},
-    "t3":    {"title": "3 месяца",        "days": 90, "price": 2},
-    "life":  {"title": "Навсегда",        "days": None, "price": 1490},
+    "trial": {"title": "Пробный (3 дня)", "days": 3,  "price": 99},
+    "t1":    {"title": "1 месяц",         "days": 30, "price": 399},
+    "t3":    {"title": "3 месяца",        "days": 90, "price": 899},
+    "life":  {"title": "Навсегда",        "days": None, "price": 1990},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -100,6 +101,13 @@ class ProfileFieldEdit(StatesGroup):
     height = State()
     weight = State()
     limits = State()
+
+
+class FoodPhotoFlow(StatesGroup):
+    """FSM для подсчёта калорий по фото."""
+    waiting_photo = State()
+    confirm_items = State()
+    edit_item_grams = State()
 
 
 # =========================
@@ -816,6 +824,7 @@ def menu_main_inline_kb():
             InlineKeyboardButton(text="📓 Дневник", callback_data="nav:diary"),
             InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures"),
         ],
+        [InlineKeyboardButton(text="📸 Калории по фото", callback_data="food:start")],
         [InlineKeyboardButton(text="🔥 Улучшить доступ", callback_data="nav:upgrade")],
         [InlineKeyboardButton(text="❓ Ответы на вопросы", callback_data="nav:faq")],
     ])
@@ -1389,6 +1398,8 @@ async def init_db():
         )
         """)
         await conn.commit()
+
+    await db_init_food()
 
 
 async def ensure_user(user_id: int, username: str):
@@ -5205,6 +5216,588 @@ async def cmd_testpay(message: Message, bot: Bot):
 
 
 # =========================
+# 📸 КАЛОРИИ ПО ФОТО — база продуктов (на 100г)
+# =========================
+FOOD_DB: Dict[str, Dict[str, float]] = {
+    "rice":           {"kcal": 344, "protein": 7.0,  "fat": 0.6, "carbs": 76.0},
+    "buckwheat":      {"kcal": 313, "protein": 12.6, "fat": 3.3, "carbs": 57.1},
+    "oats":           {"kcal": 389, "protein": 16.9, "fat": 6.9, "carbs": 66.3},
+    "chicken breast": {"kcal": 165, "protein": 31.0, "fat": 3.6, "carbs": 0.0},
+    "turkey":         {"kcal": 189, "protein": 29.0, "fat": 7.4, "carbs": 0.0},
+    "eggs":           {"kcal": 155, "protein": 13.0, "fat": 11.0,"carbs": 1.1},
+    "banana":         {"kcal": 89,  "protein": 1.1,  "fat": 0.3, "carbs": 23.0},
+    "apple":          {"kcal": 52,  "protein": 0.3,  "fat": 0.2, "carbs": 14.0},
+    "bread":          {"kcal": 265, "protein": 9.0,  "fat": 3.2, "carbs": 49.0},
+    "cheese":         {"kcal": 402, "protein": 25.0, "fat": 33.0,"carbs": 1.3},
+    "cottage cheese": {"kcal": 98,  "protein": 11.0, "fat": 4.3, "carbs": 3.4},
+    "milk":           {"kcal": 61,  "protein": 3.2,  "fat": 3.3, "carbs": 4.8},
+    "potato":         {"kcal": 77,  "protein": 2.0,  "fat": 0.1, "carbs": 17.0},
+    "olive oil":      {"kcal": 884, "protein": 0.0,  "fat": 100.0,"carbs": 0.0},
+    "salad":          {"kcal": 15,  "protein": 1.3,  "fat": 0.2, "carbs": 2.9},
+    "pasta":          {"kcal": 371, "protein": 13.0, "fat": 1.5, "carbs": 74.0},
+    "salmon":         {"kcal": 208, "protein": 20.0, "fat": 13.0,"carbs": 0.0},
+    "beef":           {"kcal": 250, "protein": 26.0, "fat": 15.0,"carbs": 0.0},
+    "pork":           {"kcal": 297, "protein": 25.0, "fat": 21.0,"carbs": 0.0},
+    "tomato":         {"kcal": 18,  "protein": 0.9,  "fat": 0.2, "carbs": 3.9},
+}
+
+FOOD_DB_RU: Dict[str, str] = {
+    "rice": "рис", "buckwheat": "гречка", "oats": "овсянка",
+    "chicken breast": "куриная грудка", "turkey": "индейка", "eggs": "яйца",
+    "banana": "банан", "apple": "яблоко", "bread": "хлеб", "cheese": "сыр",
+    "cottage cheese": "творог", "milk": "молоко", "potato": "картофель",
+    "olive oil": "оливковое масло", "salad": "салат/зелень", "pasta": "паста/макароны",
+    "salmon": "лосось", "beef": "говядина", "pork": "свинина", "tomato": "томат",
+}
+
+
+def food_name_ru(name: str) -> str:
+    return FOOD_DB_RU.get(name.lower(), name)
+
+
+def calc_food_macros(items: list) -> Dict[str, float]:
+    """Считает суммарные КБЖУ по списку {name, grams}."""
+    total = {"kcal": 0.0, "protein": 0.0, "fat": 0.0, "carbs": 0.0}
+    for item in items:
+        name = (item.get("name") or "").lower().strip()
+        grams = float(item.get("grams") or 0)
+        factor = grams / 100.0
+        db_entry = FOOD_DB.get(name)
+        if db_entry:
+            for k in total:
+                total[k] += db_entry[k] * factor
+        elif item.get("kcal_per100"):
+            kcal_per100 = float(item["kcal_per100"])
+            total["kcal"] += kcal_per100 * factor
+            total["protein"] += float(item.get("protein_per100") or 0) * factor
+            total["fat"] += float(item.get("fat_per100") or 0) * factor
+            total["carbs"] += float(item.get("carbs_per100") or 0) * factor
+    return {k: round(v, 1) for k, v in total.items()}
+
+
+# =========================
+# 📸 КАЛОРИИ ПО ФОТО — DB
+# =========================
+async def db_init_food():
+    """Создаёт таблицу food_diary если нет."""
+    async with db() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS food_diary (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                date TEXT,
+                item_name TEXT,
+                grams REAL,
+                kcal REAL,
+                protein REAL,
+                fat REAL,
+                carbs REAL,
+                created_at TEXT
+            )
+        """)
+        await conn.commit()
+
+
+async def db_add_food_entry(user_id: int, date: str, item_name: str,
+                             grams: float, kcal: float, protein: float,
+                             fat: float, carbs: float):
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        await conn.execute("""
+            INSERT INTO food_diary (user_id, date, item_name, grams, kcal, protein, fat, carbs, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, date, item_name, grams, kcal, protein, fat, carbs, now))
+        await conn.commit()
+
+
+async def db_get_day_total(user_id: int, date: str) -> Dict[str, float]:
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT SUM(kcal), SUM(protein), SUM(fat), SUM(carbs)
+            FROM food_diary WHERE user_id=? AND date=?
+        """, (user_id, date)) as cur:
+            row = await cur.fetchone()
+    if not row or row[0] is None:
+        return {"kcal": 0.0, "protein": 0.0, "fat": 0.0, "carbs": 0.0}
+    return {
+        "kcal": round(row[0] or 0, 1),
+        "protein": round(row[1] or 0, 1),
+        "fat": round(row[2] or 0, 1),
+        "carbs": round(row[3] or 0, 1),
+    }
+
+
+# =========================
+# 📸 КАЛОРИИ ПО ФОТО — OpenAI Vision
+# =========================
+async def openai_analyze_food(image_bytes: bytes) -> Tuple[Optional[list], Optional[str]]:
+    """Отправляет фото в OpenAI Vision, возвращает (items, error)."""
+    import base64
+    import aiohttp as _aiohttp
+
+    if not OPENAI_API_KEY:
+        return None, "OPENAI_API_KEY не задан. Добавь его в переменные окружения."
+
+    b64 = base64.b64encode(image_bytes).decode()
+
+    prompt = (
+        "You are a food calorie estimator. Look at this food photo and identify all food items.\n"
+        "Return ONLY a valid JSON object with no extra text, no markdown, no explanation:\n"
+        '{"items": [{"name": "chicken breast", "grams": 150}, {"name": "rice", "grams": 180}], "notes": ""}\n'
+        "Rules:\n"
+        "- name must be in English, lowercase\n"
+        "- grams is your best estimate (integer)\n"
+        "- if you see a dish, break it into ingredients\n"
+        "- return ONLY the JSON, nothing else"
+    )
+
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 500,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}", "detail": "low"}},
+                ]
+            }
+        ]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    for attempt in range(2):
+        try:
+            async with _aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=_aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    if resp.status != 200:
+                        err_text = await resp.text()
+                        if attempt == 0:
+                            continue
+                        return None, f"OpenAI ошибка {resp.status}: {err_text[:200]}"
+                    data = await resp.json()
+                    raw = data["choices"][0]["message"]["content"].strip()
+                    # Убираем возможные markdown-обёртки
+                    raw = re.sub(r"^```[a-z]*\n?", "", raw)
+                    raw = re.sub(r"\n?```$", "", raw)
+                    parsed = json.loads(raw)
+                    items = parsed.get("items", [])
+                    if not isinstance(items, list) or len(items) == 0:
+                        if attempt == 0:
+                            continue
+                        return None, "Модель не нашла продукты на фото. Попробуй другое фото."
+                    return items, None
+        except json.JSONDecodeError:
+            if attempt == 0:
+                continue
+            return None, "Модель вернула невалидный JSON. Попробуй снова."
+        except Exception as e:
+            if attempt == 0:
+                continue
+            return None, f"Ошибка сети: {type(e).__name__}: {e}"
+
+    return None, "Не удалось получить ответ от OpenAI. Попробуй снова."
+
+
+# =========================
+# 📸 КАЛОРИИ ПО ФОТО — КЛАВИАТУРЫ
+# =========================
+def food_confirm_kb(items: list) -> InlineKeyboardMarkup:
+    """Клавиатура подтверждения после анализа фото."""
+    rows = [
+        [InlineKeyboardButton(text="✅ Записать в дневник", callback_data="food:save")],
+        [InlineKeyboardButton(text="✏️ Изменить порции", callback_data="food:edit_menu")],
+        [InlineKeyboardButton(text="🔁 Другое фото", callback_data="food:retry")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def food_edit_items_kb(items: list) -> InlineKeyboardMarkup:
+    """Список продуктов для редактирования граммовки."""
+    rows = []
+    for i, item in enumerate(items):
+        name_display = food_name_ru(item["name"])
+        rows.append([InlineKeyboardButton(
+            text=f"✏️ {name_display} — {item['grams']}г",
+            callback_data=f"food:edit_item:{i}"
+        )])
+    rows.append([InlineKeyboardButton(text="◀️ Назад", callback_data="food:back_confirm")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def food_unknown_kb(item_idx: int, item_name: str) -> InlineKeyboardMarkup:
+    """Клавиатура для неизвестного продукта — выбрать ближайший или ввести вручную."""
+    rows = []
+    # Предлагаем 4 наиболее похожих из базы
+    candidates = list(FOOD_DB.keys())[:8]
+    for i in range(0, len(candidates), 2):
+        row = []
+        for c in candidates[i:i+2]:
+            row.append(InlineKeyboardButton(
+                text=food_name_ru(c),
+                callback_data=f"food:map:{item_idx}:{c}"
+            ))
+        rows.append(row)
+    rows.append([InlineKeyboardButton(text="✍️ Ввести ккал вручную", callback_data=f"food:manual:{item_idx}")])
+    rows.append([InlineKeyboardButton(text="◀️ Назад", callback_data="food:back_confirm")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _items_text(items: list) -> str:
+    """Текст с распознанными продуктами и КБЖУ."""
+    lines = ["🍽 Распознано:\n"]
+    for item in items:
+        name_display = food_name_ru(item["name"])
+        grams = item.get("grams", 0)
+        macros = calc_food_macros([item])
+        if item.get("unknown"):
+            lines.append(f"• ❓ {name_display} — {grams}г  (неизвестный продукт)")
+        else:
+            lines.append(f"• {name_display} — {grams}г  ({macros['kcal']} ккал)")
+    total = calc_food_macros(items)
+    lines.append(f"\n📊 Итого: {total['kcal']} ккал")
+    lines.append(f"Б {total['protein']}г  Ж {total['fat']}г  У {total['carbs']}г")
+    return "\n".join(lines)
+
+
+# =========================
+# 📸 КАЛОРИИ ПО ФОТО — ХЕНДЛЕРЫ
+# =========================
+async def cb_food_photo_start(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Нажали кнопку 📸 Калории по фото."""
+    uid = callback.from_user.id
+    await state.clear()
+
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    if not OPENAI_API_KEY:
+        await clean_edit(callback, uid,
+            "⚠️ Функция «Калории по фото» требует OPENAI_API_KEY.\n"
+            "Администратор должен добавить ключ OpenAI в настройки.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")]
+            ])
+        )
+        await callback.answer()
+        return
+
+    await state.set_state(FoodPhotoFlow.waiting_photo)
+    await clean_edit(callback, uid,
+        "📸 Отправь фото еды\n\n"
+        "Сфотографируй тарелку — постараюсь определить продукты и граммовку.\n"
+        "Лучше всего работает с одним блюдом или набором продуктов на тарелке.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")]
+        ])
+    )
+    await callback.answer()
+
+
+async def food_receive_photo(message: Message, state: FSMContext, bot: Bot):
+    """Получили фото еды — анализируем через OpenAI Vision."""
+    uid = message.from_user.id
+
+    if not message.photo:
+        await clean_send(bot, message.chat.id, uid,
+            "Нужно именно фото 📸\nОтправь фотографию еды.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")]
+            ])
+        )
+        await try_delete_user_message(bot, message)
+        return
+
+    # Удаляем сообщение пользователя
+    await try_delete_user_message(bot, message)
+
+    # Показываем "анализирую..."
+    wait_msg_id = await clean_send(bot, message.chat.id, uid,
+        "🔍 Анализирую фото, подожди секунду…"
+    )
+
+    # Скачиваем фото (берём наибольший размер)
+    photo = message.photo[-1]
+    file = await bot.get_file(photo.file_id)
+    file_bytes = await bot.download_file(file.file_path)
+    image_bytes = file_bytes.read() if hasattr(file_bytes, "read") else bytes(file_bytes)
+
+    # Отправляем в OpenAI
+    items, error = await openai_analyze_food(image_bytes)
+
+    if error or not items:
+        await clean_send(bot, message.chat.id, uid,
+            f"❌ {error or 'Не удалось распознать продукты.'}\n\nПопробуй отправить другое фото.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔁 Попробовать снова", callback_data="food:start")],
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+            ])
+        )
+        await state.clear()
+        return
+
+    # Помечаем неизвестные продукты
+    for item in items:
+        name = (item.get("name") or "").lower().strip()
+        item["name"] = name
+        if name not in FOOD_DB:
+            item["unknown"] = True
+
+    # Сохраняем items в FSM
+    await state.update_data(items=items)
+    await state.set_state(FoodPhotoFlow.confirm_items)
+
+    text = _items_text(items)
+
+    # Проверяем: есть ли неизвестные
+    has_unknown = any(item.get("unknown") for item in items)
+    if has_unknown:
+        text += "\n\n❓ Есть неизвестные продукты — нажми «Изменить порции» чтобы уточнить."
+
+    await clean_send(bot, message.chat.id, uid, text, reply_markup=food_confirm_kb(items))
+
+
+async def cb_food_save(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Записываем приём пищи в дневник."""
+    uid = callback.from_user.id
+    data = await state.get_data()
+    items = data.get("items", [])
+
+    if not items:
+        await clean_edit(callback, uid, "Нет данных. Отправь фото снова.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")]
+            ])
+        )
+        await callback.answer()
+        await state.clear()
+        return
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # Записываем каждый продукт отдельной строкой
+    for item in items:
+        macros = calc_food_macros([item])
+        await db_add_food_entry(
+            user_id=uid,
+            date=today,
+            item_name=item.get("name", "unknown"),
+            grams=float(item.get("grams", 0)),
+            kcal=macros["kcal"],
+            protein=macros["protein"],
+            fat=macros["fat"],
+            carbs=macros["carbs"],
+        )
+
+    # Итоги за приём
+    meal_macros = calc_food_macros(items)
+    # Итоги за день
+    day_total = await db_get_day_total(uid, today)
+
+    text = (
+        f"✅ Записано!\n\n"
+        f"🍽 Этот приём:\n"
+        f"• {meal_macros['kcal']} ккал\n"
+        f"• Б {meal_macros['protein']}г  Ж {meal_macros['fat']}г  У {meal_macros['carbs']}г\n\n"
+        f"📅 За сегодня ({today}):\n"
+        f"• {day_total['kcal']} ккал\n"
+        f"• Б {day_total['protein']}г  Ж {day_total['fat']}г  У {day_total['carbs']}г"
+    )
+
+    await clean_edit(callback, uid, text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📸 Ещё фото", callback_data="food:start")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+        ])
+    )
+    await state.clear()
+    await callback.answer("✅ Записано!")
+
+
+async def cb_food_retry(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Другое фото."""
+    uid = callback.from_user.id
+    await state.clear()
+    await state.set_state(FoodPhotoFlow.waiting_photo)
+    await clean_edit(callback, uid,
+        "📸 Отправь другое фото еды:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")]
+        ])
+    )
+    await callback.answer()
+
+
+async def cb_food_edit_menu(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Показываем список продуктов для редактирования."""
+    uid = callback.from_user.id
+    data = await state.get_data()
+    items = data.get("items", [])
+    if not items:
+        await callback.answer("Нет данных", show_alert=True)
+        return
+
+    await clean_edit(callback, uid,
+        "✏️ Выбери продукт для изменения граммовки:",
+        reply_markup=food_edit_items_kb(items)
+    )
+    await callback.answer()
+
+
+async def cb_food_edit_item(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Выбрали конкретный продукт для редактирования граммовки."""
+    uid = callback.from_user.id
+    idx = int(callback.data.split(":")[2])
+    data = await state.get_data()
+    items = data.get("items", [])
+
+    if idx >= len(items):
+        await callback.answer("Не найден", show_alert=True)
+        return
+
+    item = items[idx]
+    name_display = food_name_ru(item["name"])
+
+    # Если продукт неизвестный — предлагаем сначала выбрать из базы
+    if item.get("unknown"):
+        await clean_edit(callback, uid,
+            f"❓ «{name_display}» не найден в базе.\n\n"
+            "Выбери ближайший продукт из списка или введи калорийность вручную:",
+            reply_markup=food_unknown_kb(idx, item["name"])
+        )
+        await callback.answer()
+        return
+
+    await state.update_data(edit_idx=idx)
+    await state.set_state(FoodPhotoFlow.edit_item_grams)
+
+    await clean_edit(callback, uid,
+        f"✏️ {name_display}\n\nСейчас: {item['grams']}г\n\nВведи новое количество граммов (числом):",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="food:edit_menu")]
+        ])
+    )
+    await callback.answer()
+
+
+async def cb_food_map_unknown(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Пользователь выбрал ближайший продукт для неизвестного."""
+    parts = callback.data.split(":")
+    idx = int(parts[2])
+    mapped_name = parts[3]
+
+    data = await state.get_data()
+    items = data.get("items", [])
+    if idx >= len(items):
+        await callback.answer("Не найден", show_alert=True)
+        return
+
+    items[idx]["name"] = mapped_name
+    items[idx].pop("unknown", None)
+    await state.update_data(items=items)
+
+    await clean_edit(callback, callback.from_user.id,
+        _items_text(items),
+        reply_markup=food_confirm_kb(items)
+    )
+    await callback.answer(f"✅ Заменено на {food_name_ru(mapped_name)}")
+
+
+async def cb_food_manual_kcal_start(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Начало ввода ккал вручную для неизвестного продукта."""
+    idx = int(callback.data.split(":")[2])
+    await state.update_data(edit_idx=idx, manual_kcal=True)
+    await state.set_state(FoodPhotoFlow.edit_item_grams)
+
+    data = await state.get_data()
+    items = data.get("items", [])
+    name_display = food_name_ru(items[idx]["name"]) if idx < len(items) else "продукт"
+
+    await clean_edit(callback, callback.from_user.id,
+        f"✍️ {name_display}\n\n"
+        "Введи калорийность на 100г (только число).\n"
+        "Например: 250\n\n"
+        "Или в формате: 250 5 10 30 (ккал белок жир углеводы на 100г)",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="food:edit_menu")]
+        ])
+    )
+    await callback.answer()
+
+
+async def food_enter_grams(message: Message, state: FSMContext, bot: Bot):
+    """Пользователь ввёл граммы (или ккал вручную)."""
+    uid = message.from_user.id
+    await try_delete_user_message(bot, message)
+
+    fsm_data = await state.get_data()
+    idx = fsm_data.get("edit_idx", 0)
+    is_manual = fsm_data.get("manual_kcal", False)
+    items = fsm_data.get("items", [])
+
+    txt = (message.text or "").strip()
+
+    if is_manual:
+        # Парсим "250" или "250 5 10 30"
+        parts = txt.split()
+        try:
+            kcal_per100 = float(parts[0].replace(",", "."))
+        except ValueError:
+            await clean_send(bot, message.chat.id, uid, "Введи число (калорийность на 100г):")
+            return
+
+        items[idx]["kcal_per100"] = kcal_per100
+        items[idx]["protein_per100"] = float(parts[1].replace(",", ".")) if len(parts) > 1 else 0.0
+        items[idx]["fat_per100"] = float(parts[2].replace(",", ".")) if len(parts) > 2 else 0.0
+        items[idx]["carbs_per100"] = float(parts[3].replace(",", ".")) if len(parts) > 3 else 0.0
+        items[idx].pop("unknown", None)
+        await state.update_data(items=items, manual_kcal=False, edit_idx=None)
+    else:
+        # Обновляем граммы
+        try:
+            grams = float(txt.replace(",", "."))
+            if grams <= 0:
+                raise ValueError
+        except ValueError:
+            await clean_send(bot, message.chat.id, uid, "Введи положительное число (граммы):")
+            return
+        items[idx]["grams"] = grams
+        await state.update_data(items=items, edit_idx=None)
+
+    await state.set_state(FoodPhotoFlow.confirm_items)
+
+    await clean_send(bot, message.chat.id, uid,
+        _items_text(items),
+        reply_markup=food_confirm_kb(items)
+    )
+
+
+async def cb_food_back_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Вернуться к экрану подтверждения."""
+    uid = callback.from_user.id
+    data = await state.get_data()
+    items = data.get("items", [])
+    await state.set_state(FoodPhotoFlow.confirm_items)
+    await clean_edit(callback, uid,
+        _items_text(items),
+        reply_markup=food_confirm_kb(items)
+    )
+    await callback.answer()
+
+
+# =========================
 # РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
 # =========================
 def setup_handlers(dp: Dispatcher):
@@ -5279,6 +5872,19 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_support_from_reply, F.text == "🆘 Поддержка")
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
 
+    # 📸 Калории по фото
+    dp.callback_query.register(cb_food_photo_start, F.data == "food:start")
+    dp.callback_query.register(cb_food_save, F.data == "food:save")
+    dp.callback_query.register(cb_food_retry, F.data == "food:retry")
+    dp.callback_query.register(cb_food_edit_menu, F.data == "food:edit_menu")
+    dp.callback_query.register(cb_food_back_confirm, F.data == "food:back_confirm")
+    dp.callback_query.register(cb_food_edit_item, F.data.startswith("food:edit_item:"))
+    dp.callback_query.register(cb_food_map_unknown, F.data.startswith("food:map:"))
+    dp.callback_query.register(cb_food_manual_kcal_start, F.data.startswith("food:manual:"))
+    dp.message.register(food_receive_photo, FoodPhotoFlow.waiting_photo, F.photo)
+    dp.message.register(food_receive_photo, FoodPhotoFlow.waiting_photo)  # fallback для не-фото
+    dp.message.register(food_enter_grams, FoodPhotoFlow.edit_item_grams)
+
     dp.message.register(forward_to_admin)
 
 
@@ -5352,6 +5958,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
-
