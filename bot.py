@@ -864,7 +864,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     if has_full_access:
         rows.append([InlineKeyboardButton(text="🔄 Сменить программу", callback_data="p:edit")])
     else:
-        rows.append([InlineKeyboardButton(text="🔥 Открыть полный доступ (3 мес)", callback_data="nav:upgrade")])
+        rows.append([InlineKeyboardButton(text="📋 Сменить план тренировок", callback_data="nav:upgrade")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -1290,16 +1290,22 @@ async def init_db():
             user_id INTEGER PRIMARY KEY,
             paid INTEGER DEFAULT 0,
             tariff TEXT,
+            tariff_name TEXT NOT NULL DEFAULT 'Нет',
             expires_at TEXT,
             paid_at TEXT,
-            plan_regens_left INTEGER DEFAULT NULL
+            plan_regens_left INTEGER DEFAULT NULL,
+            remind_stage INTEGER NOT NULL DEFAULT -1
         )
         """)
-        # Миграция: добавить поле если его нет (для существующих баз)
-        try:
-            await conn.execute("ALTER TABLE access ADD COLUMN plan_regens_left INTEGER DEFAULT NULL")
-        except Exception:
-            pass
+        for _col, _typ in [
+            ("plan_regens_left", "INTEGER DEFAULT NULL"),
+            ("tariff_name",      "TEXT NOT NULL DEFAULT 'Нет'"),
+            ("remind_stage",     "INTEGER NOT NULL DEFAULT -1"),
+        ]:
+            try:
+                await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
+            except Exception:
+                pass
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1527,6 +1533,66 @@ async def decrement_plan_regens(user_id: int):
         await conn.commit()
 
 
+
+# =========================
+# ПОДПИСКА: утилиты
+# =========================
+async def get_subscription(user_id: int) -> dict:
+    """Единый источник правды о подписке пользователя."""
+    async with db() as conn:
+        async with conn.execute(
+            """SELECT paid, tariff, tariff_name, expires_at, paid_at, remind_stage
+               FROM access WHERE user_id=?""",
+            (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return {
+            "tariff": "none", "tariff_name": "Нет",
+            "expires_at": None, "is_active": 0, "remind_stage": -1
+        }
+    paid, tariff, tariff_name, expires_at, paid_at, remind_stage = row
+    is_active = 0
+    if paid == 1:
+        if tariff == "life":
+            is_active = 1
+        elif expires_at:
+            try:
+                if datetime.utcnow() < datetime.fromisoformat(expires_at):
+                    is_active = 1
+            except Exception:
+                pass
+    return {
+        "tariff": tariff or "none",
+        "tariff_name": tariff_name or "Нет",
+        "expires_at": expires_at,
+        "is_active": is_active,
+        "remind_stage": remind_stage if remind_stage is not None else -1,
+    }
+
+
+def is_subscription_active(sub: dict) -> bool:
+    return bool(sub.get("is_active"))
+
+
+def format_tariff_line(sub: dict) -> str:
+    """Строка о тарифе для главного меню."""
+    tariff = sub.get("tariff", "none")
+    if not is_subscription_active(sub):
+        return "💳 Тариф: нет (доступ ограничен)"
+    if tariff == "life":
+        return "💳 Тариф: Навсегда ✅"
+    tariff_name = sub.get("tariff_name") or ""
+    expires_at = sub.get("expires_at")
+    if expires_at:
+        try:
+            dt = datetime.fromisoformat(expires_at)
+            return f"💳 Тариф: {tariff_name} (до {dt.strftime('%d.%m.%Y')})"
+        except Exception:
+            pass
+    return f"💳 Тариф: {tariff_name}"
+
+
 async def is_full_access_active(user_id: int) -> bool:
     """Полный доступ: тренировки + питание (только платные тарифы, не пробный)."""
     a = await get_access(user_id)
@@ -1545,11 +1611,15 @@ async def set_paid_tariff(user_id: int, tariff_code: str):
     now_iso = now.isoformat()
     expires_at = None if t["days"] is None else (now + timedelta(days=int(t["days"]))).isoformat()
     regens = t.get("plan_regens")  # None = безлимит, 0 = нельзя, N = лимит
+    tariff_name = t.get("title", tariff_code)
 
     async with db() as conn:
         await conn.execute(
-            "UPDATE access SET paid=1, tariff=?, expires_at=?, paid_at=?, plan_regens_left=? WHERE user_id=?",
-            (tariff_code, expires_at, now_iso, regens, user_id)
+            """UPDATE access
+               SET paid=1, tariff=?, tariff_name=?, expires_at=?, paid_at=?,
+                   plan_regens_left=?, remind_stage=-1
+               WHERE user_id=?""",
+            (tariff_code, tariff_name, expires_at, now_iso, regens, user_id)
         )
         await conn.commit()
 
@@ -1781,180 +1851,166 @@ async def get_all_user_ids():
 # =========================
 
 EXERCISE_TECH_MAP = [
-    ("гоблет", "goblet"),
-    ("присед с гантел", "goblet"),   # до общего "присед"
+    # ── СПЕЦИФИЧНЫЕ — строго раньше общих ───────────────────────────────────
+
+    # Присед
     ("гоблет-присед", "goblet"),
-    ("хакк", "hack_squat"),
+    ("гоблет", "goblet"),
+    ("присед с гантел", "goblet"),          # "присед с гантелями" — goblet, не squat
     ("хакк-присед", "hack_squat"),
+    ("хакк", "hack_squat"),
+    ("болгарские выпады", "bulgarian"),
+    ("болгарские выпады (нога", "bulgarian"),
     ("болгар", "bulgarian"),
+    ("выпады ходьбой", "lunge"),
+    ("выпады на месте", "lunge"),
+    ("выпады с гантелями", "lunge"),
     ("выпад", "lunge"),
+    ("присед со штангой", "squat"),
+    ("присед сумо", "squat"),
+    ("присед с паузой", "squat"),
+    ("приседания на одной ноге", "squat"),
+    ("приседания (собственный вес)", "squat"),
+    ("присед", "squat"),
+
+    # Нижняя тяга / задняя цепь
+    ("румынская тяга с гантелями", "rdl"),
+    ("румынская тяга со штангой", "rdl"),
+    ("румынская тяга", "rdl"),
+    ("становая тяга (техника)", "deadlift"),
+    ("становая тяга (лёгкая", "deadlift"),
+    ("становая тяга", "deadlift"),          # стоит ПОСЛЕ (техника) и (лёгкая)
+    ("ягодичный мост со штангой", "hinge"),
+    ("ягодичный мост на одной ноге", "hinge"),
     ("ягодичный мост", "hinge"),
+    ("гиперэкстензия с весом", "hyperext"),
+    ("гиперэкстензия на полу", "hyperext"),
     ("гиперэкстензи", "hyperext"),
+    ("good-morning", "good_morning"),
+
+    # Ноги — тренажёры
+    ("жим ногами в тренажёре", "legpress"),
+    ("жим ногами", "legpress"),
+    ("жим ног", "legpress"),
+    ("сгибания ног в тренажёре", "legcurl"),
     ("сгибания ног", "legcurl"),
+
+    # Икры
+    ("подъёмы на носки на одной ноге", "calves"),
+    ("подъёмы на носки с гантелями", "calves"),
+    ("подъёмы на носки стоя", "calves"),
+    ("подъёмы на носки сидя", "calves"),
     ("подъём на носки", "calves"),
     ("подъёмы на носки", "calves"),
     ("икры", "calves"),
-    ("присед", "squat"),
-    ("жим ног", "legpress"),
-    ("жим лёж", "bench"),
-    ("жим гантел", "bench"),
-    ("жим в тренаж", "bench"),
-    ("сведени", "bench"),
-    ("отжима узк", "narrow_pushup"),
-    ("узкие отжима", "narrow_pushup"),
-    ("пайк", "pike_pushup"),
-    ("отжима", "row"),
-    ("верхний блок", "latpulldown"),
-    ("тяга верхн", "latpulldown"),
-    ("тяга резинки сверху", "band_pull"),
-    ("тяга горизонт", "rowtrain"),
-    ("тяга гантел", "dumbbell_row"),
-    ("тяга в тренаж", "rowtrain"),
-    ("тяга резинки к поясу", "band_row"),
-    ("тяга резинки", "band_row"),
-    ("подтягива", "pullup"),
-    ("румынская тяга", "rdl"),
-    ("good-morning", "good_morning"),
-    ("жим резинки вверх", "band_ohp"),
-    ("жим вверх", "ohp"),
-    ("жим в тренажёре вверх", "ohp"),
-    ("face pull", "face_pull"),
-    ("тяга к лицу", "face_pull"),
-    ("задняя дельта", "rear_delt"),
-    ("разведени", "lateralraise"),
-    ("молотки", "hammer"),
-    ("сгибани", "biceps"),
-    ("разгибани", "triceps"),
-    ("трицепс", "triceps"),
-    ("разгибание гантели из-за головы", "triceps_oh"),
-    ("планка", "core"),
-    ("скручива", "core"),
-    ("подъём ног", "core"),
-    # Новые упражнения из расширенных пулов
-    ("жим штанги лёж", "bench"),
-    ("жим штанги под углом", "bench"),
-    ("жим гантелей под углом", "bench"),
-    ("жим гантелей лёж", "bench"),
-    ("сведения в кроссовере", "bench"),
-    ("отжимания с весом", "row"),
-    ("тяга штанги в наклоне", "rowtrain"),
-    ("тяга т-гриф", "rowtrain"),
-    ("тяга нижнего блока", "rowtrain"),
-    ("горизонтальные подтягивания", "pullup"),
-    ("негативные подтягивания", "pullup"),
-    ("подтягивания на петлях", "pullup"),
-    ("подтягивания (обратный хват)", "pullup"),
-    ("подтягивания (прямой хват)", "pullup"),
-    ("жим штанги стоя", "ohp"),
-    ("армейский жим", "ohp"),
-    ("жим гантелей стоя", "ohp"),
-    ("жим гантелей сидя", "ohp"),
-    ("тяга штанги к подбородку", "lateralraise"),
-    ("тяга резинки к подбородку", "lateralraise"),
-    ("тяга резинки к лицу", "face_pull"),
-    ("задняя дельта в тренажёре", "rear_delt"),
-    ("разведения гантелей в наклоне", "rear_delt"),
-    ("разведения гантелей в стороны", "lateralraise"),
-    ("сгибания на скамье скотта", "biceps"),
-    ("концентрированные сгибания", "biceps"),
-    ("сгибания на резинке", "biceps"),
-    ("французский жим", "triceps_oh"),
-    ("обратные отжимания", "triceps"),
-    ("ролик для пресса", "core"),
-    ("боковая планка", "core"),
-    ("велосипед", "core"),
-    ("обратные скручивания", "core"),
-    ("подъёмы на носки на одной ноге", "calves"),
-    ("подъёмы на носки с гантелями", "calves"),
-    ("становая тяга", "rdl"),
-    ("приседания на одной ноге", "squat"),
-    ("присед сумо", "squat"),
-    ("выпады ходьбой", "lunge"),
-    ("выпады на месте", "lunge"),
-    ("болгарские выпады с гантелями", "bulgarian"),
-    ("болгарские выпады", "bulgarian"),
-    ("ягодичный мост на одной ноге", "hinge"),
-    ("румынская тяга с гантелями", "rdl"),
-    ("румынская тяга со штангой", "rdl"),
-    ("становая тяга (лёгкая", "deadlift"),
-    ("становая тяга (техника)", "deadlift"),
-    ("становая тяга", "deadlift"),
-    ("тяга штанги в наклоне", "barbell_row"),
-    ("тяга т-гриф", "barbell_row"),
+
+    # Жим лёжа — специфичные перед общим "жим лёж"
     ("жим штанги под углом", "incline_press"),
     ("жим гантелей под углом", "incline_press"),
-    ("жим штанги стоя", "ohp_barbell"),
-    ("армейский жим", "ohp_barbell"),
-    # Зал: базовые, которые могут не попасть выше
-    ("присед со штангой", "squat"),
-    ("присед с гантелями", "goblet"),
     ("жим штанги лёж", "bench"),
     ("жим гантелей лёж", "bench"),
     ("жим в тренажёре (грудь)", "bench"),
+    ("жим лёж", "bench"),
+    ("жим в тренаж", "bench"),
     ("сведения в кроссовере", "bench"),
-    ("подтягивания (широкий", "pullup"),
-    ("подтягивания нейтральным", "pullup"),
-    ("верхний блок широк", "latpulldown"),
-    ("верхний блок узк", "latpulldown"),
-    ("тяга верхнего блока", "latpulldown"),
-    ("жим ногами в тренажёре", "legpress"),
-    ("хакк-присед", "hack_squat"),
-    ("болгарские выпады с гантел", "bulgarian"),
-    ("выпады с гантелями", "lunge"),
-    ("ягодичный мост со штангой", "hinge"),
-    ("гиперэкстензия с весом", "hyperext"),
-    ("гиперэкстензия на полу", "hyperext"),
-    ("сгибания ног в тренажёре", "legcurl"),
-    ("подъёмы на носки стоя", "calves"),
-    ("подъёмы на носки сидя", "calves"),
-    ("скручивания на блоке", "core"),
-    ("подъёмы ног в висе", "core"),
-    ("подъёмы ног в упоре", "core"),
-    ("ролик для пресса", "core"),
-    ("боковая планка", "core"),
-    # Дома: базовые
-    ("приседания (собственный вес)", "squat"),
-    ("присед с паузой", "squat"),
-    ("присед сумо", "squat"),
-    ("болгарские выпады (нога на стуле)", "bulgarian"),
-    ("выпады на месте", "lunge"),
-    ("выпады ходьбой", "lunge"),
-    ("приседания на одной ноге", "squat"),
-    ("ягодичный мост на одной ноге", "hinge"),
-    ("good-morning", "good_morning"),
-    ("отжимания (классика)", "row"),
+    ("сведени", "bench"),
+
+    # Жим вверх — ohp_barbell строго перед ohp
+    ("армейский жим", "ohp_barbell"),
+    ("жим штанги стоя", "ohp_barbell"),
+    ("жим гантелей стоя", "ohp"),
+    ("жим гантелей сидя", "ohp"),
+    ("жим резинки вверх", "band_ohp"),
+    ("жим вверх", "ohp"),
+    ("жим в тренажёре вверх", "ohp"),
+
+    # Отжимания
+    ("отжимания узкие (трицепс)", "narrow_pushup"),
+    ("отжима узк", "narrow_pushup"),
+    ("узкие отжима", "narrow_pushup"),
+    ("пайк-отжимания", "pike_pushup"),
+    ("отжимания (ноги высоко", "pike_pushup"),
+    ("пайк", "pike_pushup"),
+    ("отжимания с весом", "row"),
     ("отжимания с паузой", "row"),
     ("отжимания от возвышения", "row"),
     ("отжимания с хлопком", "row"),
+    ("отжимания (классика)", "row"),
     ("горизонтальные подтягивания", "pullup"),
-    ("тяга резинки к поясу", "band_row"),
-    ("тяга резинки в наклоне", "band_row"),
+    ("обратные отжимания от стула", "triceps"),
+    ("обратные отжимания", "triceps"),
+    ("отжима", "row"),
+
+    # Подтягивания / тяга сверху
+    ("подтягивания (широкий", "pullup"),
     ("подтягивания (обратный хват)", "pullup"),
     ("подтягивания (прямой хват)", "pullup"),
-    ("негативные подтягивания", "pullup"),
-    ("тяга резинки сверху", "band_pull"),
+    ("подтягивания нейтральным", "pullup"),
     ("подтягивания на петлях", "pullup"),
-    ("пайк-отжимания", "pike_pushup"),
-    ("жим резинки вверх", "band_ohp"),
-    ("отжимания (ноги высоко", "pike_pushup"),
-    ("тяга резинки к лицу", "face_pull"),
-    ("сгибания на резинке", "biceps"),
-    ("отжимания узкие (трицепс)", "narrow_pushup"),
-    ("обратные отжимания от стула", "triceps"),
-    ("подъёмы ног лёжа", "core"),
-    ("велосипед (скручивания", "core"),
-    ("обратные скручивания", "core"),
-    ("скручивания на полу", "core"),
-    ("подъёмы на носки на одной ноге", "calves"),
-    ("подъёмы на носки с гантелями", "calves"),
-    ("разведения гантелей в стороны", "lateralraise"),
-    ("разведения гантелей в наклоне", "rear_delt"),
+    ("негативные подтягивания", "pullup"),
+    ("подтягива", "pullup"),
+    ("верхний блок широк", "latpulldown"),
+    ("верхний блок узк", "latpulldown"),
+    ("тяга верхнего блока", "latpulldown"),
+    ("верхний блок", "latpulldown"),
+    ("тяга верхн", "latpulldown"),
+
+    # Горизонтальные тяги — barbell_row/dumbbell_row перед rowtrain
+    ("тяга штанги в наклоне", "barbell_row"),
+    ("тяга т-гриф", "barbell_row"),
+    ("тяга гантели одной рукой", "dumbbell_row"),
+    ("тяга гантел", "dumbbell_row"),
+    ("тяга нижнего блока", "rowtrain"),
+    ("тяга горизонт", "rowtrain"),
+    ("тяга в тренаж", "rowtrain"),
+
+    # Тяга резинок — специфичные перед "тяга резинки"
+    ("тяга резинки сверху", "band_pull"),
+    ("тяга резинки к поясу", "band_row"),
+    ("тяга резинки в наклоне", "band_row"),
+    ("тяга резинки к лицу", "face_pull"),     # перед "тяга резинки"
     ("тяга резинки к подбородку", "lateralraise"),
-    ("молотки с гантелями", "hammer"),
-    ("сгибания гантелей стоя", "biceps"),
-    ("разгибание гантели из-за головы", "triceps_oh"),
-    ("обратные отжимания", "triceps"),
+    ("тяга резинки", "band_row"),
+
+    # Face pull / задняя дельта
     ("face pull", "face_pull"),
+    ("тяга к лицу", "face_pull"),
+    ("тяга штанги к подбородку", "lateralraise"),
+    ("задняя дельта в тренажёре", "rear_delt"),
+    ("задняя дельта", "rear_delt"),
+    ("разведения гантелей в наклоне", "rear_delt"),   # перед "разведени"
+    ("разведения гантелей в стороны", "lateralraise"),
+    ("разведени", "lateralraise"),
+
+    # Пресс
+    ("ролик для пресса", "core"),
+    ("боковая планка", "core"),
+    ("велосипед (скручивания", "core"),
+    ("велосипед", "core"),
+    ("обратные скручивания", "core"),
+    ("скручивания на блоке", "core"),
+    ("скручивания на полу", "core"),
+    ("подъёмы ног в висе", "core"),
+    ("подъёмы ног в упоре", "core"),
+    ("подъёмы ног лёжа", "core"),
+    ("подъём ног", "core"),
+    ("планка", "core"),
+    ("скручива", "core"),
+
+    # Бицепс
+    ("сгибания на скамье скотта", "biceps"),
+    ("концентрированные сгибания", "biceps"),
+    ("сгибания на резинке", "biceps"),
+    ("сгибания гантелей стоя", "biceps"),
+    ("молотки с гантелями", "hammer"),
+    ("молотки", "hammer"),
+    ("сгибани", "biceps"),
+
+    # Трицепс — специфичные перед "разгибани"
+    ("разгибание гантели из-за головы", "triceps_oh"),
+    ("французский жим", "triceps_oh"),
+    ("трицепс", "triceps"),
+    ("разгибани", "triceps"),
 ]
 
 
@@ -3179,8 +3235,11 @@ async def cb_faq_question(callback: CallbackQuery, bot: Bot):
 
 
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
+    sub = await get_subscription(user_id)
+    tariff_line = format_tariff_line(sub)
     text = (
         "Главное меню\n\n"
+        f"{tariff_line}\n\n"
         "Шаги для старта:\n"
         "1. ⚙️ Профиль — цель, параметры, место тренировок\n"
         "2. 💳 Оплата — выбери тариф, программа сформируется сразу\n"
@@ -4568,16 +4627,16 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
 
 
 async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
-    """Статистика выполненных тренировок — теперь в главном экране тренировок."""
+    """Статистика тренировок: дни по порядку + закрытие недели."""
     uid = callback.from_user.id
     async with db() as conn:
-        # Пробуем получить day_title (новое поле)
         try:
             async with conn.execute("""
                 SELECT day_num, completed_date, created_at, day_title
                 FROM workout_completions
                 WHERE user_id=?
-                ORDER BY id DESC LIMIT 30
+                ORDER BY completed_date ASC, day_num ASC, id ASC
+                LIMIT 60
             """, (uid,)) as cur:
                 rows = await cur.fetchall()
         except Exception:
@@ -4585,7 +4644,8 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
                 SELECT day_num, completed_date, created_at
                 FROM workout_completions
                 WHERE user_id=?
-                ORDER BY id DESC LIMIT 30
+                ORDER BY completed_date ASC, day_num ASC, id ASC
+                LIMIT 60
             """, (uid,)) as cur:
                 raw = await cur.fetchall()
             rows = [(r[0], r[1], r[2], "") for r in raw]
@@ -4596,12 +4656,16 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
 
     total = len(rows)
     plan_text, plan_struct = await get_workout_plan(uid)
+    u = await get_user(uid)
+    freq = int(u.get("freq") or 3)
 
-    lines = ["📊 Статистика тренировок\n"]
+    lines = ["\U0001f4ca Статистика тренировок\n"]
     lines.append(f"Всего выполнено: {total} тренировок\n")
 
+    # Последние 10 — от старых к новым (rows уже в порядке ASC)
+    recent = rows[-10:]
     lines.append("🗓 Последние тренировки:")
-    for row in rows[:10]:
+    for row in recent:
         day_num = row[0]
         completed_date = row[1]
         saved_title = row[3] if len(row) > 3 else ""
@@ -4615,11 +4679,11 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
             day_label = f"День {day_num}"
         lines.append(f"✅ {completed_date}  —  {day_label}")
 
-    # Серия (streak)
-    dates = sorted(set(r[1] for r in rows), reverse=True)
+    # Серия (streak) по всем датам
+    all_dates = sorted(set(r[1] for r in rows), reverse=True)
     streak = 0
     prev = None
-    for d in dates:
+    for d in all_dates:
         try:
             dt = datetime.strptime(d, "%Y-%m-%d").date()
         except Exception:
@@ -4632,7 +4696,22 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
             break
         prev = dt
 
-    lines.append(f"\n🔥 Текущая серия: {streak} дн. подряд")
+    lines.append(f"\n\U0001f525 Текущая серия: {streak} дн. подряд")
+
+    # Закрытие недели
+    today = datetime.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    ws_str = week_start.strftime("%Y-%m-%d")
+    we_str = week_end.strftime("%Y-%m-%d")
+    done_this_week = len(set(
+        r[1] for r in rows if ws_str <= r[1] <= we_str
+    ))
+    lines.append("")
+    if done_this_week >= freq:
+        lines.append(f"✅ Неделя закрыта: выполнено {done_this_week}/{freq}")
+    else:
+        lines.append(f"📌 Осталось: {freq - done_this_week} тренировок на этой неделе")
 
     text = "\n".join(lines)
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -4643,32 +4722,51 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
 
 
 async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
-    """Показываем технику упражнения с картинкой (из просмотра дня)."""
+    """Показываем технику конкретного упражнения из просмотра дня тренировки.
+    callback_data: wex:tech:{day_num}:{tech_key}
+    """
     parts = callback.data.split(":")
-    tech_key = parts[3]
-    day_num = parts[2]
+    tech_key = parts[3] if len(parts) > 3 else ""
+    day_num  = parts[2] if len(parts) > 2 else "1"
+
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"⬅️ Назад к тренировке (День {day_num})",
+            callback_data=f"wday:{day_num}"
+        )]
+    ])
 
     item = TECH.get(tech_key)
     if not item:
-        await callback.answer("Техника не найдена 😅", show_alert=True)
+        # Техника не найдена — показываем экран вместо show_alert
+        await clean_edit(
+            callback,
+            callback.from_user.id,
+            (
+                "⚠️ Техника для этого упражнения пока не добавлена.\n\n"
+                "Напиши в поддержку — добавим."
+            ),
+            reply_markup=back_kb,
+        )
+        await callback.answer()
         return
 
-    text = item["text"]
-    img_path = item["img"]
+    text     = item["text"]
+    img_path = item.get("img", "")
 
-    back_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"⬅️ Назад к Дню {day_num}", callback_data=f"wday:{day_num}")]
-    ])
+    if img_path and os.path.exists(img_path):
+        # Есть картинка — удаляем текущее сообщение и отправляем фото
+        last_id = await get_last_bot_msg_id(callback.from_user.id)
+        if last_id:
+            try:
+                await bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=last_id
+                )
+            except Exception:
+                pass
 
-    last_id = await get_last_bot_msg_id(callback.from_user.id)
-    if last_id:
-        try:
-            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
-        except Exception:
-            pass
-
-    if os.path.exists(img_path):
-        photo = FSInputFile(img_path)
+        photo   = FSInputFile(img_path)
         caption = text[:1020] + ("…" if len(text) > 1020 else "")
         m = await bot.send_photo(
             chat_id=callback.message.chat.id,
@@ -4687,12 +4785,8 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
         else:
             await set_last_bot_msg_id(callback.from_user.id, m.message_id)
     else:
-        m = await bot.send_message(
-            chat_id=callback.message.chat.id,
-            text=text,
-            reply_markup=back_kb
-        )
-        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
+        # Нет картинки — просто редактируем текущее сообщение
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
 
     await callback.answer()
 
@@ -4902,7 +4996,11 @@ async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
     await state.set_state(MeasureFlow.enter_value)
 
     name = dict(MEASURE_TYPES).get(mtype, mtype)
-    await callback.message.answer(f"Впиши «{name}» числом:")
+    text = f"Замеры\n\n\U0001f4dd {name}\n\nВведи значение числом:"
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к замерам", callback_data="nav:measures")]
+    ])
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
     await callback.answer()
 
 
@@ -4917,16 +5015,23 @@ async def measure_value(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     mtype = data.get("mtype")
+    uid = message.from_user.id
 
-    await add_measure(message.from_user.id, mtype, val)
-    rows = await get_last_measures(message.from_user.id, mtype, 6)
+    await add_measure(uid, mtype, val)
+    await try_delete_user_message(bot, message)
 
+    rows = await get_last_measures(uid, mtype, 6)
     name = dict(MEASURE_TYPES).get(mtype, mtype)
     hist = "\n".join([f"• {r[0]:g} ({r[1][:10]})" for r in rows])
-    out = f"✅ {name}: {val:g}\n\nПоследние:\n{hist}"
-    await clean_send(bot, message.chat.id, message.from_user.id, out, reply_markup=measures_kb())
+    out = (
+        f"Замеры\n\n"
+        f"✅ {name} записан: {val:g}\n\n"
+        f"Последние {name}:\n{hist}\n\n"
+        "Выбери следующий параметр:"
+    )
     await state.set_state(MeasureFlow.choose_type)
-    await try_delete_user_message(bot, message)
+    # Редактируем последнее сообщение бота — без создания нового
+    await clean_send(bot, message.chat.id, uid, out, reply_markup=measures_kb())
 
 
 async def measures_history(callback: CallbackQuery):
@@ -5520,6 +5625,92 @@ async def run_web_server():
 # =========================
 # MAIN
 # =========================
+
+# =========================
+# НАПОМИНАНИЯ ОБ ОКОНЧАНИИ ПОДПИСКИ
+# =========================
+async def _check_and_remind_subscriptions(bot: Bot):
+    """Проверяем подписки и рассылаем уведомления при необходимости."""
+    today = datetime.utcnow().date()
+    async with db() as conn:
+        async with conn.execute(
+            """SELECT user_id, tariff, tariff_name, expires_at, remind_stage
+               FROM access WHERE paid=1 AND expires_at IS NOT NULL"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    for row in rows:
+        user_id, tariff, tariff_name, expires_at, remind_stage = row
+        remind_stage = remind_stage if remind_stage is not None else -1
+        try:
+            exp_dt = datetime.fromisoformat(expires_at)
+            exp_date = exp_dt.date()
+        except Exception:
+            continue
+
+        days_left = (exp_date - today).days
+
+        # Подписка истекла — деактивируем
+        if days_left < 0:
+            async with db() as conn:
+                await conn.execute(
+                    "UPDATE access SET paid=0 WHERE user_id=?", (user_id,)
+                )
+                await conn.commit()
+            continue
+
+        # Определяем нужную стадию напоминания
+        send_stage = None
+        if days_left == 3 and remind_stage < 3:
+            send_stage = 3
+        elif days_left == 1 and remind_stage < 1:
+            send_stage = 1
+        elif days_left == 0 and remind_stage < 0:
+            send_stage = 0
+
+        if send_stage is None:
+            continue
+
+        if days_left == 0:
+            days_str = "сегодня"
+        elif days_left == 1:
+            days_str = "завтра"
+        else:
+            days_str = f"через {days_left} дн."
+
+        text = (
+            f"\u23f3 Подписка скоро закончится: осталось {days_left} дн.\n\n"
+            "Чтобы не потерять доступ к плану и статистике — продли подписку \U0001f447"
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="\U0001f4b3 Продлить подписку",
+                callback_data="nav:upgrade"
+            )]
+        ])
+        try:
+            await bot.send_message(user_id, text, reply_markup=kb)
+            async with db() as conn:
+                await conn.execute(
+                    "UPDATE access SET remind_stage=? WHERE user_id=?",
+                    (send_stage, user_id)
+                )
+                await conn.commit()
+        except Exception:
+            pass  # пользователь заблокировал бота
+
+
+async def subscription_reminder_loop(bot: Bot):
+    """Фоновая задача: раз в 12 часов проверяет подписки и шлёт уведомления."""
+    logger.info("subscription_reminder_loop started")
+    while True:
+        try:
+            await _check_and_remind_subscriptions(bot)
+        except Exception:
+            logger.exception("subscription_reminder_loop error")
+        await asyncio.sleep(12 * 3600)
+
+
 async def main():
     if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
         raise RuntimeError("Нужно задать BOT_TOKEN через ENV.")
@@ -5556,6 +5747,7 @@ async def main():
     await asyncio.gather(
         bot_loop(),
         run_web_server(),
+        subscription_reminder_loop(bot),
     )
 
 if __name__ == "__main__":
