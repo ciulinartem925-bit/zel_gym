@@ -40,9 +40,9 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
-    "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 0},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 1,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 1,  "plan_regens": 10},
+    "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 399,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 899,  "plan_regens": 10},
     "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
 }
 
@@ -861,10 +861,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
         rows.append(btns[i:i+2])
 
     rows.append([InlineKeyboardButton(text="📊 Статистика", callback_data="wday:stats:0")])
-    if has_full_access:
-        rows.append([InlineKeyboardButton(text="🔄 Сменить программу", callback_data="p:edit")])
-    else:
-        rows.append([InlineKeyboardButton(text="📋 Сменить план тренировок", callback_data="nav:upgrade")])
+    rows.append([InlineKeyboardButton(text="🔄 Сменить план тренировок", callback_data="p:edit")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -1306,6 +1303,14 @@ async def init_db():
                 await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
             except Exception:
                 pass
+        # Миграция: пробный тариф теперь имеет 1 смену плана (было 0)
+        # Исправляем существующих пользователей с trial + plan_regens_left=0
+        try:
+            await conn.execute(
+                "UPDATE access SET plan_regens_left=1 WHERE tariff='trial' AND (plan_regens_left IS NULL OR plan_regens_left=0) AND paid=1"
+            )
+        except Exception:
+            pass
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2921,10 +2926,14 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 
     lines = [f"📅 Пример {day_i}  (цель: {calories} ккал)", ""]
     for mi, m in enumerate(day_meals, start=1):
-        mt = _sum_nutr(m)
+        # Фильтруем позиции с нулевыми граммами
+        m_filtered = [(k, g) for k, g in m if g > 0.5]
+        if not m_filtered:
+            continue
+        mt = _sum_nutr(m_filtered)
         meal_name = meal_names[mi - 1] if mi <= len(meal_names) else f"Приём {mi}"
         lines.append(f"{meal_name}  ({_fmt_tot(mt)})")
-        for k, g in m:
+        for k, g in m_filtered:
             if k == "eggs":
                 est = max(1, int(round(g / 60.0)))
                 lines.append(f"• {FOOD_DB[k]['name']} — {est} шт (~{int(g)}г)")
@@ -3434,17 +3443,37 @@ async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     uid = callback.from_user.id
     u = await get_user(uid)
     regens_left, is_unlimited = await get_plan_regens(uid)
+
+    # Если лимит исчерпан — показываем заглушку с предложением апгрейда
+    if not is_unlimited and regens_left is not None and int(regens_left) <= 0:
+        a = await get_access(uid)
+        tariff_name = TARIFFS.get(a.get("tariff", ""), {}).get("title", "текущий")
+        await clean_edit(callback, uid,
+            f"⚠️ Лимит смены плана исчерпан.\n\n"
+            f"Твой тариф: {tariff_name}\n"
+            "Чтобы менять план чаще — обнови подписку 👇",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💳 Тарифы", callback_data="nav:upgrade")],
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")],
+            ])
+        )
+        await callback.answer()
+        return
+
     if is_unlimited:
         regens_str = "безлимит"
     elif regens_left is not None:
         regens_str = f"осталось: {regens_left}"
     else:
         regens_str = ""
+
     text = (
         "Редактирование профиля\n\n"
         "Выбери параметр — введи новое значение.\n"
         "Когда всё готово — нажми «Составить новый план»."
     )
+    if regens_str:
+        text += f"\n\n🔄 Смен плана: {regens_str}"
     await clean_edit(callback, uid, text, reply_markup=profile_edit_field_kb(u, regens_str))
     await callback.answer()
 
@@ -3688,6 +3717,8 @@ async def _finish_field_edit(bot: Bot, chat_id: int, user_id: int):
     else:
         regens_str = ""
     text = _profile_summary_text(u) + "\n\nПараметр сохранён.\nНажми «Составить новый план», чтобы обновить программу."
+    if regens_str:
+        text += f"\n🔄 Смен плана: {regens_str}"
     await clean_send(bot, chat_id, user_id, text, reply_markup=profile_edit_field_kb(u, regens_str))
 
 
@@ -5765,4 +5796,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
