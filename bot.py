@@ -1582,6 +1582,16 @@ def format_tariff_line(sub: dict) -> str:
         return "💳 Тариф: нет (доступ ограничен)"
     if tariff == "life":
         return "💳 Тариф: Навсегда ✅"
+    # Пробный — всегда отображаем как "Пробный"
+    if tariff == "trial":
+        expires_at = sub.get("expires_at")
+        if expires_at:
+            try:
+                dt = datetime.fromisoformat(expires_at)
+                return f"💳 Тариф: Пробный (до {dt.strftime('%d.%m.%Y')})"
+            except Exception:
+                pass
+        return "💳 Тариф: Пробный"
     tariff_name = sub.get("tariff_name") or ""
     expires_at = sub.get("expires_at")
     if expires_at:
@@ -2036,7 +2046,7 @@ def get_tech_key_for_exercise(name: str) -> Optional[str]:
         return "core"
     if any(x in n for x in ["румынск", "мертвая", "становая", "hinge", "ягодиц"]):
         return "rdl"
-    return "squat"  # самый базовый fallback
+    return None  # нет подходящей техники — не показываем кнопку
 
 
 # =========================
