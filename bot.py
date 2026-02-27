@@ -40,10 +40,10 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
 # ТАРИФЫ
 TARIFFS = {
-    "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 0},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 399,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 899,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
+    "trial": {"title": "Пробный доступ (3 дня)", "days": 3,  "price": 1},
+    "t1":    {"title": "1 месяц",                "days": 30, "price": 399},
+    "t3":    {"title": "3 месяца",               "days": 90, "price": 899},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1990},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -830,33 +830,10 @@ def simple_back_to_menu_inline_kb():
 # =========================
 # ✅ Тренировки: кнопки дней
 # =========================
-def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict = None):
+def workout_days_kb(freq: int, has_full_access: bool = False):
     freq = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
     rows = []
-    btns = []
-    for i in range(1, freq + 1):
-        if plan_struct:
-            day_text = (plan_struct.get("days") or {}).get(str(i), "")
-            label = get_day_display_name(i, day_text)
-            # Короткие метки для кнопок
-            t = day_text.lower()
-            if "фулбади" in t or "fullbody" in t:
-                suffix = {1: "A", 2: "B", 3: "C"}.get(i, str(i))
-                label = f"Full Body {suffix}"
-            elif "верх тела" in t:
-                label = "Верх"
-            elif "низ тела" in t or ("ниж" in t and "тел" in t):
-                label = "Низ"
-            elif "грудь и плеч" in t or "толчок" in t:
-                label = "Грудь/Плечи"
-            elif ("тяга" in t and "спина" in t) or "спина и бицепс" in t:
-                label = "Спина/Бицепс"
-            elif "ноги" in t and "квадрицепс" in t:
-                label = "Ноги"
-            btn_text = f"📅 {label}"
-        else:
-            btn_text = f"📅 День {i}"
-        btns.append(InlineKeyboardButton(text=btn_text, callback_data=f"wday:{i}"))
+    btns = [InlineKeyboardButton(text=f"📅 День {i}", callback_data=f"wday:{i}") for i in range(1, freq + 1)]
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
@@ -864,7 +841,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     if has_full_access:
         rows.append([InlineKeyboardButton(text="🔄 Сменить программу", callback_data="p:edit")])
     else:
-        rows.append([InlineKeyboardButton(text="📋 Сменить план тренировок", callback_data="nav:upgrade")])
+        rows.append([InlineKeyboardButton(text="🔥 Открыть полный доступ (3 мес)", callback_data="nav:upgrade")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -921,15 +898,11 @@ def profile_ready_kb():
     ])
 
 
-def profile_edit_field_kb(u: dict, regens_str: str = "") -> InlineKeyboardMarkup:
+def profile_edit_field_kb(u: dict) -> InlineKeyboardMarkup:
     """Меню выбора конкретного поля профиля для редактирования — 2 столбца."""
     def val(k, fallback="—"):
         v = u.get(k)
         return str(v) if v else fallback
-
-    plan_btn_text = f"🚀 Составить новый план"
-    if regens_str:
-        plan_btn_text += f"  ({regens_str})"
 
     rows = [
         [
@@ -952,7 +925,7 @@ def profile_edit_field_kb(u: dict, regens_str: str = "") -> InlineKeyboardMarkup
             InlineKeyboardButton(text=f"🍽 Приёмов еды: {val('meals')}", callback_data="pf:meals"),
             InlineKeyboardButton(text=f"⛔️ Ограничения", callback_data="pf:limits"),
         ],
-        [InlineKeyboardButton(text=plan_btn_text, callback_data="p:rebuild_plan")],
+        [InlineKeyboardButton(text="🚀 Составить новый план", callback_data="p:rebuild_plan")],
         [InlineKeyboardButton(text="🏠 Назад", callback_data="nav:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -1290,22 +1263,10 @@ async def init_db():
             user_id INTEGER PRIMARY KEY,
             paid INTEGER DEFAULT 0,
             tariff TEXT,
-            tariff_name TEXT NOT NULL DEFAULT 'Нет',
             expires_at TEXT,
-            paid_at TEXT,
-            plan_regens_left INTEGER DEFAULT NULL,
-            remind_stage INTEGER NOT NULL DEFAULT -1
+            paid_at TEXT
         )
         """)
-        for _col, _typ in [
-            ("plan_regens_left", "INTEGER DEFAULT NULL"),
-            ("tariff_name",      "TEXT NOT NULL DEFAULT 'Нет'"),
-            ("remind_stage",     "INTEGER NOT NULL DEFAULT -1"),
-        ]:
-            try:
-                await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
-            except Exception:
-                pass
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1501,108 +1462,6 @@ async def is_access_active(user_id: int) -> bool:
     return datetime.utcnow() < exp
 
 
-async def get_plan_regens(user_id: int):
-    """Возвращает (regens_left, is_unlimited).
-    regens_left=None => безлимит. regens_left=0 => исчерпан."""
-    async with db() as conn:
-        async with conn.execute(
-            "SELECT plan_regens_left, tariff FROM access WHERE user_id=?", (user_id,)
-        ) as cur:
-            row = await cur.fetchone()
-    if not row:
-        return (0, False)
-    regens_left = row[0]
-    tariff_code = row[1] or ""
-    t = TARIFFS.get(tariff_code, {})
-    base_regens = t.get("plan_regens")
-    if base_regens is None:
-        return (None, True)  # безлимит
-    if regens_left is None:
-        # Поле ещё не установлено (старые записи) — использовать базовый лимит тарифа
-        return (base_regens, False)
-    return (int(regens_left), False)
-
-
-async def decrement_plan_regens(user_id: int):
-    """Уменьшить счётчик на 1 (не уходить ниже 0)."""
-    async with db() as conn:
-        await conn.execute(
-            "UPDATE access SET plan_regens_left = MAX(0, COALESCE(plan_regens_left, 0) - 1) WHERE user_id=?",
-            (user_id,)
-        )
-        await conn.commit()
-
-
-
-# =========================
-# ПОДПИСКА: утилиты
-# =========================
-async def get_subscription(user_id: int) -> dict:
-    """Единый источник правды о подписке пользователя."""
-    async with db() as conn:
-        async with conn.execute(
-            """SELECT paid, tariff, tariff_name, expires_at, paid_at, remind_stage
-               FROM access WHERE user_id=?""",
-            (user_id,)
-        ) as cur:
-            row = await cur.fetchone()
-    if not row:
-        return {
-            "tariff": "none", "tariff_name": "Нет",
-            "expires_at": None, "is_active": 0, "remind_stage": -1
-        }
-    paid, tariff, tariff_name, expires_at, paid_at, remind_stage = row
-    is_active = 0
-    if paid == 1:
-        if tariff == "life":
-            is_active = 1
-        elif expires_at:
-            try:
-                if datetime.utcnow() < datetime.fromisoformat(expires_at):
-                    is_active = 1
-            except Exception:
-                pass
-    return {
-        "tariff": tariff or "none",
-        "tariff_name": tariff_name or "Нет",
-        "expires_at": expires_at,
-        "is_active": is_active,
-        "remind_stage": remind_stage if remind_stage is not None else -1,
-    }
-
-
-def is_subscription_active(sub: dict) -> bool:
-    return bool(sub.get("is_active"))
-
-
-def format_tariff_line(sub: dict) -> str:
-    """Строка о тарифе для главного меню."""
-    tariff = sub.get("tariff", "none")
-    if not is_subscription_active(sub):
-        return "💳 Тариф: нет (доступ ограничен)"
-    if tariff == "life":
-        return "💳 Тариф: Навсегда ✅"
-    # Пробный — всегда отображаем как "Пробный"
-    if tariff == "trial":
-        expires_at = sub.get("expires_at")
-        if expires_at:
-            try:
-                dt = datetime.fromisoformat(expires_at)
-                return f"💳 Тариф: Пробный (до {dt.strftime('%d.%m.%Y')})"
-            except Exception:
-                pass
-        return "💳 Тариф: Пробный"
-    tariff_name = sub.get("tariff_name") or ""
-    expires_at = sub.get("expires_at")
-    if expires_at:
-        try:
-            dt = datetime.fromisoformat(expires_at)
-            return f"💳 Тариф: {tariff_name} (до {dt.strftime('%d.%m.%Y')})"
-        except Exception:
-            pass
-    return f"💳 Тариф: {tariff_name}"
-
-
 async def is_full_access_active(user_id: int) -> bool:
     """Полный доступ: тренировки + питание (только платные тарифы, не пробный)."""
     a = await get_access(user_id)
@@ -1620,16 +1479,11 @@ async def set_paid_tariff(user_id: int, tariff_code: str):
     now = datetime.utcnow()
     now_iso = now.isoformat()
     expires_at = None if t["days"] is None else (now + timedelta(days=int(t["days"]))).isoformat()
-    regens = t.get("plan_regens")  # None = безлимит, 0 = нельзя, N = лимит
-    tariff_name = t.get("title", tariff_code)
 
     async with db() as conn:
         await conn.execute(
-            """UPDATE access
-               SET paid=1, tariff=?, tariff_name=?, expires_at=?, paid_at=?,
-                   plan_regens_left=?, remind_stage=-1
-               WHERE user_id=?""",
-            (tariff_code, tariff_name, expires_at, now_iso, regens, user_id)
+            "UPDATE access SET paid=1, tariff=?, expires_at=?, paid_at=? WHERE user_id=?",
+            (tariff_code, expires_at, now_iso, user_id)
         )
         await conn.commit()
 
@@ -1741,7 +1595,7 @@ async def get_or_create_today_session(user_id: int) -> int:
         if row:
             return int(row[0])
 
-        title = f"Тренировка {today}"  # обновляется через update_diary_session_title если известен тип дня
+        title = f"Тренировка {today}"
         cur2 = await conn.execute("""
             INSERT INTO diary_sessions (user_id, session_date, title, created_at)
             VALUES (?, ?, ?, ?)
@@ -1861,166 +1715,177 @@ async def get_all_user_ids():
 # =========================
 
 EXERCISE_TECH_MAP = [
-    # ── СПЕЦИФИЧНЫЕ — строго раньше общих ───────────────────────────────────
-
-    # Присед
-    ("гоблет-присед", "goblet"),
     ("гоблет", "goblet"),
-    ("присед с гантел", "goblet"),          # "присед с гантелями" — goblet, не squat
-    ("хакк-присед", "hack_squat"),
     ("хакк", "hack_squat"),
-    ("болгарские выпады", "bulgarian"),
-    ("болгарские выпады (нога", "bulgarian"),
     ("болгар", "bulgarian"),
-    ("выпады ходьбой", "lunge"),
-    ("выпады на месте", "lunge"),
-    ("выпады с гантелями", "lunge"),
     ("выпад", "lunge"),
-    ("присед со штангой", "squat"),
-    ("присед сумо", "squat"),
-    ("присед с паузой", "squat"),
-    ("приседания на одной ноге", "squat"),
-    ("приседания (собственный вес)", "squat"),
-    ("присед", "squat"),
-
-    # Нижняя тяга / задняя цепь
-    ("румынская тяга с гантелями", "rdl"),
-    ("румынская тяга со штангой", "rdl"),
-    ("румынская тяга", "rdl"),
-    ("становая тяга (техника)", "deadlift"),
-    ("становая тяга (лёгкая", "deadlift"),
-    ("становая тяга", "deadlift"),          # стоит ПОСЛЕ (техника) и (лёгкая)
-    ("ягодичный мост со штангой", "hinge"),
-    ("ягодичный мост на одной ноге", "hinge"),
     ("ягодичный мост", "hinge"),
-    ("гиперэкстензия с весом", "hyperext"),
-    ("гиперэкстензия на полу", "hyperext"),
     ("гиперэкстензи", "hyperext"),
-    ("good-morning", "good_morning"),
-
-    # Ноги — тренажёры
-    ("жим ногами в тренажёре", "legpress"),
-    ("жим ногами", "legpress"),
-    ("жим ног", "legpress"),
-    ("сгибания ног в тренажёре", "legcurl"),
     ("сгибания ног", "legcurl"),
-
-    # Икры
-    ("подъёмы на носки на одной ноге", "calves"),
-    ("подъёмы на носки с гантелями", "calves"),
-    ("подъёмы на носки стоя", "calves"),
-    ("подъёмы на носки сидя", "calves"),
     ("подъём на носки", "calves"),
     ("подъёмы на носки", "calves"),
     ("икры", "calves"),
-
-    # Жим лёжа — специфичные перед общим "жим лёж"
-    ("жим штанги под углом", "incline_press"),
-    ("жим гантелей под углом", "incline_press"),
-    ("жим штанги лёж", "bench"),
-    ("жим гантелей лёж", "bench"),
-    ("жим в тренажёре (грудь)", "bench"),
+    ("присед", "squat"),
+    ("жим ног", "legpress"),
     ("жим лёж", "bench"),
+    ("жим гантел", "bench"),
     ("жим в тренаж", "bench"),
-    ("сведения в кроссовере", "bench"),
     ("сведени", "bench"),
-
-    # Жим вверх — ohp_barbell строго перед ohp
-    ("армейский жим", "ohp_barbell"),
-    ("жим штанги стоя", "ohp_barbell"),
-    ("жим гантелей стоя", "ohp"),
-    ("жим гантелей сидя", "ohp"),
+    ("отжима узк", "narrow_pushup"),
+    ("узкие отжима", "narrow_pushup"),
+    ("пайк", "pike_pushup"),
+    ("отжима", "row"),
+    ("верхний блок", "latpulldown"),
+    ("тяга верхн", "latpulldown"),
+    ("тяга резинки сверху", "band_pull"),
+    ("тяга горизонт", "rowtrain"),
+    ("тяга гантел", "dumbbell_row"),
+    ("тяга в тренаж", "rowtrain"),
+    ("тяга резинки к поясу", "band_row"),
+    ("тяга резинки", "band_row"),
+    ("подтягива", "pullup"),
+    ("румынская тяга", "rdl"),
+    ("good-morning", "good_morning"),
     ("жим резинки вверх", "band_ohp"),
     ("жим вверх", "ohp"),
     ("жим в тренажёре вверх", "ohp"),
-
-    # Отжимания
-    ("отжимания узкие (трицепс)", "narrow_pushup"),
-    ("отжима узк", "narrow_pushup"),
-    ("узкие отжима", "narrow_pushup"),
-    ("пайк-отжимания", "pike_pushup"),
-    ("отжимания (ноги высоко", "pike_pushup"),
-    ("пайк", "pike_pushup"),
-    ("отжимания с весом", "row"),
-    ("отжимания с паузой", "row"),
-    ("отжимания от возвышения", "row"),
-    ("отжимания с хлопком", "row"),
-    ("отжимания (классика)", "row"),
-    ("горизонтальные подтягивания", "pullup"),
-    ("обратные отжимания от стула", "triceps"),
-    ("обратные отжимания", "triceps"),
-    ("отжима", "row"),
-
-    # Подтягивания / тяга сверху
-    ("подтягивания (широкий", "pullup"),
-    ("подтягивания (обратный хват)", "pullup"),
-    ("подтягивания (прямой хват)", "pullup"),
-    ("подтягивания нейтральным", "pullup"),
-    ("подтягивания на петлях", "pullup"),
-    ("негативные подтягивания", "pullup"),
-    ("подтягива", "pullup"),
-    ("верхний блок широк", "latpulldown"),
-    ("верхний блок узк", "latpulldown"),
-    ("тяга верхнего блока", "latpulldown"),
-    ("верхний блок", "latpulldown"),
-    ("тяга верхн", "latpulldown"),
-
-    # Горизонтальные тяги — barbell_row/dumbbell_row перед rowtrain
-    ("тяга штанги в наклоне", "barbell_row"),
-    ("тяга т-гриф", "barbell_row"),
-    ("тяга гантели одной рукой", "dumbbell_row"),
-    ("тяга гантел", "dumbbell_row"),
-    ("тяга нижнего блока", "rowtrain"),
-    ("тяга горизонт", "rowtrain"),
-    ("тяга в тренаж", "rowtrain"),
-
-    # Тяга резинок — специфичные перед "тяга резинки"
-    ("тяга резинки сверху", "band_pull"),
-    ("тяга резинки к поясу", "band_row"),
-    ("тяга резинки в наклоне", "band_row"),
-    ("тяга резинки к лицу", "face_pull"),     # перед "тяга резинки"
-    ("тяга резинки к подбородку", "lateralraise"),
-    ("тяга резинки", "band_row"),
-
-    # Face pull / задняя дельта
     ("face pull", "face_pull"),
     ("тяга к лицу", "face_pull"),
-    ("тяга штанги к подбородку", "lateralraise"),
-    ("задняя дельта в тренажёре", "rear_delt"),
     ("задняя дельта", "rear_delt"),
-    ("разведения гантелей в наклоне", "rear_delt"),   # перед "разведени"
-    ("разведения гантелей в стороны", "lateralraise"),
     ("разведени", "lateralraise"),
-
-    # Пресс
-    ("ролик для пресса", "core"),
-    ("боковая планка", "core"),
-    ("велосипед (скручивания", "core"),
-    ("велосипед", "core"),
-    ("обратные скручивания", "core"),
-    ("скручивания на блоке", "core"),
-    ("скручивания на полу", "core"),
-    ("подъёмы ног в висе", "core"),
-    ("подъёмы ног в упоре", "core"),
-    ("подъёмы ног лёжа", "core"),
-    ("подъём ног", "core"),
+    ("молотки", "hammer"),
+    ("сгибани", "biceps"),
+    ("разгибани", "triceps"),
+    ("трицепс", "triceps"),
+    ("разгибание гантели из-за головы", "triceps_oh"),
     ("планка", "core"),
     ("скручива", "core"),
-
-    # Бицепс
+    ("подъём ног", "core"),
+    # Новые упражнения из расширенных пулов
+    ("жим штанги лёж", "bench"),
+    ("жим штанги под углом", "bench"),
+    ("жим гантелей под углом", "bench"),
+    ("жим гантелей лёж", "bench"),
+    ("сведения в кроссовере", "bench"),
+    ("отжимания с весом", "row"),
+    ("тяга штанги в наклоне", "rowtrain"),
+    ("тяга т-гриф", "rowtrain"),
+    ("тяга нижнего блока", "rowtrain"),
+    ("горизонтальные подтягивания", "pullup"),
+    ("негативные подтягивания", "pullup"),
+    ("подтягивания на петлях", "pullup"),
+    ("подтягивания (обратный хват)", "pullup"),
+    ("подтягивания (прямой хват)", "pullup"),
+    ("жим штанги стоя", "ohp"),
+    ("армейский жим", "ohp"),
+    ("жим гантелей стоя", "ohp"),
+    ("жим гантелей сидя", "ohp"),
+    ("тяга штанги к подбородку", "lateralraise"),
+    ("тяга резинки к подбородку", "lateralraise"),
+    ("тяга резинки к лицу", "face_pull"),
+    ("задняя дельта в тренажёре", "rear_delt"),
+    ("разведения гантелей в наклоне", "rear_delt"),
+    ("разведения гантелей в стороны", "lateralraise"),
     ("сгибания на скамье скотта", "biceps"),
     ("концентрированные сгибания", "biceps"),
     ("сгибания на резинке", "biceps"),
-    ("сгибания гантелей стоя", "biceps"),
-    ("молотки с гантелями", "hammer"),
-    ("молотки", "hammer"),
-    ("сгибани", "biceps"),
-
-    # Трицепс — специфичные перед "разгибани"
-    ("разгибание гантели из-за головы", "triceps_oh"),
     ("французский жим", "triceps_oh"),
-    ("трицепс", "triceps"),
-    ("разгибани", "triceps"),
+    ("обратные отжимания", "triceps"),
+    ("ролик для пресса", "core"),
+    ("боковая планка", "core"),
+    ("велосипед", "core"),
+    ("обратные скручивания", "core"),
+    ("подъёмы на носки на одной ноге", "calves"),
+    ("подъёмы на носки с гантелями", "calves"),
+    ("становая тяга", "rdl"),
+    ("приседания на одной ноге", "squat"),
+    ("присед сумо", "squat"),
+    ("выпады ходьбой", "lunge"),
+    ("выпады на месте", "lunge"),
+    ("болгарские выпады с гантелями", "bulgarian"),
+    ("болгарские выпады", "bulgarian"),
+    ("ягодичный мост на одной ноге", "hinge"),
+    ("румынская тяга с гантелями", "rdl"),
+    ("румынская тяга со штангой", "rdl"),
+    ("становая тяга (лёгкая", "deadlift"),
+    ("становая тяга (техника)", "deadlift"),
+    ("становая тяга", "deadlift"),
+    ("тяга штанги в наклоне", "barbell_row"),
+    ("тяга т-гриф", "barbell_row"),
+    ("жим штанги под углом", "incline_press"),
+    ("жим гантелей под углом", "incline_press"),
+    ("жим штанги стоя", "ohp_barbell"),
+    ("армейский жим", "ohp_barbell"),
+    # Зал: базовые, которые могут не попасть выше
+    ("присед со штангой", "squat"),
+    ("присед с гантелями", "goblet"),
+    ("жим штанги лёж", "bench"),
+    ("жим гантелей лёж", "bench"),
+    ("жим в тренажёре (грудь)", "bench"),
+    ("сведения в кроссовере", "bench"),
+    ("подтягивания (широкий", "pullup"),
+    ("подтягивания нейтральным", "pullup"),
+    ("верхний блок широк", "latpulldown"),
+    ("верхний блок узк", "latpulldown"),
+    ("тяга верхнего блока", "latpulldown"),
+    ("жим ногами в тренажёре", "legpress"),
+    ("хакк-присед", "hack_squat"),
+    ("болгарские выпады с гантел", "bulgarian"),
+    ("выпады с гантелями", "lunge"),
+    ("ягодичный мост со штангой", "hinge"),
+    ("гиперэкстензия с весом", "hyperext"),
+    ("гиперэкстензия на полу", "hyperext"),
+    ("сгибания ног в тренажёре", "legcurl"),
+    ("подъёмы на носки стоя", "calves"),
+    ("подъёмы на носки сидя", "calves"),
+    ("скручивания на блоке", "core"),
+    ("подъёмы ног в висе", "core"),
+    ("подъёмы ног в упоре", "core"),
+    ("ролик для пресса", "core"),
+    ("боковая планка", "core"),
+    # Дома: базовые
+    ("приседания (собственный вес)", "squat"),
+    ("присед с паузой", "squat"),
+    ("присед сумо", "squat"),
+    ("болгарские выпады (нога на стуле)", "bulgarian"),
+    ("выпады на месте", "lunge"),
+    ("выпады ходьбой", "lunge"),
+    ("приседания на одной ноге", "squat"),
+    ("ягодичный мост на одной ноге", "hinge"),
+    ("good-morning", "good_morning"),
+    ("отжимания (классика)", "row"),
+    ("отжимания с паузой", "row"),
+    ("отжимания от возвышения", "row"),
+    ("отжимания с хлопком", "row"),
+    ("горизонтальные подтягивания", "pullup"),
+    ("тяга резинки к поясу", "band_row"),
+    ("тяга резинки в наклоне", "band_row"),
+    ("подтягивания (обратный хват)", "pullup"),
+    ("подтягивания (прямой хват)", "pullup"),
+    ("негативные подтягивания", "pullup"),
+    ("тяга резинки сверху", "band_pull"),
+    ("подтягивания на петлях", "pullup"),
+    ("пайк-отжимания", "pike_pushup"),
+    ("жим резинки вверх", "band_ohp"),
+    ("отжимания (ноги высоко", "pike_pushup"),
+    ("тяга резинки к лицу", "face_pull"),
+    ("сгибания на резинке", "biceps"),
+    ("отжимания узкие (трицепс)", "narrow_pushup"),
+    ("обратные отжимания от стула", "triceps"),
+    ("подъёмы ног лёжа", "core"),
+    ("велосипед (скручивания", "core"),
+    ("обратные скручивания", "core"),
+    ("скручивания на полу", "core"),
+    ("подъёмы на носки на одной ноге", "calves"),
+    ("подъёмы на носки с гантелями", "calves"),
+    ("разведения гантелей в стороны", "lateralraise"),
+    ("разведения гантелей в наклоне", "rear_delt"),
+    ("тяга резинки к подбородку", "lateralraise"),
+    ("молотки с гантелями", "hammer"),
+    ("сгибания гантелей стоя", "biceps"),
+    ("разгибание гантели из-за головы", "triceps_oh"),
+    ("обратные отжимания", "triceps"),
+    ("face pull", "face_pull"),
 ]
 
 
@@ -2046,7 +1911,7 @@ def get_tech_key_for_exercise(name: str) -> Optional[str]:
         return "core"
     if any(x in n for x in ["румынск", "мертвая", "становая", "hinge", "ягодиц"]):
         return "rdl"
-    return None  # нет подходящей техники — не показываем кнопку
+    return "squat"  # самый базовый fallback
 
 
 # =========================
@@ -2083,22 +1948,23 @@ def get_day_kind_from_text(day_text: str) -> str:
 def get_day_display_name(day_num: int, day_text: str, system: str = "") -> str:
     """Возвращает понятное название дня с учётом системы и номера."""
     t = day_text.lower()
-    # Full Body — A/B/C
-    if "фулбади" in t or "fullbody" in t:
-        suffix = {1: "A", 2: "B", 3: "C"}.get(day_num, str(day_num))
-        return f"Full Body {suffix}"
-    # Верх/Низ — без "тела"
-    if "верх" in t and "тела" in t:
-        return "Верх"
-    if "низ" in t:
-        return "Низ"
-    # PPL — с группами мышц
+    # PPL
     if "толчок" in t or "push" in t:
         return "Грудь и Плечи"
     if ("тяга" in t or "pull" in t) and ("спина" in t or "бицепс" in t or "pull" in t):
         return "Спина и Бицепс"
-    if "ноги" in t and "тяга" not in t:
+    if "ноги" in t and ("тяга" not in t):
         return "Ноги"
+    # Верх/Низ
+    if "верх" in t and "тела" in t:
+        return "Верх тела"
+    if "низ" in t:
+        return "Низ тела"
+    # Фулбади
+    if "фулбади" in t or "fullbody" in t:
+        # A/B/C по номеру
+        suffix = {1: "А", 2: "Б", 3: "В"}.get(day_num, "")
+        return f"Фулбади {suffix}".strip()
     return f"День {day_num}"
 
 
@@ -2171,19 +2037,14 @@ async def clear_day_progress(user_id: int, day_num: int):
         await conn.commit()
 
 
-async def mark_day_completed(user_id: int, day_num: int, day_title: str = ""):
+async def mark_day_completed(user_id: int, day_num: int):
     today = datetime.now().strftime("%Y-%m-%d")
     now = datetime.utcnow().isoformat()
     async with db() as conn:
-        # Добавляем поле day_title если его нет (миграция)
-        try:
-            await conn.execute("ALTER TABLE workout_completions ADD COLUMN day_title TEXT DEFAULT ''")
-        except Exception:
-            pass
         await conn.execute("""
-            INSERT INTO workout_completions (user_id, day_num, completed_date, created_at, day_title)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, day_num, today, now, day_title))
+            INSERT INTO workout_completions (user_id, day_num, completed_date, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, day_num, today, now))
         await conn.commit()
 
 
@@ -2221,21 +2082,19 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     # Определяем тип дня из текста плана
     t = day_text.lower()
     if "верх тела" in t:
-        # Верх/Низ — без подписи групп мышц
-        day_type = "Верх"
+        day_type = "Верх тела"
         day_emoji = "💪"
-        day_note = ""
+        day_note = "Грудь, спина, плечи, руки"
     elif "низ тела" in t or ("ниж" in t and "тел" in t):
-        day_type = "Низ"
+        day_type = "Низ тела"
         day_emoji = "🦵"
-        day_note = ""
+        day_note = "Квадрицепс, бицепс бедра, ягодицы, икры"
     elif "толчок" in t or ("грудь и плеч" in t):
-        # Сплит — оставляем группы мышц
-        day_type = "Грудь и Плечи"
+        day_type = "Толчок (Грудь и Плечи)"
         day_emoji = "🏋️"
         day_note = "Грудь, дельты, трицепс"
     elif ("тяга" in t and "спина" in t) or ("спина и бицепс" in t):
-        day_type = "Спина и Бицепс"
+        day_type = "Тяга (Спина и Бицепс)"
         day_emoji = "🔙"
         day_note = "Широчайшие, ромбовидные, бицепс"
     elif "ноги" in t and "квадрицепс" in t:
@@ -2243,12 +2102,11 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
         day_emoji = "🦵"
         day_note = "Квадрицепс, бицепс бедра, ягодицы, икры"
     elif "фулбади" in t or "fullbody" in t:
-        # Full Body — A/B/C без подписи "всё тело"
-        suffix_map = {1: "A", 2: "B", 3: "C"}
-        s = suffix_map.get(day_num, str(day_num))
-        day_type = f"Full Body {s}"
+        suffix_map = {1: "А", 2: "Б", 3: "В"}
+        s = suffix_map.get(day_num, "")
+        day_type = f"Фулбади {s}".strip()
         day_emoji = "💪"
-        day_note = ""
+        day_note = "Всё тело"
     else:
         day_type = get_day_display_name(day_num, day_text)
         day_emoji = "💪"
@@ -3245,11 +3103,8 @@ async def cb_faq_question(callback: CallbackQuery, bot: Bot):
 
 
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
-    sub = await get_subscription(user_id)
-    tariff_line = format_tariff_line(sub)
     text = (
         "Главное меню\n\n"
-        f"{tariff_line}\n\n"
         "Шаги для старта:\n"
         "1. ⚙️ Профиль — цель, параметры, место тренировок\n"
         "2. 💳 Оплата — выбери тариф, программа сформируется сразу\n"
@@ -3311,27 +3166,26 @@ async def cmd_start(message: Message, bot: Bot):
 
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
     text = (
-        "💳 Тарифы\n\n"
-        f"🟩 1 месяц — {TARIFFS['t1']['price']}₽\n"
-        "• Тренировки + дневник + замеры\n"
-        "• Поддержка\n"
-        "• Обновление плана: 3 раза\n\n"
-        f"🟦 3 месяца — {TARIFFS['t3']['price']}₽\n"
-        "• Всё, что в 1 месяце + питание\n"
-        "• Смена программы\n"
-        "• Обновление плана: 10 раз\n"
-        "• Выгоднее по цене\n\n"
-        f"🟨 Навсегда — {TARIFFS['life']['price']}₽\n"
-        "• Полный доступ: тренировки + питание + дневник\n"
-        "• Смена программы\n"
-        "• Обновление плана: безлимит\n\n"
+        "Тарифы\n\n"
+        f"📋 1 месяц — {TARIFFS['t1']['price']}₽\n"
+        "— Тренировки, дневник, замеры\n"
+        "— Доступ на 30 дней\n"
+        "— Питание не включено\n\n"
+        f"🔥 3 месяца — {TARIFFS['t3']['price']}₽\n"
+        "— Тренировки + питание + дневник + замеры\n"
+        "— Смена программы\n"
+        "— Доступ на 90 дней\n\n"
+        f"🏆 Навсегда — {TARIFFS['life']['price']}₽\n"
+        "— Тренировки + питание + дневник + замеры\n"
+        "— Смена программы\n"
+        "— Доступ без ограничений\n\n"
         "После оплаты программа активируется автоматически."
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"📋 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -3431,31 +3285,24 @@ async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot)
 async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     """Показываем меню выбора — что именно менять в профиле."""
     await state.clear()
-    uid = callback.from_user.id
-    u = await get_user(uid)
-    regens_left, is_unlimited = await get_plan_regens(uid)
-    if is_unlimited:
-        regens_str = "безлимит"
-    elif regens_left is not None:
-        regens_str = f"осталось: {regens_left}"
-    else:
-        regens_str = ""
+    u = await get_user(callback.from_user.id)
     text = (
         "Редактирование профиля\n\n"
         "Выбери параметр — введи новое значение.\n"
         "Когда всё готово — нажми «Составить новый план»."
     )
-    await clean_edit(callback, uid, text, reply_markup=profile_edit_field_kb(u, regens_str))
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=profile_edit_field_kb(u))
     await callback.answer()
 
 
 async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
-    """Генерирует новый план тренировок на основе текущего профиля с учётом лимита."""
+    """Генерирует новый план тренировок на основе текущего профиля."""
     uid = callback.from_user.id
-
-    # Проверяем, есть ли активный доступ
-    if not await is_access_active(uid):
-        await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
+    if not await is_full_access_active(uid):
+        await callback.answer(
+            "🔒 Смена программы доступна на тарифах 3 месяца и Навсегда.",
+            show_alert=True
+        )
         return
 
     if not await ensure_profile_ready(uid):
@@ -3463,22 +3310,7 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
-    # Проверяем лимит обновлений
-    regens_left, is_unlimited = await get_plan_regens(uid)
-    if not is_unlimited and regens_left is not None and int(regens_left) <= 0:
-        a = await get_access(uid)
-        tariff_name = TARIFFS.get(a.get("tariff", ""), {}).get("title", "текущий")
-        await clean_edit(callback, uid,
-            f"⚠️ Лимит обновлений плана исчерпан.\n\nТариф: {tariff_name}\nЧтобы обновлять план чаще — перейди в «Оплата».",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Оплата", callback_data="nav:upgrade")],
-                [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
-            ])
-        )
-        await callback.answer()
-        return
-
-    await callback.answer("🔄 Составляю новую программу…")
+    await callback.answer("🔄 Генерирую новую программу…")
 
     import random as _rnd
     shift = _rnd.randint(1, 9999)
@@ -3492,29 +3324,15 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
     )
     await save_workout_plan(uid, intro, dumps_plan(plan_struct))
 
-    # Уменьшаем счётчик (только если не безлимит)
-    if not is_unlimited:
-        await decrement_plan_regens(uid)
-
     # Сбрасываем прогресс дней
     async with db() as conn:
         await conn.execute("DELETE FROM workout_day_progress WHERE user_id=?", (uid,))
         await conn.commit()
 
-    # Получаем обновлённый счётчик для отображения
-    regens_after, is_unlim_after = await get_plan_regens(uid)
-    if is_unlim_after:
-        regens_str = "Безлимит"
-    elif regens_after is not None:
-        regens_str = f"Осталось обновлений: {regens_after}"
-    else:
-        regens_str = ""
-
     full_access = await is_full_access_active(uid)
-    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access, plan_struct=plan_struct)
-    suffix = f"\n\n{regens_str}" if regens_str else ""
+    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access)
     await clean_edit(callback, uid,
-        intro + "\n\n✅ Программа обновлена под твой профиль!" + suffix,
+        intro + "\n\n✅ Программа обновлена под твой профиль!",
         reply_markup=kb
     )
 
@@ -3569,13 +3387,11 @@ async def cb_build_program(callback: CallbackQuery, state: FSMContext, bot: Bot)
         return
 
     text = (
-        "🚀 Профиль готов!\n\n"
-        "Выбери формат доступа:\n\n"
+        "Профиль готов.\n\n"
         f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽\n"
-        "• 3 дня\n"
-        "• Тренировки + ответы на вопросы\n"
-        "• Без питания и дневника\n\n"
-        "Или посмотри полную линейку тарифов 👇"
+        "3 дня. Тренировки + вопросы.\n"
+        "Чтобы убедиться, что всё работает.\n\n"
+        "Или выбери полноценный тариф:"
     )
     await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
     await callback.answer()
@@ -3680,15 +3496,8 @@ async def _finish_field_edit(bot: Bot, chat_id: int, user_id: int):
     """После изменения одного поля — показываем профиль без пересборки плана.
     Пересборка происходит только при нажатии 'Составить новый план'."""
     u = await get_user(user_id)
-    regens_left, is_unlimited = await get_plan_regens(user_id)
-    if is_unlimited:
-        regens_str = "безлимит"
-    elif regens_left is not None:
-        regens_str = f"осталось: {regens_left}"
-    else:
-        regens_str = ""
     text = _profile_summary_text(u) + "\n\nПараметр сохранён.\nНажми «Составить новый план», чтобы обновить программу."
-    await clean_send(bot, chat_id, user_id, text, reply_markup=profile_edit_field_kb(u, regens_str))
+    await clean_send(bot, chat_id, user_id, text, reply_markup=profile_edit_field_kb(u))
 
 
 async def profile_field_age(message: Message, state: FSMContext, bot: Bot):
@@ -4155,7 +3964,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
             f"❌ Не удалось создать счёт на оплату.{err_detail}\n\n"
             "Напиши в поддержку или попробуй позже.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")]
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")]
             ])
         )
         return
@@ -4167,7 +3976,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await clean_edit(callback, uid,
             "❌ Не получил ссылку на оплату.\nПопробуй позже.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")]
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")]
             ])
         )
         return
@@ -4202,7 +4011,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
     pay_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Перейти к оплате", url=confirmation_url)],
         [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_pay:{yk_payment_id}:{tariff_code}")],
-        [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")],
     ])
 
     await clean_edit(callback, uid, text, reply_markup=pay_kb)
@@ -4436,48 +4245,6 @@ def measures_kb():
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-async def get_week_progress(user_id: int, freq: int) -> str:
-    """Блок прогресса недели: выполнено/осталось."""
-    today = datetime.now().date()
-    # Начало текущей недели (понедельник)
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=6)
-
-    async with db() as conn:
-        async with conn.execute("""
-            SELECT completed_date FROM workout_completions
-            WHERE user_id=? AND completed_date >= ? AND completed_date <= ?
-            ORDER BY completed_date
-        """, (user_id, week_start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"))) as cur:
-            rows = await cur.fetchall()
-
-    # Уникальные дни (один день = одна тренировка)
-    done_dates = list(set(r[0] for r in rows))
-    done_count = len(done_dates)
-    remaining = max(0, freq - done_count)
-
-    # Строим визуальную строку дней недели
-    day_names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-    done_set = set(done_dates)
-    day_cells = []
-    for i in range(7):
-        d = week_start + timedelta(days=i)
-        mark = "✅" if d.strftime("%Y-%m-%d") in done_set else "⬜"
-        day_cells.append(f"{mark} {day_names[i]}")
-    # Только рабочие дни по freq (показываем первые freq дней или всю неделю)
-    row_str = "  ".join(day_cells)
-
-    lines = [
-        "📊 Прогресс недели",
-        "",
-        f"Выполнено: {done_count}/{freq}",
-        f"Осталось: {remaining}",
-        "",
-        row_str,
-    ]
-    return "\n".join(lines)
-
-
 async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
     if not await is_access_active(user_id):
         await clean_send(bot, chat_id, user_id, locked_text())
@@ -4493,17 +4260,13 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
         plan_text, plan_struct = await get_workout_plan(user_id)
 
     u = await get_user(user_id)
-    freq = int(u.get("freq") or plan_struct.get("freq") or 3)
     full_access = await is_full_access_active(user_id)
-    kb = workout_days_kb(freq, has_full_access=full_access, plan_struct=plan_struct)
-
-    week_progress = await get_week_progress(user_id, freq)
-    display_text = (plan_text or "🏋️ План не найден.") + "\n\n" + week_progress
+    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access)
 
     if callback:
-        await clean_edit(callback, user_id, display_text, reply_markup=kb)
+        await clean_edit(callback, user_id, plan_text or "🏋️ План не найден.", reply_markup=kb)
     else:
-        await clean_send(bot, chat_id, user_id, display_text, reply_markup=kb)
+        await clean_send(bot, chat_id, user_id, plan_text or "🏋️ План не найден.", reply_markup=kb)
 
 
 # =========================
@@ -4570,7 +4333,7 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
     if not exercises:
         u = await get_user(uid)
         full_access = await is_full_access_active(uid)
-        kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access, plan_struct=plan_struct)
+        kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access)
         await clean_edit(callback, uid, day_text, reply_markup=kb)
         await callback.answer()
         return
@@ -4622,8 +4385,7 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
     all_done = total > 0 and done_count == total
 
     if all_done:
-        day_title = get_day_display_name(day_num, day_text)
-        await mark_day_completed(uid, day_num, day_title)
+        await mark_day_completed(uid, day_num)
         await clear_day_progress(uid, day_num)
         text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True)
         kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
@@ -4637,28 +4399,16 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
 
 
 async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
-    """Статистика тренировок: дни по порядку + закрытие недели."""
+    """Статистика выполненных тренировок — теперь в главном экране тренировок."""
     uid = callback.from_user.id
     async with db() as conn:
-        try:
-            async with conn.execute("""
-                SELECT day_num, completed_date, created_at, day_title
-                FROM workout_completions
-                WHERE user_id=?
-                ORDER BY completed_date ASC, day_num ASC, id ASC
-                LIMIT 60
-            """, (uid,)) as cur:
-                rows = await cur.fetchall()
-        except Exception:
-            async with conn.execute("""
-                SELECT day_num, completed_date, created_at
-                FROM workout_completions
-                WHERE user_id=?
-                ORDER BY completed_date ASC, day_num ASC, id ASC
-                LIMIT 60
-            """, (uid,)) as cur:
-                raw = await cur.fetchall()
-            rows = [(r[0], r[1], r[2], "") for r in raw]
+        async with conn.execute("""
+            SELECT day_num, completed_date, created_at
+            FROM workout_completions
+            WHERE user_id=?
+            ORDER BY id DESC LIMIT 30
+        """, (uid,)) as cur:
+            rows = await cur.fetchall()
 
     if not rows:
         await callback.answer("Пока нет завершённых тренировок 💪", show_alert=True)
@@ -4666,34 +4416,24 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
 
     total = len(rows)
     plan_text, plan_struct = await get_workout_plan(uid)
-    u = await get_user(uid)
-    freq = int(u.get("freq") or 3)
 
-    lines = ["\U0001f4ca Статистика тренировок\n"]
+    lines = ["📊 Статистика тренировок\n"]
     lines.append(f"Всего выполнено: {total} тренировок\n")
 
-    # Последние 10 — от старых к новым (rows уже в порядке ASC)
-    recent = rows[-10:]
     lines.append("🗓 Последние тренировки:")
-    for row in recent:
-        day_num = row[0]
-        completed_date = row[1]
-        saved_title = row[3] if len(row) > 3 else ""
-        if saved_title:
-            day_label = f"День {day_num} • {saved_title}"
-        elif plan_struct:
-            day_text_str = (plan_struct.get("days") or {}).get(str(day_num), "")
-            day_name = get_day_display_name(day_num, day_text_str)
+    for day_num, completed_date, _ in rows[:10]:
+        day_label = f"День {day_num}"
+        if plan_struct:
+            day_text = (plan_struct.get("days") or {}).get(str(day_num), "")
+            day_name = get_day_display_name(day_num, day_text)
             day_label = f"День {day_num} • {day_name}"
-        else:
-            day_label = f"День {day_num}"
         lines.append(f"✅ {completed_date}  —  {day_label}")
 
-    # Серия (streak) по всем датам
-    all_dates = sorted(set(r[1] for r in rows), reverse=True)
+    # Серия (streak)
+    dates = sorted(set(r[1] for r in rows), reverse=True)
     streak = 0
     prev = None
-    for d in all_dates:
+    for d in dates:
         try:
             dt = datetime.strptime(d, "%Y-%m-%d").date()
         except Exception:
@@ -4706,22 +4446,7 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
             break
         prev = dt
 
-    lines.append(f"\n\U0001f525 Текущая серия: {streak} дн. подряд")
-
-    # Закрытие недели
-    today = datetime.now().date()
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=6)
-    ws_str = week_start.strftime("%Y-%m-%d")
-    we_str = week_end.strftime("%Y-%m-%d")
-    done_this_week = len(set(
-        r[1] for r in rows if ws_str <= r[1] <= we_str
-    ))
-    lines.append("")
-    if done_this_week >= freq:
-        lines.append(f"✅ Неделя закрыта: выполнено {done_this_week}/{freq}")
-    else:
-        lines.append(f"📌 Осталось: {freq - done_this_week} тренировок на этой неделе")
+    lines.append(f"\n🔥 Текущая серия: {streak} дн. подряд")
 
     text = "\n".join(lines)
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -4732,51 +4457,32 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
 
 
 async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
-    """Показываем технику конкретного упражнения из просмотра дня тренировки.
-    callback_data: wex:tech:{day_num}:{tech_key}
-    """
+    """Показываем технику упражнения с картинкой (из просмотра дня)."""
     parts = callback.data.split(":")
-    tech_key = parts[3] if len(parts) > 3 else ""
-    day_num  = parts[2] if len(parts) > 2 else "1"
-
-    back_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=f"⬅️ Назад к тренировке (День {day_num})",
-            callback_data=f"wday:{day_num}"
-        )]
-    ])
+    tech_key = parts[3]
+    day_num = parts[2]
 
     item = TECH.get(tech_key)
     if not item:
-        # Техника не найдена — показываем экран вместо show_alert
-        await clean_edit(
-            callback,
-            callback.from_user.id,
-            (
-                "⚠️ Техника для этого упражнения пока не добавлена.\n\n"
-                "Напиши в поддержку — добавим."
-            ),
-            reply_markup=back_kb,
-        )
-        await callback.answer()
+        await callback.answer("Техника не найдена 😅", show_alert=True)
         return
 
-    text     = item["text"]
-    img_path = item.get("img", "")
+    text = item["text"]
+    img_path = item["img"]
 
-    if img_path and os.path.exists(img_path):
-        # Есть картинка — удаляем текущее сообщение и отправляем фото
-        last_id = await get_last_bot_msg_id(callback.from_user.id)
-        if last_id:
-            try:
-                await bot.delete_message(
-                    chat_id=callback.message.chat.id,
-                    message_id=last_id
-                )
-            except Exception:
-                pass
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"⬅️ Назад к Дню {day_num}", callback_data=f"wday:{day_num}")]
+    ])
 
-        photo   = FSInputFile(img_path)
+    last_id = await get_last_bot_msg_id(callback.from_user.id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
+    if os.path.exists(img_path):
+        photo = FSInputFile(img_path)
         caption = text[:1020] + ("…" if len(text) > 1020 else "")
         m = await bot.send_photo(
             chat_id=callback.message.chat.id,
@@ -4795,8 +4501,12 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
         else:
             await set_last_bot_msg_id(callback.from_user.id, m.message_id)
     else:
-        # Нет картинки — просто редактируем текущее сообщение
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
+        m = await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=text,
+            reply_markup=back_kb
+        )
+        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
 
     await callback.answer()
 
@@ -5006,11 +4716,7 @@ async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
     await state.set_state(MeasureFlow.enter_value)
 
     name = dict(MEASURE_TYPES).get(mtype, mtype)
-    text = f"Замеры\n\n\U0001f4dd {name}\n\nВведи значение числом:"
-    back_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад к замерам", callback_data="nav:measures")]
-    ])
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
+    await callback.message.answer(f"Впиши «{name}» числом:")
     await callback.answer()
 
 
@@ -5025,23 +4731,16 @@ async def measure_value(message: Message, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     mtype = data.get("mtype")
-    uid = message.from_user.id
 
-    await add_measure(uid, mtype, val)
-    await try_delete_user_message(bot, message)
+    await add_measure(message.from_user.id, mtype, val)
+    rows = await get_last_measures(message.from_user.id, mtype, 6)
 
-    rows = await get_last_measures(uid, mtype, 6)
     name = dict(MEASURE_TYPES).get(mtype, mtype)
     hist = "\n".join([f"• {r[0]:g} ({r[1][:10]})" for r in rows])
-    out = (
-        f"Замеры\n\n"
-        f"✅ {name} записан: {val:g}\n\n"
-        f"Последние {name}:\n{hist}\n\n"
-        "Выбери следующий параметр:"
-    )
+    out = f"✅ {name}: {val:g}\n\nПоследние:\n{hist}"
+    await clean_send(bot, message.chat.id, message.from_user.id, out, reply_markup=measures_kb())
     await state.set_state(MeasureFlow.choose_type)
-    # Редактируем последнее сообщение бота — без создания нового
-    await clean_send(bot, message.chat.id, uid, out, reply_markup=measures_kb())
+    await try_delete_user_message(bot, message)
 
 
 async def measures_history(callback: CallbackQuery):
@@ -5482,7 +5181,7 @@ async def cb_workout_rebuild(callback: CallbackQuery, bot: Bot):
         await conn.commit()
 
     full_access = await is_full_access_active(uid)
-    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access, plan_struct=plan_struct)
+    kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access)
     await clean_edit(callback, uid,
         intro + "\n\n✅ Программа обновлена! Прогресс дней сброшен.",
         reply_markup=kb
@@ -5635,92 +5334,6 @@ async def run_web_server():
 # =========================
 # MAIN
 # =========================
-
-# =========================
-# НАПОМИНАНИЯ ОБ ОКОНЧАНИИ ПОДПИСКИ
-# =========================
-async def _check_and_remind_subscriptions(bot: Bot):
-    """Проверяем подписки и рассылаем уведомления при необходимости."""
-    today = datetime.utcnow().date()
-    async with db() as conn:
-        async with conn.execute(
-            """SELECT user_id, tariff, tariff_name, expires_at, remind_stage
-               FROM access WHERE paid=1 AND expires_at IS NOT NULL"""
-        ) as cur:
-            rows = await cur.fetchall()
-
-    for row in rows:
-        user_id, tariff, tariff_name, expires_at, remind_stage = row
-        remind_stage = remind_stage if remind_stage is not None else -1
-        try:
-            exp_dt = datetime.fromisoformat(expires_at)
-            exp_date = exp_dt.date()
-        except Exception:
-            continue
-
-        days_left = (exp_date - today).days
-
-        # Подписка истекла — деактивируем
-        if days_left < 0:
-            async with db() as conn:
-                await conn.execute(
-                    "UPDATE access SET paid=0 WHERE user_id=?", (user_id,)
-                )
-                await conn.commit()
-            continue
-
-        # Определяем нужную стадию напоминания
-        send_stage = None
-        if days_left == 3 and remind_stage < 3:
-            send_stage = 3
-        elif days_left == 1 and remind_stage < 1:
-            send_stage = 1
-        elif days_left == 0 and remind_stage < 0:
-            send_stage = 0
-
-        if send_stage is None:
-            continue
-
-        if days_left == 0:
-            days_str = "сегодня"
-        elif days_left == 1:
-            days_str = "завтра"
-        else:
-            days_str = f"через {days_left} дн."
-
-        text = (
-            f"\u23f3 Подписка скоро закончится: осталось {days_left} дн.\n\n"
-            "Чтобы не потерять доступ к плану и статистике — продли подписку \U0001f447"
-        )
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(
-                text="\U0001f4b3 Продлить подписку",
-                callback_data="nav:upgrade"
-            )]
-        ])
-        try:
-            await bot.send_message(user_id, text, reply_markup=kb)
-            async with db() as conn:
-                await conn.execute(
-                    "UPDATE access SET remind_stage=? WHERE user_id=?",
-                    (send_stage, user_id)
-                )
-                await conn.commit()
-        except Exception:
-            pass  # пользователь заблокировал бота
-
-
-async def subscription_reminder_loop(bot: Bot):
-    """Фоновая задача: раз в 12 часов проверяет подписки и шлёт уведомления."""
-    logger.info("subscription_reminder_loop started")
-    while True:
-        try:
-            await _check_and_remind_subscriptions(bot)
-        except Exception:
-            logger.exception("subscription_reminder_loop error")
-        await asyncio.sleep(12 * 3600)
-
-
 async def main():
     if "PASTE_NEW_TOKEN_HERE" in BOT_TOKEN or not BOT_TOKEN or BOT_TOKEN == "0":
         raise RuntimeError("Нужно задать BOT_TOKEN через ENV.")
@@ -5757,7 +5370,6 @@ async def main():
     await asyncio.gather(
         bot_loop(),
         run_web_server(),
-        subscription_reminder_loop(bot),
     )
 
 if __name__ == "__main__":
