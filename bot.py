@@ -42,16 +42,16 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 # СЛОВАРИ МЕДИА-ФАЙЛОВ
 # =========================
 IMAGE_PATHS = {
-    "welcome":      "media/welcome.jpg",
-    "restart":      "media/restart.jpg",
-    "profile":      "media/profile.jpg",
-    "menu":         "media/menu.jpg",
-    "workouts":     "media/workouts.jpg",
-    "nutrition":    "media/nutrition.jpg",
-    "diary":        "media/diary.jpg",
-    "measurements": "media/measurements.jpg",
-    "upgrade":      "media/upgrade.jpg",
-    "faq":          "media/faq.jpg",
+    "welcome":      "media/tech/welcome.jpg",
+    "restart":      "media/tech/restart.jpg",
+    "profile":      "media/tech/profile.jpg",
+    "menu":         "media/tech/menu.jpg",
+    "workouts":     "media/tech/workouts.jpg",
+    "nutrition":    "media/tech/nutrition.jpg",
+    "diary":        "media/tech/diary.jpg",
+    "measurements": "media/tech/measurements.jpg",
+    "upgrade":      "media/tech/upgrade.jpg",
+    "faq":          "media/tech/faq.jpg",
 }
 
 TECH_GIFS = {
@@ -6655,3 +6655,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
