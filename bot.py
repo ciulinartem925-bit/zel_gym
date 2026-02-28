@@ -41,9 +41,9 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 # ТАРИФЫ
 TARIFFS = {
     "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 399,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 899,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 3,  "plan_regens": 10},
+    "life":  {"title": "Навсегда",               "days": None, "price": 4, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -6625,3 +6625,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
