@@ -93,11 +93,11 @@ TECH_GIFS = {
     "squat_bodyweight":  "media/tech/squat.gif",
     "rdl_barbell":       "media/tech/rdl.gif",
     "rdl_dumbbell":      "media/tech/rdl.gif",
-    "incline_press":     "media/tech/bench.gif",
-    "bench_dumbbell":    "media/tech/bench.gif",
-    "bench_machine":     "media/tech/bench.gif",
-    "incline_press_barbell":  "media/tech/bench.gif",
-    "incline_press_dumbbell": "media/tech/bench.gif",
+    "incline_press":     "media/tech/incline_bench.gif",
+    "bench_dumbbell":    "media/tech/bench_dumbbell.gif",
+    "bench_machine":     "media/tech/bench_machine.gif",
+    "incline_press_barbell":  "media/tech/incline_press_barbell.gif",
+    "incline_press_dumbbell": "media/tech/incline_press_dumbbell.gif",
     "ohp_barbell":       "media/tech/ohp.gif",
     "ohp_dumbbell":      "media/tech/ohp.gif",
     "ohp_machine":       "media/tech/ohp.gif",
@@ -116,8 +116,8 @@ TECH_GIFS = {
     "hammer":            "media/tech/biceps.gif",
     "triceps_oh":        "media/tech/triceps.gif",
     "hack_squat":        "media/tech/squat.gif",
-    "chest_fly":         "media/tech/bench.gif",
-    "crossover":         "media/tech/bench.gif",
+    "chest_fly":         "media/tech/chest_fly.gif",
+    "crossover":         "media/tech/crossover.gif",
     "deadlift_sumo":     "media/tech/rdl.gif",
     "ohp_barbell":       "media/tech/ohp.gif",
 }
@@ -1019,7 +1019,7 @@ TECH = {
     },
     "bench_dumbbell": {
         "title": "Жим гантелей лёжа",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/bench_dumbbell.jpg",
         "text": (
             "📚 Жим гантелей лёжа (грудь + трицепс)\n\n"
             "✅ Настройка\n"
@@ -1040,7 +1040,7 @@ TECH = {
     },
     "bench_machine": {
         "title": "Жим в тренажёре (грудь)",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/bench_machine.jpg",
         "text": (
             "📚 Жим в тренажёре — грудь\n\n"
             "✅ Настройка\n"
@@ -1270,7 +1270,7 @@ TECH = {
     },
     "incline_press_barbell": {
         "title": "Жим штанги под углом",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/incline_press_barbell.jpg",
         "text": (
             "📚 Жим штанги под углом (верх груди)\n\n"
             "✅ Настройка\n"
@@ -1289,7 +1289,7 @@ TECH = {
     },
     "incline_press_dumbbell": {
         "title": "Жим гантелей под углом",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/incline_press_dumbbell.jpg",
         "text": (
             "📚 Жим гантелей под углом (верх груди)\n\n"
             "✅ Настройка\n"
@@ -1364,7 +1364,7 @@ TECH = {
     },
     "chest_fly": {
         "title": "Разведения на грудь",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/chest_fly.jpg",
         "text": (
             "📚 Разведения гантелей лёжа (грудь)\n\n"
             "✅ Настройка\n"
@@ -1383,7 +1383,7 @@ TECH = {
     },
     "crossover": {
         "title": "Сведения в кроссовере",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/crossover.jpg",
         "text": (
             "📚 Сведения в кроссовере (изоляция груди)\n\n"
             "✅ Настройка\n"
@@ -6560,3 +6560,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
