@@ -1531,10 +1531,9 @@ def build_program_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽ (3 дня)",
-            callback_data="tariff:trial"
+            callback_data="tariff:trial:from_profile"
         )],
         [InlineKeyboardButton(text="📋 Ознакомиться с другими тарифами", callback_data="nav:upgrade_after_profile")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
 
@@ -4112,18 +4111,9 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await open_upgrade(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
     elif key == "upgrade_after_profile":
         await open_upgrade(user_id=uid, chat_id=chat_id, bot=bot, callback=callback, source="after_profile")
-    elif key == "back_to_program_tariff":
-        # Возврат на пост-профильный экран с пробным доступом
-        text = (
-            "🚀 Профиль готов!\n\n"
-            "Выбери формат доступа:\n\n"
-            f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽\n"
-            "• 3 дня\n"
-            "• Тренировки + ответы на вопросы\n"
-            "• Без питания и дневника\n\n"
-            "Или посмотри полную линейку тарифов 👇"
-        )
-        await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
+    elif key in ("back_to_program_tariff", "back_to_profile_done"):
+        # Возврат на экран «Профиль готов!» из тарифов или пробного
+        await _show_profile_done_screen(callback, uid)
     else:
         await show_main_menu(bot, chat_id, uid)
 
@@ -4334,6 +4324,20 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 # =========================
 # ПРОФИЛЬ-МАСТЕР
 # =========================
+async def _show_profile_done_screen(callback: CallbackQuery, uid: int) -> None:
+    """Единый рендер экрана 'Профиль готов!' с выбором тарифа."""
+    text = (
+        "🚀 Профиль готов!\n\n"
+        "Выбери формат доступа:\n\n"
+        f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽\n"
+        "• 3 дня\n"
+        "• Тренировки + ответы на вопросы\n"
+        "• Без питания и дневника\n\n"
+        "Или посмотри полную линейку тарифов 👇"
+    )
+    await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
+
+
 async def cb_build_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """Показываем тарифы после заполнения профиля."""
     await state.clear()
@@ -4346,16 +4350,7 @@ async def cb_build_program(callback: CallbackQuery, state: FSMContext, bot: Bot)
         await callback.answer()
         return
 
-    text = (
-        "🚀 Профиль готов!\n\n"
-        "Выбери формат доступа:\n\n"
-        f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽\n"
-        "• 3 дня\n"
-        "• Тренировки + ответы на вопросы\n"
-        "• Без питания и дневника\n\n"
-        "Или посмотри полную линейку тарифов 👇"
-    )
-    await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
+    await _show_profile_done_screen(callback, uid)
     await callback.answer()
 
 
@@ -4897,7 +4892,13 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
     Создаём платёж через ЮКасса REST API и отправляем кнопку со ссылкой.
     Пользователь оплачивает на странице ЮКасса, бот проверяет статус.
     """
-    tariff_code = callback.data.split(":")[1]
+    parts = callback.data.split(":")
+    tariff_code = parts[1]
+    # from_profile=True если пришли с экрана "Профиль готов!" — кнопка Назад ведёт туда же
+    from_profile = len(parts) > 2 and parts[2] == "from_profile"
+    back_cb = "nav:back_to_profile_done" if from_profile else "nav:upgrade"
+    back_label = "⬅️ Назад" if from_profile else "⬅️ Назад к тарифам"
+
     if tariff_code not in TARIFFS:
         await callback.answer("Не понял тариф 😅", show_alert=True)
         return
@@ -4935,7 +4936,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
             f"❌ Не удалось создать счёт на оплату.{err_detail}\n\n"
             "Напиши в поддержку или попробуй позже.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")]
+                [InlineKeyboardButton(text=back_label, callback_data=back_cb)]
             ])
         )
         return
@@ -4947,7 +4948,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await clean_edit(callback, uid,
             "❌ Не получил ссылку на оплату.\nПопробуй позже.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")]
+                [InlineKeyboardButton(text=back_label, callback_data=back_cb)]
             ])
         )
         return
@@ -4982,7 +4983,7 @@ async def cb_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
     pay_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Перейти к оплате", url=confirmation_url)],
         [InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_pay:{yk_payment_id}:{tariff_code}")],
-        [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")],
+        [InlineKeyboardButton(text=back_label, callback_data=back_cb)],
     ])
 
     await clean_edit(callback, uid, text, reply_markup=pay_kb)
