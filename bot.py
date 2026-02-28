@@ -41,8 +41,8 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 # ТАРИФЫ
 TARIFFS = {
     "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 399,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 899,  "plan_regens": 10},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 3,  "plan_regens": 10},
     "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
 }
 
@@ -1364,6 +1364,25 @@ def control_reply_kb():
         one_time_keyboard=False,
         input_field_placeholder="Кнопки снизу 👇"
     )
+
+
+def control_reply_kb_support_only():
+    """Клавиатура для пользователей без активной подписки — только Поддержка."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🆘 Поддержка")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=False,
+        input_field_placeholder="Оформи подписку для доступа 👇"
+    )
+
+
+async def get_reply_kb_for_user(user_id: int) -> ReplyKeyboardMarkup:
+    """Возвращает полную клавиатуру если есть активная подписка (включая пробную), иначе только Поддержка."""
+    if await is_access_active(user_id):
+        return control_reply_kb()
+    return control_reply_kb_support_only()
 
 
 # =========================
@@ -2812,7 +2831,30 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
-    if "верх тела" in t:
+    if "фулбади" in t or "fullbody" in t:
+        # Full Body — A/B/C без подписи «всё тело»
+        suffix_map = {1: "A", 2: "B", 3: "C"}
+        s = suffix_map.get(day_num, str(day_num))
+        day_type = f"Full Body {s}"
+        day_emoji = "💪"
+        day_note = ""
+    elif "верх а" in t or ("верх" in t and "вариант а" in t):
+        day_type = "Верх А"
+        day_emoji = "💪"
+        day_note = "Грудь, спина, плечи, руки — вариант А"
+    elif "верх б" in t or ("верх" in t and "вариант б" in t):
+        day_type = "Верх Б"
+        day_emoji = "💪"
+        day_note = "Грудь, спина, плечи, руки — вариант Б"
+    elif "низ а" in t or ("низ" in t and "вариант а" in t):
+        day_type = "Низ А"
+        day_emoji = "🦵"
+        day_note = "Квадрицепс, бицепс бедра, ягодицы, икры — вариант А"
+    elif "низ б" in t or ("низ" in t and "вариант б" in t):
+        day_type = "Низ Б"
+        day_emoji = "🦵"
+        day_note = "Ягодицы, бицепс бедра, кор — вариант Б"
+    elif "верх тела" in t:
         # Верх/Низ — без подписи групп мышц
         day_type = "Верх"
         day_emoji = "💪"
@@ -2834,15 +2876,20 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
         day_type = "Ноги"
         day_emoji = "🦵"
         day_note = "Квадрицепс, бицепс бедра, ягодицы, икры"
-    elif "фулбади" in t or "fullbody" in t:
-        # Full Body — A/B/C без подписи "всё тело"
-        suffix_map = {1: "A", 2: "B", 3: "C"}
-        s = suffix_map.get(day_num, str(day_num))
-        day_type = f"Full Body {s}"
-        day_emoji = "💪"
-        day_note = ""
+    elif "push" in t or ("толч" in t):
+        day_type = "Толчок"
+        day_emoji = "🏋️"
+        day_note = "Грудь, дельты, трицепс"
+    elif "pull" in t or ("тяга" in t and "спина" in t) or ("спина и бицепс" in t):
+        day_type = "Тяга"
+        day_emoji = "🔙"
+        day_note = "Широчайшие, ромбовидные, бицепс"
+    elif "legs" in t or ("ног" in t and "квадр" in t):
+        day_type = "Ноги"
+        day_emoji = "🦵"
+        day_note = "Квадрицепс, бицепс бедра, ягодицы, икры"
     else:
-        day_type = get_day_display_name(day_num, day_text)
+        day_type = get_day_display_name(day_num, day_text) or "Тренировка"
         day_emoji = "💪"
         day_note = ""
 
@@ -3999,6 +4046,13 @@ async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
         "6. 🍽 Питание — КБЖУ + примеры рационов\n\n"
         "Нет результата? Загляни в «Частые вопросы»."
     )
+    # Обновляем reply-клавиатуру в зависимости от активности подписки
+    reply_kb = await get_reply_kb_for_user(user_id)
+    try:
+        kb_msg = await bot.send_message(chat_id=chat_id, text="​", reply_markup=reply_kb)
+        await bot.delete_message(chat_id=chat_id, message_id=kb_msg.message_id)
+    except Exception:
+        pass
     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
 
 
@@ -4015,7 +4069,7 @@ async def cmd_start(message: Message, bot: Bot):
     await bot.send_message(
         chat_id=message.chat.id,
         text="✅ Я на месте. Кнопки снизу 👇",
-        reply_markup=control_reply_kb()
+        reply_markup=await get_reply_kb_for_user(message.from_user.id)
     )
 
     welcome_text = (
@@ -5037,6 +5091,16 @@ async def cb_check_payment(callback: CallbackQuery, bot: Bot):
                 reply_markup=menu_main_inline_kb()
             )
 
+            # Обновляем reply-клавиатуру на полную после активации подписки
+            try:
+                kb_msg = await bot.send_message(
+                    chat_id=callback.message.chat.id, text="​",
+                    reply_markup=control_reply_kb()
+                )
+                await bot.delete_message(chat_id=callback.message.chat.id, message_id=kb_msg.message_id)
+            except Exception:
+                pass
+
             # Уведомляем админа
             if ADMIN_ID:
                 try:
@@ -5103,6 +5167,15 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
         await set_paid_tariff(user_id, tariff)
 
         a = await get_access(user_id)
+        # Уведомляем пользователя и обновляем reply-клавиатуру
+        try:
+            kb_msg = await bot.send_message(
+                chat_id=user_id, text="​",
+                reply_markup=control_reply_kb()
+            )
+            await bot.delete_message(chat_id=user_id, message_id=kb_msg.message_id)
+        except Exception:
+            pass
         await bot.send_message(
             chat_id=user_id,
             text=f"✅ Оплата подтверждена.\nТариф: {TARIFFS[tariff]['title']}\n{access_status_str(a)}",
