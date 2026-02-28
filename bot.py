@@ -93,7 +93,7 @@ TECH_GIFS = {
     "squat_bodyweight":  "media/tech/squat.gif",
     "rdl_barbell":       "media/tech/rdl.gif",
     "rdl_dumbbell":      "media/tech/rdl.gif",
-    "incline_press":     "media/tech/incline_bench.gif",
+    "incline_press":     "media/tech/incline_press.gif",
     "bench_dumbbell":    "media/tech/bench_dumbbell.gif",
     "bench_machine":     "media/tech/bench_machine.gif",
     "incline_press_barbell":  "media/tech/incline_press_barbell.gif",
@@ -6560,4 +6560,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
