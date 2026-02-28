@@ -38,6 +38,90 @@ BOT_PUBLIC_URL = os.getenv("BOT_PUBLIC_URL", "https://t.me/")  # https://t.me/yo
 DB_PATH = os.getenv("DB_PATH", "bot.db")
 WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 
+# =========================
+# СЛОВАРИ МЕДИА-ФАЙЛОВ
+# =========================
+IMAGE_PATHS = {
+    "welcome":      "media/welcome.jpg",
+    "restart":      "media/restart.jpg",
+    "profile":      "media/profile.jpg",
+    "menu":         "media/menu.jpg",
+    "workouts":     "media/workouts.jpg",
+    "nutrition":    "media/nutrition.jpg",
+    "diary":        "media/diary.jpg",
+    "measurements": "media/measurements.jpg",
+    "upgrade":      "media/upgrade.jpg",
+    "faq":          "media/faq.jpg",
+}
+
+TECH_GIFS = {
+    "squat":             "media/tech/squat.gif",
+    "bench":             "media/tech/bench.gif",
+    "row":               "media/tech/pushup.gif",
+    "latpulldown":       "media/tech/latpulldown.gif",
+    "pullup":            "media/tech/pullup.gif",
+    "rdl":               "media/tech/rdl.gif",
+    "ohp":               "media/tech/ohp.gif",
+    "lateralraise":      "media/tech/lateralraise.gif",
+    "biceps":            "media/tech/biceps.gif",
+    "triceps":           "media/tech/triceps.gif",
+    "legpress":          "media/tech/legpress.gif",
+    "hinge":             "media/tech/hinge.gif",
+    "core":              "media/tech/core.gif",
+    "hanging_leg_raise": "media/tech/hanging_leg_raise.gif",
+    "leg_raise_lying":   "media/tech/leg_raise_lying.gif",
+    "ab_crunch":         "media/tech/ab_crunch.gif",
+    "ab_rollout":        "media/tech/ab_rollout.gif",
+    "side_plank":        "media/tech/side_plank.gif",
+    "elbow_leg_raise":   "media/tech/elbow_leg_raise.gif",
+    "calves":            "media/tech/calves.gif",
+    "goblet":            "media/tech/goblet.gif",
+    "lunge":             "media/tech/lunge.gif",
+    "hyperext":          "media/tech/hyperext.gif",
+    "legcurl":           "media/tech/legcurl.gif",
+    "rowtrain":          "media/tech/rowtrain.gif",
+    "dumbbell_row":      "media/tech/dumbbell_row.gif",
+    "band_row":          "media/tech/band_row.gif",
+    "deadlift":          "media/tech/rdl.gif",
+    "hack_squat":        "media/tech/squat.gif",
+    "bulgarian":         "media/tech/squat.gif",
+    "lunge_walking":     "media/tech/lunge.gif",
+    "lunge_barbell":     "media/tech/lunge.gif",
+    "lunge_dumbbell":    "media/tech/lunge.gif",
+    "squat_barbell":     "media/tech/squat.gif",
+    "squat_sumo":        "media/tech/squat.gif",
+    "squat_bodyweight":  "media/tech/squat.gif",
+    "rdl_barbell":       "media/tech/rdl.gif",
+    "rdl_dumbbell":      "media/tech/rdl.gif",
+    "incline_press":     "media/tech/bench.gif",
+    "bench_dumbbell":    "media/tech/bench.gif",
+    "bench_machine":     "media/tech/bench.gif",
+    "incline_press_barbell":  "media/tech/bench.gif",
+    "incline_press_dumbbell": "media/tech/bench.gif",
+    "ohp_barbell":       "media/tech/ohp.gif",
+    "ohp_dumbbell":      "media/tech/ohp.gif",
+    "ohp_machine":       "media/tech/ohp.gif",
+    "band_ohp":          "media/tech/ohp.gif",
+    "pike_pushup":       "media/tech/ohp.gif",
+    "narrow_pushup":     "media/tech/triceps.gif",
+    "pullup_chinup":     "media/tech/pullup.gif",
+    "pullup_wide":       "media/tech/pullup.gif",
+    "latpulldown_wide":  "media/tech/latpulldown.gif",
+    "latpulldown_narrow":"media/tech/latpulldown.gif",
+    "barbell_row":       "media/tech/rowtrain.gif",
+    "band_pull":         "media/tech/latpulldown.gif",
+    "good_morning":      "media/tech/rdl.gif",
+    "face_pull":         "media/tech/lateralraise.gif",
+    "rear_delt":         "media/tech/lateralraise.gif",
+    "hammer":            "media/tech/biceps.gif",
+    "triceps_oh":        "media/tech/triceps.gif",
+    "hack_squat":        "media/tech/squat.gif",
+    "chest_fly":         "media/tech/bench.gif",
+    "crossover":         "media/tech/bench.gif",
+    "deadlift_sumo":     "media/tech/rdl.gif",
+    "ohp_barbell":       "media/tech/ohp.gif",
+}
+
 # ТАРИФЫ
 TARIFFS = {
     "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
@@ -1775,6 +1859,125 @@ async def clean_edit(callback: CallbackQuery, user_id: int, text: str, reply_mar
         await set_last_bot_msg_id(user_id, callback.message.message_id)
     except Exception:
         await clean_send(callback.bot, callback.message.chat.id, user_id, text, reply_markup=reply_markup)
+
+
+async def _send_with_image(
+    bot: Bot, chat_id: int, user_id: int,
+    text: str, image_key: str, reply_markup=None
+):
+    """Отправляет сообщение с фото из IMAGE_PATHS[image_key].
+    Если файл не найден — отправляет обычный текст.
+    Всегда удаляет предыдущее главное сообщение бота (чистый чат)."""
+    path = IMAGE_PATHS.get(image_key, "")
+    last_id = await get_last_bot_msg_id(user_id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+    if path and os.path.exists(path):
+        try:
+            photo = FSInputFile(path)
+            caption = text[:1020] + ("…" if len(text) > 1020 else "")
+            m = await bot.send_photo(
+                chat_id=chat_id, photo=photo,
+                caption=caption, reply_markup=reply_markup
+            )
+            await set_last_bot_msg_id(user_id, m.message_id)
+            return m.message_id
+        except Exception:
+            pass  # fallback to text
+    m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    await set_last_bot_msg_id(user_id, m.message_id)
+    return m.message_id
+
+
+async def send_screen(
+    message: Message,
+    text: str,
+    image_key: Optional[str] = None,
+    reply_markup=None,
+    edit: bool = False,
+):
+    """Универсальная функция отправки экрана с опциональным изображением.
+    Если edit=True — пытаемся редактировать текст, иначе отправляем новое.
+    Если image_key указан и файл существует — используем send_photo."""
+    bot: Bot = message.bot
+    chat_id = message.chat.id
+    user_id = message.from_user.id if message.from_user else 0
+
+    path = IMAGE_PATHS.get(image_key or "", "") if image_key else ""
+    has_image = bool(path and os.path.exists(path))
+
+    if edit and not has_image:
+        try:
+            await message.edit_text(text, reply_markup=reply_markup)
+            await set_last_bot_msg_id(user_id, message.message_id)
+            return
+        except Exception:
+            pass
+
+    # Удаляем предыдущее главное сообщение
+    last_id = await get_last_bot_msg_id(user_id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if has_image:
+        try:
+            photo = FSInputFile(path)
+            caption = text[:1020] + ("…" if len(text) > 1020 else "")
+            m = await bot.send_photo(
+                chat_id=chat_id, photo=photo,
+                caption=caption, reply_markup=reply_markup
+            )
+            await set_last_bot_msg_id(user_id, m.message_id)
+            return
+        except Exception:
+            pass
+
+    m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    await set_last_bot_msg_id(user_id, m.message_id)
+
+
+async def _send_tech_with_gif(
+    bot: Bot, chat_id: int, user_id: int,
+    tech_key: str, text: str, reply_markup=None
+):
+    """Отправляет технику упражнения с GIF если есть, иначе — текст.
+    Удаляет предыдущее главное сообщение (чистый чат)."""
+    gif_path = TECH_GIFS.get(tech_key, "")
+
+    last_id = await get_last_bot_msg_id(user_id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if gif_path and os.path.exists(gif_path):
+        try:
+            animation = FSInputFile(gif_path)
+            caption = text[:1020] + ("…" if len(text) > 1020 else "")
+            m = await bot.send_animation(
+                chat_id=chat_id, animation=animation,
+                caption=caption, reply_markup=reply_markup
+            )
+            rest = text[1020:].strip()
+            if rest:
+                m2 = await bot.send_message(chat_id=chat_id, text=rest, reply_markup=reply_markup)
+                await set_last_bot_msg_id(user_id, m2.message_id)
+            else:
+                await set_last_bot_msg_id(user_id, m.message_id)
+            return
+        except Exception:
+            pass  # fallback to text
+
+    # Нет GIF или ошибка — отправляем текст
+    m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    await set_last_bot_msg_id(user_id, m.message_id)
 
 
 # =========================
@@ -3825,7 +4028,7 @@ async def open_faq(user_id: int, chat_id: int, bot: Bot, callback: Optional[Call
     if callback:
         await clean_edit(callback, user_id, text, reply_markup=faq_kb())
     else:
-        await clean_send(bot, chat_id, user_id, text, reply_markup=faq_kb())
+        await _send_with_image(bot, chat_id, user_id, text, "faq", reply_markup=faq_kb())
 
 
 async def cb_faq_question(callback: CallbackQuery, bot: Bot):
@@ -3853,7 +4056,7 @@ async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
         "6. 🍽 Питание — КБЖУ + примеры рационов\n\n"
         "Нет результата? Загляни в «Частые вопросы»."
     )
-    await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
+    await _send_with_image(bot, chat_id, user_id, text, "menu", reply_markup=menu_main_inline_kb())
 
 
 def welcome_kb():
@@ -3889,7 +4092,10 @@ async def cmd_start(message: Message, bot: Bot):
             "✅ поможет отслеживать прогресс\n\n"
             "Чтобы продолжить, выбери доступ 👇"
         )
-        await bot.send_message(chat_id=message.chat.id, text=spec_text, reply_markup=build_program_tariff_kb())
+        await _send_with_image(
+            bot, message.chat.id, uid,
+            spec_text, "restart", reply_markup=build_program_tariff_kb()
+        )
         return
 
     await bot.send_message(
@@ -3913,20 +4119,10 @@ async def cmd_start(message: Message, bot: Bot):
         "Начнём?"
     )
 
-    if os.path.exists(WELCOME_IMAGE):
-        photo = FSInputFile(WELCOME_IMAGE)
-        await bot.send_photo(
-            chat_id=message.chat.id,
-            photo=photo,
-            caption=welcome_text,
-            reply_markup=welcome_kb()
-        )
-    else:
-        await bot.send_message(
-            chat_id=message.chat.id,
-            text=welcome_text,
-            reply_markup=welcome_kb()
-        )
+    await _send_with_image(
+        bot, message.chat.id, uid,
+        welcome_text, "welcome", reply_markup=welcome_kb()
+    )
 
 
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
@@ -3961,7 +4157,7 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
     if callback:
         await clean_edit(callback, user_id, text, reply_markup=kb)
     else:
-        await clean_send(bot, chat_id, user_id, text, reply_markup=kb)
+        await _send_with_image(bot, chat_id, user_id, text, "upgrade", reply_markup=kb)
 
 
 # =========================
@@ -4048,12 +4244,12 @@ async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot)
 
     u = await get_user(message.from_user.id)
     if await ensure_profile_ready(message.from_user.id):
-        await clean_send(bot, message.chat.id, message.from_user.id, _profile_summary_text(u), reply_markup=profile_ready_kb())
+        await _send_with_image(bot, message.chat.id, message.from_user.id, _profile_summary_text(u), "profile", reply_markup=profile_ready_kb())
         return
 
     await state.set_state(ProfileWizard.goal)
     text = _profile_header(1) + "Настроим профиль.\n\n🎯 Цель?"
-    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_goal())
+    await _send_with_image(bot, message.chat.id, message.from_user.id, text, "profile", reply_markup=kb_goal())
 
 
 async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
@@ -5164,7 +5360,7 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
     if callback:
         await clean_edit(callback, user_id, display_text, reply_markup=kb)
     else:
-        await clean_send(bot, chat_id, user_id, display_text, reply_markup=kb)
+        await _send_with_image(bot, chat_id, user_id, display_text, "workouts", reply_markup=kb)
 
 
 # =========================
@@ -5395,6 +5591,7 @@ async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
 async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
     """Показываем технику конкретного упражнения из просмотра дня тренировки.
     callback_data: wex:tech:{day_num}:{tech_key}
+    Использует GIF из TECH_GIFS, если файл существует.
     """
     parts = callback.data.split(":")
     tech_key = parts[3] if len(parts) > 3 else ""
@@ -5409,7 +5606,6 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
 
     item = TECH.get(tech_key)
     if not item:
-        # Техника не найдена — показываем экран вместо show_alert
         await clean_edit(
             callback,
             callback.from_user.id,
@@ -5422,43 +5618,12 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
-    text     = item["text"]
-    img_path = item.get("img", "")
-
-    if img_path and os.path.exists(img_path):
-        # Есть картинка — удаляем текущее сообщение и отправляем фото
-        last_id = await get_last_bot_msg_id(callback.from_user.id)
-        if last_id:
-            try:
-                await bot.delete_message(
-                    chat_id=callback.message.chat.id,
-                    message_id=last_id
-                )
-            except Exception:
-                pass
-
-        photo   = FSInputFile(img_path)
-        caption = text[:1020] + ("…" if len(text) > 1020 else "")
-        m = await bot.send_photo(
-            chat_id=callback.message.chat.id,
-            photo=photo,
-            caption=caption,
-            reply_markup=back_kb
-        )
-        rest = text[1020:].strip()
-        if rest:
-            m2 = await bot.send_message(
-                chat_id=callback.message.chat.id,
-                text=rest,
-                reply_markup=back_kb
-            )
-            await set_last_bot_msg_id(callback.from_user.id, m2.message_id)
-        else:
-            await set_last_bot_msg_id(callback.from_user.id, m.message_id)
-    else:
-        # Нет картинки — просто редактируем текущее сообщение
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
-
+    text = item["text"]
+    # Используем GIF (не картинку)
+    await _send_tech_with_gif(
+        bot, callback.message.chat.id, callback.from_user.id,
+        tech_key, text, reply_markup=back_kb
+    )
     await callback.answer()
 
 
@@ -5508,7 +5673,7 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
     if callback:
         await clean_edit(callback, user_id, summary, reply_markup=nutrition_examples_kb())
     else:
-        await clean_send(bot, chat_id, user_id, summary, reply_markup=nutrition_examples_kb())
+        await _send_with_image(bot, chat_id, user_id, summary, "nutrition", reply_markup=nutrition_examples_kb())
 
 
 async def open_measures(user_id: int, chat_id: int, bot: Bot, state: FSMContext, callback: Optional[CallbackQuery] = None):
@@ -5524,7 +5689,7 @@ async def open_measures(user_id: int, chat_id: int, bot: Bot, state: FSMContext,
     if callback:
         await clean_edit(callback, user_id, text, reply_markup=measures_kb())
     else:
-        await clean_send(bot, chat_id, user_id, text, reply_markup=measures_kb())
+        await _send_with_image(bot, chat_id, user_id, text, "measurements", reply_markup=measures_kb())
 
 
 async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, callback: Optional[CallbackQuery] = None):
@@ -5551,7 +5716,7 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
     if callback:
         await clean_edit(callback, user_id, text, reply_markup=diary_exercises_kb())
     else:
-        await clean_send(bot, chat_id, user_id, text, reply_markup=diary_exercises_kb())
+        await _send_with_image(bot, chat_id, user_id, text, "diary", reply_markup=diary_exercises_kb())
 
 
 # =========================
@@ -5874,7 +6039,7 @@ async def cb_nutr_basket(callback: CallbackQuery, bot: Bot):
 
 
 # =========================
-# ✅ ТЕХНИКИ: ХЕНДЛЕРЫ (с картинками)
+# ✅ ТЕХНИКИ: ХЕНДЛЕРЫ (с GIF-анимациями)
 # =========================
 async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -5883,7 +6048,7 @@ async def cb_tech_list(callback: CallbackQuery, state: FSMContext):
 
 
 async def cb_tech_show(callback: CallbackQuery, bot: Bot):
-    """Показ техники с картинкой из списка техник."""
+    """Показ техники с GIF-анимацией из TECH_GIFS (если файл есть), иначе — текст."""
     key = callback.data.split("tech:", 1)[1]
     item = TECH.get(key)
     if not item:
@@ -5891,41 +6056,10 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
         return
 
     text = item["text"]
-    img_path = item["img"]
-    caption = text[:1020] + ("…" if len(text) > 1020 else "")
-    rest = text[1020:].strip()
-
-    last_id = await get_last_bot_msg_id(callback.from_user.id)
-    if last_id:
-        try:
-            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
-        except Exception:
-            pass
-
-    if os.path.exists(img_path):
-        photo = FSInputFile(img_path)
-        m = await bot.send_photo(
-            chat_id=callback.message.chat.id,
-            photo=photo,
-            caption=caption,
-            reply_markup=tech_back_kb()
-        )
-        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
-        if rest:
-            m2 = await bot.send_message(
-                chat_id=callback.message.chat.id,
-                text=rest,
-                reply_markup=tech_back_kb()
-            )
-            await set_last_bot_msg_id(callback.from_user.id, m2.message_id)
-    else:
-        m = await bot.send_message(
-            chat_id=callback.message.chat.id,
-            text=text,
-            reply_markup=tech_back_kb()
-        )
-        await set_last_bot_msg_id(callback.from_user.id, m.message_id)
-
+    await _send_tech_with_gif(
+        bot, callback.message.chat.id, callback.from_user.id,
+        key, text, reply_markup=tech_back_kb()
+    )
     await callback.answer()
 
 
