@@ -47,10 +47,10 @@ IMAGE_PATHS = {
     "profile":      "media2/tech/profile.jpg",
     "menu":         "media2/tech/menu.jpg",
     # ── Разделы (media/sections/) ────────────────────────────────────────────
-    "workouts":     "media2/sections/workouts.jpg",
-    "nutrition":    "media2/sections/nutrition.jpg",
-    "diary":        "media2/sections/diary.jpg",
-    "measurements": "media2/sections/measurements.jpg",
+    "workouts":     "media2/tech/workouts.jpg",
+    "nutrition":    "media2/tech/nutrition.jpg",
+    "diary":        "media2/tech/diary.jpg",
+    "measurements": "media2/tech/measurements.jpg",
     # ────────────────────────────────────────────────────────────────────────
     "upgrade":      "media2/tech/upgrade.jpg",
     "faq":          "media2/tech/faq.jpg",
@@ -6772,4 +6772,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
