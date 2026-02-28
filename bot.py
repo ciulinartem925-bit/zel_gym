@@ -1398,27 +1398,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     rows = []
     btns = []
     for i in range(1, freq + 1):
-        if plan_struct:
-            day_text = (plan_struct.get("days") or {}).get(str(i), "")
-            label = get_day_display_name(i, day_text)
-            # Короткие метки для кнопок
-            t = day_text.lower()
-            if "фулбади" in t or "fullbody" in t:
-                suffix = {1: "A", 2: "B", 3: "C"}.get(i, str(i))
-                label = f"Full Body {suffix}"
-            elif "верх тела" in t:
-                label = "Верх"
-            elif "низ тела" in t or ("ниж" in t and "тел" in t):
-                label = "Низ"
-            elif "грудь и плеч" in t or "толчок" in t:
-                label = "Грудь/Плечи"
-            elif ("тяга" in t and "спина" in t) or "спина и бицепс" in t:
-                label = "Спина/Бицепс"
-            elif "ноги" in t and "квадрицепс" in t:
-                label = "Ноги"
-            btn_text = f"📅 {label}"
-        else:
-            btn_text = f"📅 День {i}"
+        btn_text = f"📅 День {i}"
         btns.append(InlineKeyboardButton(text=btn_text, callback_data=f"wday:{i}"))
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
@@ -3883,8 +3863,38 @@ def welcome_kb():
 
 
 async def cmd_start(message: Message, bot: Bot):
-    await ensure_user(message.from_user.id, message.from_user.username or "")
+    uid = message.from_user.id
+    await ensure_user(uid, message.from_user.username or "")
     await try_delete_user_message(bot, message)
+
+    # Проверяем: профиль заполнен, но подписки нет
+    u = await get_user(uid)
+    profile_complete = bool(
+        u.get("goal") and u.get("sex") and u.get("height")
+        and u.get("weight") and u.get("freq")
+    )
+    subscription_active = await is_access_active(uid)
+
+    if profile_complete and not subscription_active:
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text="✅ Я на месте. Кнопки снизу 👇",
+            reply_markup=control_reply_kb()
+        )
+        spec_text = (
+            "👋 Ты уже заполнил профиль — осталось открыть доступ.\n\n"
+            "Что умеет бот:\n"
+            "✅ составит программу под твою цель\n"
+            "✅ покажет технику упражнений\n"
+            "✅ поможет отслеживать прогресс\n\n"
+            "Чтобы продолжить, выбери доступ 👇"
+        )
+        spec_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🟢 Пробный доступ — 1₽", callback_data="tariff:trial")],
+            [InlineKeyboardButton(text="📌 Ознакомиться с другими тарифами", callback_data="nav:upgrade")],
+        ])
+        await bot.send_message(chat_id=message.chat.id, text=spec_text, reply_markup=spec_kb)
+        return
 
     await bot.send_message(
         chat_id=message.chat.id,
