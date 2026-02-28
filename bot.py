@@ -41,8 +41,8 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 # ТАРИФЫ
 TARIFFS = {
     "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 3,  "plan_regens": 10},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 399,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 899,  "plan_regens": 10},
     "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
 }
 
@@ -1412,41 +1412,30 @@ def simple_back_to_menu_inline_kb():
 # =========================
 # ✅ Тренировки: кнопки дней
 # =========================
-def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict = None):
-    freq = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
-    rows = []
+def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict = None, active_day: int = 0):
+    """Клавиатура выбора дня тренировки.
+    - Метки: строго «День N» (✅ День N если active_day совпадает)
+    - Количество кнопок = freq (из профиля) или длина плана
+    - Раскладка: 2 кнопки в строке
+    """
+    # Определяем количество дней: freq из аргумента, но не больше реально доступных дней в плане
+    plan_days_count = len((plan_struct.get("days") or {}) if plan_struct else {})
+    if plan_days_count > 0:
+        # Показываем ровно freq кнопок (не больше реально сгенерированных дней)
+        n = max(1, min(int(freq or 3), plan_days_count))
+    else:
+        n = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
+
     btns = []
-    for i in range(1, freq + 1):
-        if plan_struct:
-            day_text = (plan_struct.get("days") or {}).get(str(i), "")
-            label = get_day_display_name(i, day_text)
-            # Короткие метки для кнопок
-            t = day_text.lower()
-            if "фулбади" in t or "fullbody" in t:
-                suffix = {1: "A", 2: "B", 3: "C"}.get(i, str(i))
-                label = f"Full Body {suffix}"
-            elif "верх а" in t or ("верх" in t and "вариант а" in t):
-                label = "Верх А"
-            elif "верх б" in t or ("верх" in t and "вариант б" in t):
-                label = "Верх Б"
-            elif "низ а" in t or ("низ" in t and "вариант а" in t):
-                label = "Низ А"
-            elif "низ б" in t or ("низ" in t and "вариант б" in t):
-                label = "Низ Б"
-            elif "верх тела" in t:
-                label = "Верх"
-            elif "низ тела" in t or ("ниж" in t and "тел" in t):
-                label = "Низ"
-            elif "грудь и плеч" in t or "толчок" in t:
-                label = "Грудь/Плечи"
-            elif ("тяга" in t and "спина" in t) or "спина и бицепс" in t:
-                label = "Спина/Бицепс"
-            elif "ноги" in t and "квадрицепс" in t:
-                label = "Ноги"
-            btn_text = f"📅 {label}"
+    for i in range(1, n + 1):
+        if i == active_day:
+            label = f"✅ День {i}"
         else:
-            btn_text = f"📅 День {i}"
-        btns.append(InlineKeyboardButton(text=btn_text, callback_data=f"wday:{i}"))
+            label = f"День {i}"
+        btns.append(InlineKeyboardButton(text=label, callback_data=f"wday:{i}"))
+
+    # Раскладка 2 в строку
+    rows = []
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
@@ -2894,7 +2883,8 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
         day_note = ""
 
     lines = []
-    lines.append(f"{day_emoji} День {day_num}: {day_type}")
+    # Заголовок строго в формате "🏋️ День N: фокус"
+    lines.append(f"🏋️ День {day_num}: {day_type}")
     if day_note:
         lines.append(f"📌 {day_note}")
     lines.append("")
@@ -5361,11 +5351,11 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
 
 
 # =========================
-# ✅ Клавиатура дня тренировки — только управление и техники
-# убраны кнопки «Статистика» и «Меню»
+# ✅ Клавиатура дня тренировки — упражнения + навигация по дням
 # =========================
-def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
-    """Клавиатура упражнений дня с чекбоксами и кнопкой техники."""
+def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int],
+                              freq: int = 3, plan_struct: dict = None) -> InlineKeyboardMarkup:
+    """Клавиатура упражнений дня с чекбоксами, кнопкой техники и мини-навигацией по дням (✅ — текущий день)."""
     rows = []
     for idx, name in enumerate(exercises):
         is_done = idx in done
@@ -5389,7 +5379,17 @@ def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) ->
         else:
             rows.append([done_btn])
 
-    # Только кнопка «Назад к программе»
+    # Мини-навигация: переключение дней с ✅ на текущем
+    plan_days_count = len((plan_struct.get("days") or {}) if plan_struct else {})
+    n_days = max(1, min(int(freq or 3), plan_days_count if plan_days_count > 0 else MAX_DAYS))
+    day_btns = []
+    for i in range(1, n_days + 1):
+        label = f"✅ День {i}" if i == day else f"День {i}"
+        day_btns.append(InlineKeyboardButton(text=label, callback_data=f"wday:{i}"))
+    # 2 кнопки в строку
+    for i in range(0, len(day_btns), 2):
+        rows.append(day_btns[i:i+2])
+
     rows.append([InlineKeyboardButton(text="📋 Программа", callback_data="nav:workouts")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -5432,10 +5432,12 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
     done = await get_day_done_exercises(uid, day_num)
     already_done_today = await is_day_completed_today(uid, day_num)
 
+    u = await get_user(uid)
+    freq = int(u.get("freq") or plan_struct.get("freq") or 3)
     text = build_day_display_text(day_num, day_text, exercises, done)
     if already_done_today:
         text += "\n\n🎉 День уже засчитан сегодня! Можешь пройти снова."
-    kb = workout_day_exercises_kb(day_num, exercises, done)
+    kb = workout_day_exercises_kb(day_num, exercises, done, freq=freq, plan_struct=plan_struct)
     await clean_edit(callback, uid, text, reply_markup=kb)
     await callback.answer()
 
@@ -5479,13 +5481,17 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
         day_title = get_day_display_name(day_num, day_text)
         await mark_day_completed(uid, day_num, day_title)
         await clear_day_progress(uid, day_num)
+        u = await get_user(uid)
+        freq = int(u.get("freq") or plan_struct.get("freq") or 3)
         text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True)
-        kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
+        kb = workout_day_exercises_kb(day_num, exercises, list(range(total)), freq=freq, plan_struct=plan_struct)
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer("🎉 День завершён!", show_alert=True)
     else:
+        u = await get_user(uid)
+        freq = int(u.get("freq") or plan_struct.get("freq") or 3)
         text = build_day_display_text(day_num, day_text, exercises, done)
-        kb = workout_day_exercises_kb(day_num, exercises, done)
+        kb = workout_day_exercises_kb(day_num, exercises, done, freq=freq, plan_struct=plan_struct)
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer(f"{'✅' if ex_idx in done else '↩️'} {done_count}/{total}")
 
