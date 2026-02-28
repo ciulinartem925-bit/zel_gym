@@ -57,7 +57,7 @@ IMAGE_PATHS = {
 TECH_GIFS = {
     "squat":             "media/tech/squat.gif",
     "bench":             "media/tech/bench.gif",
-    "row":               "media/tech/pushup.gif",
+    "row":               "media/tech/row.gif",
     "latpulldown":       "media/tech/latpulldown.gif",
     "pullup":            "media/tech/pullup.gif",
     "rdl":               "media/tech/rdl.gif",
@@ -82,44 +82,44 @@ TECH_GIFS = {
     "rowtrain":          "media/tech/rowtrain.gif",
     "dumbbell_row":      "media/tech/dumbbell_row.gif",
     "band_row":          "media/tech/band_row.gif",
-    "deadlift":          "media/tech/rdl.gif",
-    "hack_squat":        "media/tech/squat.gif",
-    "bulgarian":         "media/tech/squat.gif",
-    "lunge_walking":     "media/tech/lunge.gif",
-    "lunge_barbell":     "media/tech/lunge.gif",
-    "lunge_dumbbell":    "media/tech/lunge.gif",
-    "squat_barbell":     "media/tech/squat.gif",
+    "deadlift":          "media/tech/deadlift.gif",
+    "hack_squat":        "media/tech/hack_squat.gif",
+    "bulgarian":         "media/tech/bulgarian.gif",
+    "lunge_walking":     "media/tech/lunge_walking.gif",
+    "lunge_barbell":     "media/tech/lunge_barbell.gif",
+    "lunge_dumbbell":    "media/tech/lunge_dumbbell.gif",
+    "squat_barbell":     "media/tech/squat_barbel.gif",
     "squat_sumo":        "media/tech/squat.gif",
-    "squat_bodyweight":  "media/tech/squat.gif",
-    "rdl_barbell":       "media/tech/rdl.gif",
-    "rdl_dumbbell":      "media/tech/rdl.gif",
+    "squat_bodyweight":  "media/tech/squat_bodyweight.gif",
+    "rdl_barbell":       "media/tech/rdl_barbell.gif",
+    "rdl_dumbbell":      "media/tech/rdl_dumbbell.gif",
     "incline_press":     "media/tech/incline_press.gif",
     "bench_dumbbell":    "media/tech/bench_dumbbell.gif",
     "bench_machine":     "media/tech/bench_machine.gif",
     "incline_press_barbell":  "media/tech/incline_press_barbell.gif",
     "incline_press_dumbbell": "media/tech/incline_press_dumbbell.gif",
-    "ohp_barbell":       "media/tech/ohp.gif",
-    "ohp_dumbbell":      "media/tech/ohp.gif",
-    "ohp_machine":       "media/tech/ohp.gif",
-    "band_ohp":          "media/tech/ohp.gif",
-    "pike_pushup":       "media/tech/ohp.gif",
-    "narrow_pushup":     "media/tech/triceps.gif",
-    "pullup_chinup":     "media/tech/pullup.gif",
-    "pullup_wide":       "media/tech/pullup.gif",
-    "latpulldown_wide":  "media/tech/latpulldown.gif",
-    "latpulldown_narrow":"media/tech/latpulldown.gif",
-    "barbell_row":       "media/tech/rowtrain.gif",
-    "band_pull":         "media/tech/latpulldown.gif",
-    "good_morning":      "media/tech/rdl.gif",
-    "face_pull":         "media/tech/lateralraise.gif",
-    "rear_delt":         "media/tech/lateralraise.gif",
-    "hammer":            "media/tech/biceps.gif",
-    "triceps_oh":        "media/tech/triceps.gif",
-    "hack_squat":        "media/tech/squat.gif",
+    "ohp_barbell":       "media/tech/ohp_barbell.gif",
+    "ohp_dumbbell":      "media/tech/ohp_dumbbell.gif",
+    "ohp_machine":       "media/tech/ohp_machine.gif",
+    "band_ohp":          "media/tech/band_ohp.gif",
+    "pike_pushup":       "media/tech/pike_pushup.gif",
+    "narrow_pushup":     "media/tech/narrow_pushup.gif",
+    "pullup_chinup":     "media/tech/pullup_chinup.gif",
+    "pullup_wide":       "media/tech/pullup_wide.gif",
+    "latpulldown_wide":  "media/tech/latpulldown_wide.gif",
+    "latpulldown_narrow":"media/tech/latpulldown_narrow.gif",
+    "barbell_row":       "media/tech/barbell_row.gif",
+    "band_pull":         "media/tech/band_pull.gif",
+    "good_morning":      "media/tech/good_morning.gif",
+    "face_pull":         "media/tech/face_pull.gif",
+    "rear_delt":         "media/tech/rear_delt.gif",
+    "hammer":            "media/tech/hammer.gif",
+    "triceps_oh":        "media/tech/triceps_oh.gif",
+    "hack_squat":        "media/tech/hack_squat.gif",
     "chest_fly":         "media/tech/chest_fly.gif",
     "crossover":         "media/tech/crossover.gif",
-    "deadlift_sumo":     "media/tech/rdl.gif",
-    "ohp_barbell":       "media/tech/ohp.gif",
+    "deadlift_sumo":     "media/tech/deadlift_sumo.gif",
+    "ohp_barbell":       "media/tech/ohp_barbell.gif",
 }
 
 # ТАРИФЫ
@@ -397,7 +397,7 @@ TECH = {
     # ✅ Новые техники для упражнений без покрытия
     "hinge": {
         "title": "Ягодичный мост",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/hinge.jpg",
         "text": (
             "📚 Ягодичный мост (ягодицы + задняя поверхность бедра)\n\n"
             "✅ Настройка\n"
@@ -416,7 +416,7 @@ TECH = {
     },
     "core": {
         "title": "Планка",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/core.jpg",
         "text": (
             "📚 Планка (кор — стабилизация)\n\n"
             "✅ Настройка\n"
@@ -435,7 +435,7 @@ TECH = {
     },
     "hanging_leg_raise": {
         "title": "Подъёмы ног в висе",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/hanging_leg_raise.jpg",
         "text": (
             "📚 Подъёмы ног в висе (нижний пресс)\n\n"
             "✅ Настройка\n"
@@ -455,7 +455,7 @@ TECH = {
     },
     "leg_raise_lying": {
         "title": "Подъёмы ног лёжа",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/leg_raise_lying.jpg",
         "text": (
             "📚 Подъёмы ног лёжа (нижний пресс)\n\n"
             "✅ Настройка\n"
@@ -474,7 +474,7 @@ TECH = {
     },
     "ab_crunch": {
         "title": "Скручивания (пресс)",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/ab_crunch.jpg",
         "text": (
             "📚 Скручивания (верхний пресс)\n\n"
             "✅ Настройка\n"
@@ -493,7 +493,7 @@ TECH = {
     },
     "ab_rollout": {
         "title": "Ролик для пресса",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/ab_rollout.jpg",
         "text": (
             "📚 Ролик для пресса (ab wheel)\n\n"
             "✅ Как делать\n"
@@ -510,7 +510,7 @@ TECH = {
     },
     "side_plank": {
         "title": "Боковая планка",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/side_plank.jpg",
         "text": (
             "📚 Боковая планка (косые мышцы + стабилизация)\n\n"
             "✅ Настройка\n"
@@ -529,7 +529,7 @@ TECH = {
     },
     "elbow_leg_raise": {
         "title": "Подъёмы ног в упоре на локтях",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/elbow_leg_raise.jpg",
         "text": (
             "📚 Подъёмы ног в упоре на локтях (нижний пресс)\n\n"
             "✅ Настройка\n"
@@ -548,7 +548,7 @@ TECH = {
     },
     "calves": {
         "title": "Подъёмы на носки",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/calves.jpg",
         "text": (
             "📚 Подъёмы на носки (икры)\n\n"
             "✅ Как делать\n"
@@ -564,7 +564,7 @@ TECH = {
     },
     "goblet": {
         "title": "Гоблет-присед",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/goblet.jpg",
         "text": (
             "📚 Гоблет-присед (ноги + корпус)\n\n"
             "✅ Настройка\n"
@@ -583,7 +583,7 @@ TECH = {
     },
     "lunge": {
         "title": "Выпады",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/lunge.jpg",
         "text": (
             "📚 Выпады (ноги + ягодицы)\n\n"
             "✅ Как делать\n"
@@ -599,7 +599,7 @@ TECH = {
     },
     "hyperext": {
         "title": "Гиперэкстензия",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/hyperext.jpg",
         "text": (
             "📚 Гиперэкстензия (поясница + ягодицы)\n\n"
             "✅ Как делать\n"
@@ -615,7 +615,7 @@ TECH = {
     },
     "legcurl": {
         "title": "Сгибания ног",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/legcurl.jpg",
         "text": (
             "📚 Сгибания ног (бицепс бедра)\n\n"
             "✅ Как делать\n"
@@ -740,7 +740,7 @@ TECH = {
     },
     "good_morning": {
         "title": "Good Morning",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/good_morning.jpg",
         "text": (
             "📚 Good Morning (поясница + задняя поверхность бедра)\n\n"
             "✅ Как делать\n"
@@ -840,7 +840,7 @@ TECH = {
     },
     "hack_squat": {
         "title": "Хакк-присед",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/hack_squat.jpg",
         "text": (
             "📚 Хакк-присед (квадрицепс)\n\n"
             "✅ Как делать\n"
@@ -856,7 +856,7 @@ TECH = {
     },
     "bulgarian": {
         "title": "Болгарские выпады",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/bulgarian.jpg",
         "text": (
             "📚 Болгарские выпады (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -874,7 +874,7 @@ TECH = {
     },
     "deadlift": {
         "title": "Становая тяга",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/deadlift.jpg",
         "text": (
             "📚 Становая тяга (базовое упражнение)\n\n"
             "✅ Настройка\n"
@@ -955,7 +955,7 @@ TECH = {
 
     "squat_barbell": {
         "title": "Присед со штангой",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/squat_barbell.jpg",
         "text": (
             "📚 Присед со штангой (квадрицепс + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -978,7 +978,7 @@ TECH = {
     },
     "squat_bodyweight": {
         "title": "Присед (собственный вес)",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/squat_bodyweight.jpg",
         "text": (
             "📚 Присед на собственном весе\n\n"
             "✅ Настройка\n"
@@ -998,7 +998,7 @@ TECH = {
     },
     "squat_sumo": {
         "title": "Присед сумо",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/squat_sumo.jpg",
         "text": (
             "📚 Присед сумо (приводящие + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1099,7 +1099,7 @@ TECH = {
     },
     "rdl_barbell": {
         "title": "Румынская тяга со штангой",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/rdl_barbel.jpg",
         "text": (
             "📚 Румынская тяга со штангой (задняя поверхность бедра)\n\n"
             "✅ Настройка\n"
@@ -1121,7 +1121,7 @@ TECH = {
     },
     "rdl_dumbbell": {
         "title": "Румынская тяга с гантелями",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/rdl_dumbbell.jpg",
         "text": (
             "📚 Румынская тяга с гантелями (бёдра + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1141,7 +1141,7 @@ TECH = {
     },
     "lunge_barbell": {
         "title": "Выпады со штангой",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/lunge_barbell.jpg",
         "text": (
             "📚 Выпады со штангой (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1161,7 +1161,7 @@ TECH = {
     },
     "lunge_dumbbell": {
         "title": "Выпады с гантелями",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/lunge_dumbbell.jpg",
         "text": (
             "📚 Выпады с гантелями (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1181,7 +1181,7 @@ TECH = {
     },
     "lunge_walking": {
         "title": "Выпады ходьбой",
-        "img": "media/tech/squat.jpg",
+        "img": "media/tech/lunge_walking.jpg",
         "text": (
             "📚 Выпады ходьбой (динамика + координация)\n\n"
             "✅ Как делать\n"
@@ -1343,7 +1343,7 @@ TECH = {
     },
     "deadlift_sumo": {
         "title": "Становая тяга сумо",
-        "img": "media/tech/rdl.jpg",
+        "img": "media/tech/deadlift_sumo.jpg",
         "text": (
             "📚 Становая тяга сумо\n\n"
             "✅ Настройка\n"
@@ -6560,5 +6560,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
