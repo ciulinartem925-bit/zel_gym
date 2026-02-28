@@ -55,71 +55,156 @@ IMAGE_PATHS = {
 }
 
 TECH_GIFS = {
+    # ── Ноги / нижний блок ──────────────────────────────────────────────────
     "squat":             "media/tech/squat.gif",
-    "bench":             "media/tech/bench.gif",
-    "row":               "media/tech/row.gif",
-    "latpulldown":       "media/tech/latpulldown.gif",
-    "pullup":            "media/tech/pullup.gif",
-    "rdl":               "media/tech/rdl.gif",
-    "ohp":               "media/tech/ohp.gif",
-    "lateralraise":      "media/tech/lateralraise.gif",
-    "biceps":            "media/tech/biceps.gif",
-    "triceps":           "media/tech/triceps.gif",
-    "legpress":          "media/tech/legpress.gif",
-    "hinge":             "media/tech/hinge.gif",
-    "core":              "media/tech/core.gif",
-    "hanging_leg_raise": "media/tech/hanging_leg_raise.gif",
-    "leg_raise_lying":   "media/tech/leg_raise_lying.gif",
-    "ab_crunch":         "media/tech/ab_crunch.gif",
-    "ab_rollout":        "media/tech/ab_rollout.gif",
-    "side_plank":        "media/tech/side_plank.gif",
-    "elbow_leg_raise":   "media/tech/elbow_leg_raise.gif",
-    "calves":            "media/tech/calves.gif",
+    "squat_barbell":     "media/tech/squat_barbell.gif",   # fix: был squat_barbel.gif
+    "squat_sumo":        "media/tech/squat_sumo.gif",
+    "squat_bodyweight":  "media/tech/squat_bodyweight.gif",
     "goblet":            "media/tech/goblet.gif",
-    "lunge":             "media/tech/lunge.gif",
-    "hyperext":          "media/tech/hyperext.gif",
-    "legcurl":           "media/tech/legcurl.gif",
-    "rowtrain":          "media/tech/rowtrain.gif",
-    "dumbbell_row":      "media/tech/dumbbell_row.gif",
-    "band_row":          "media/tech/band_row.gif",
-    "deadlift":          "media/tech/deadlift.gif",
     "hack_squat":        "media/tech/hack_squat.gif",
     "bulgarian":         "media/tech/bulgarian.gif",
-    "lunge_walking":     "media/tech/lunge_walking.gif",
+    "lunge":             "media/tech/lunge.gif",
     "lunge_barbell":     "media/tech/lunge_barbell.gif",
     "lunge_dumbbell":    "media/tech/lunge_dumbbell.gif",
-    "squat_barbell":     "media/tech/squat_barbel.gif",
-    "squat_sumo":        "media/tech/squat.gif",
-    "squat_bodyweight":  "media/tech/squat_bodyweight.gif",
-    "rdl_barbell":       "media/tech/rdl_barbell.gif",
-    "rdl_dumbbell":      "media/tech/rdl_dumbbell.gif",
-    "incline_press":     "media/tech/incline_press.gif",
+    "lunge_walking":     "media/tech/lunge_walking.gif",
+    "legpress":          "media/tech/legpress.gif",
+    "legcurl":           "media/tech/legcurl.gif",
+    "hyperext":          "media/tech/hyperext.gif",
+    "hinge":             "media/tech/hinge.gif",
+    "calves":            "media/tech/calves.gif",
+    # ── Грудь / жим ─────────────────────────────────────────────────────────
+    "bench":             "media/tech/bench.gif",
     "bench_dumbbell":    "media/tech/bench_dumbbell.gif",
     "bench_machine":     "media/tech/bench_machine.gif",
+    "incline_press":     "media/tech/incline_press.gif",
     "incline_press_barbell":  "media/tech/incline_press_barbell.gif",
     "incline_press_dumbbell": "media/tech/incline_press_dumbbell.gif",
+    "chest_fly":         "media/tech/chest_fly.gif",
+    "crossover":         "media/tech/crossover.gif",
+    # ── Спина / тяга ────────────────────────────────────────────────────────
+    "latpulldown":       "media/tech/latpulldown.gif",
+    "latpulldown_wide":  "media/tech/latpulldown_wide.gif",
+    "latpulldown_narrow": "media/tech/latpulldown_narrow.gif",
+    "pullup":            "media/tech/pullup.gif",
+    "pullup_chinup":     "media/tech/pullup_chinup.gif",
+    "pullup_wide":       "media/tech/pullup_wide.gif",
+    "rowtrain":          "media/tech/rowtrain.gif",
+    "dumbbell_row":      "media/tech/dumbbell_row.gif",
+    "barbell_row":       "media/tech/barbell_row.gif",
+    "band_row":          "media/tech/band_row.gif",
+    "band_pull":         "media/tech/band_pull.gif",
+    "face_pull":         "media/tech/face_pull.gif",
+    "rear_delt":         "media/tech/rear_delt.gif",
+    # ── Тяга / поясница ─────────────────────────────────────────────────────
+    "rdl":               "media/tech/rdl.gif",
+    "rdl_barbell":       "media/tech/rdl_barbell.gif",
+    "rdl_dumbbell":      "media/tech/rdl_dumbbell.gif",
+    "deadlift":          "media/tech/deadlift.gif",
+    "deadlift_sumo":     "media/tech/deadlift_sumo.gif",
+    "good_morning":      "media/tech/good_morning.gif",
+    # ── Плечи ───────────────────────────────────────────────────────────────
+    "ohp":               "media/tech/ohp.gif",
     "ohp_barbell":       "media/tech/ohp_barbell.gif",
     "ohp_dumbbell":      "media/tech/ohp_dumbbell.gif",
     "ohp_machine":       "media/tech/ohp_machine.gif",
     "band_ohp":          "media/tech/band_ohp.gif",
+    "lateralraise":      "media/tech/lateralraise.gif",
     "pike_pushup":       "media/tech/pike_pushup.gif",
-    "narrow_pushup":     "media/tech/narrow_pushup.gif",
-    "pullup_chinup":     "media/tech/pullup_chinup.gif",
-    "pullup_wide":       "media/tech/pullup_wide.gif",
-    "latpulldown_wide":  "media/tech/latpulldown_wide.gif",
-    "latpulldown_narrow":"media/tech/latpulldown_narrow.gif",
-    "barbell_row":       "media/tech/barbell_row.gif",
-    "band_pull":         "media/tech/band_pull.gif",
-    "good_morning":      "media/tech/good_morning.gif",
-    "face_pull":         "media/tech/face_pull.gif",
-    "rear_delt":         "media/tech/rear_delt.gif",
+    # ── Бицепс / трицепс ────────────────────────────────────────────────────
+    "biceps":            "media/tech/biceps.gif",
+    "biceps_barbell":    "media/tech/biceps_barbell.gif",
     "hammer":            "media/tech/hammer.gif",
+    "triceps":           "media/tech/triceps.gif",
     "triceps_oh":        "media/tech/triceps_oh.gif",
-    "hack_squat":        "media/tech/hack_squat.gif",
-    "chest_fly":         "media/tech/chest_fly.gif",
-    "crossover":         "media/tech/crossover.gif",
-    "deadlift_sumo":     "media/tech/deadlift_sumo.gif",
-    "ohp_barbell":       "media/tech/ohp_barbell.gif",
+    "narrow_pushup":     "media/tech/narrow_pushup.gif",
+    # ── Кор / пресс ─────────────────────────────────────────────────────────
+    "core":              "media/tech/core.gif",
+    "side_plank":        "media/tech/side_plank.gif",
+    "hanging_leg_raise": "media/tech/hanging_leg_raise.gif",
+    "leg_raise_lying":   "media/tech/leg_raise_lying.gif",
+    "elbow_leg_raise":   "media/tech/elbow_leg_raise.gif",
+    "ab_crunch":         "media/tech/ab_crunch.gif",
+    "ab_rollout":        "media/tech/ab_rollout.gif",
+    # ── Разное ──────────────────────────────────────────────────────────────
+    "pushup":            "media/tech/pushup.gif",  # "row" = отжимания (так в файле)
+}
+
+# =========================
+# КАНОНИЧЕСКИЕ НАЗВАНИЯ УПРАЖНЕНИЙ
+# =========================
+EXERCISE_NAMES = {
+    # Ноги / нижний блок
+    "squat":             "Присед",
+    "squat_barbell":     "Присед со штангой",
+    "squat_bodyweight":  "Присед (собственный вес)",
+    "squat_sumo":        "Присед сумо",
+    "goblet":            "Гоблет-присед",
+    "hack_squat":        "Хакк-присед",
+    "bulgarian":         "Болгарские выпады",
+    "lunge":             "Выпады",
+    "lunge_barbell":     "Выпады со штангой",
+    "lunge_dumbbell":    "Выпады с гантелями",
+    "lunge_walking":     "Выпады ходьбой",
+    "legpress":          "Жим ногами",
+    "legcurl":           "Сгибания ног",
+    "hyperext":          "Гиперэкстензия",
+    "hinge":             "Ягодичный мост",
+    "calves":            "Подъёмы на носки",
+    # Грудь / жим
+    "bench":             "Жим лёжа",
+    "bench_dumbbell":    "Жим гантелей лёжа",
+    "bench_machine":     "Жим в тренажёре (грудь)",
+    "incline_press":     "Жим под углом (incline)",
+    "incline_press_barbell":  "Жим под углом (штанга)",
+    "incline_press_dumbbell": "Жим под углом (гантели)",
+    "chest_fly":         "Разведения на грудь",
+    "crossover":         "Кроссовер",
+    # Спина / тяга
+    "latpulldown":       "Тяга верхнего блока",
+    "latpulldown_wide":  "Тяга верхнего блока широким хватом",
+    "latpulldown_narrow":"Тяга верхнего блока узким хватом",
+    "pullup":            "Подтягивания",
+    "pullup_chinup":     "Подтягивания обратным хватом",
+    "pullup_wide":       "Подтягивания широким хватом",
+    "rowtrain":          "Тяга горизонтального блока",
+    "dumbbell_row":      "Тяга гантели",
+    "barbell_row":       "Тяга штанги в наклоне",
+    "band_row":          "Тяга резинки",
+    "band_pull":         "Тяга резинки сверху",
+    "face_pull":         "Face Pull",
+    "rear_delt":         "Задняя дельта",
+    # Тяга / поясница
+    "rdl":               "Румынская тяга",
+    "rdl_barbell":       "Румынская тяга со штангой",
+    "rdl_dumbbell":      "Румынская тяга с гантелями",
+    "deadlift":          "Становая тяга",
+    "deadlift_sumo":     "Становая тяга сумо",
+    "good_morning":      "Good Morning",
+    # Плечи
+    "ohp":               "Жим вверх",
+    "ohp_barbell":       "Жим штанги стоя (OHP)",
+    "ohp_dumbbell":      "Жим гантелей стоя/сидя",
+    "ohp_machine":       "Жим в тренажёре вверх",
+    "band_ohp":          "Жим резинки вверх",
+    "lateralraise":      "Разведения в стороны",
+    "pike_pushup":       "Пайк-отжимания",
+    # Бицепс / трицепс
+    "biceps":            "Бицепс сгибания",
+    "biceps_barbell":    "Сгибания со штангой (бицепс)",
+    "hammer":            "Молотки",
+    "triceps":           "Трицепс на блоке",
+    "triceps_oh":        "Разгибание трицепса из-за головы",
+    "narrow_pushup":     "Отжимания узкие",
+    # Кор / пресс
+    "core":              "Планка",
+    "side_plank":        "Боковая планка",
+    "hanging_leg_raise": "Подъёмы ног в висе",
+    "leg_raise_lying":   "Подъёмы ног лёжа",
+    "elbow_leg_raise":   "Подъёмы ног в упоре на локтях",
+    "ab_crunch":         "Скручивания (пресс)",
+    "ab_rollout":        "Ролик для пресса",
+    # Разное
+    "row":               "Отжимания",  # "row" в этом файле = отжимания
 }
 
 # ТАРИФЫ
@@ -255,7 +340,7 @@ TECH = {
         )
     },
     "latpulldown": {
-        "title": "Верхний блок",
+        "title": "Тяга верхнего блока",
         "img": "media/tech/latpulldown.jpg",
         "text": (
             "📚 Тяга верхнего блока (спина, не бицепс)\n\n"
@@ -686,7 +771,7 @@ TECH = {
     },
     "pike_pushup": {
         "title": "Пайк-отжимания",
-        "img": "media/tech/ohp.jpg",
+        "img": "media/tech/pike_pushup.jpg",
         "text": (
             "📚 Пайк-отжимания (плечи + трицепс)\n\n"
             "✅ Как делать\n"
@@ -702,7 +787,7 @@ TECH = {
     },
     "band_ohp": {
         "title": "Жим резинки вверх",
-        "img": "media/tech/ohp.jpg",
+        "img": "media/tech/band_ohp.jpg",
         "text": (
             "📚 Жим резинки вверх (плечи дома)\n\n"
             "✅ Настройка\n"
@@ -720,7 +805,7 @@ TECH = {
     },
     "band_pull": {
         "title": "Тяга резинки сверху",
-        "img": "media/tech/latpulldown.jpg",
+        "img": "media/tech/band_pull.jpg",
         "text": (
             "📚 Тяга резинки сверху (спина дома)\n\n"
             "✅ Настройка\n"
@@ -757,7 +842,7 @@ TECH = {
     },
     "face_pull": {
         "title": "Face Pull",
-        "img": "media/tech/lateralraise.jpg",
+        "img": "media/tech/face_pull.jpg",
         "text": (
             "📚 Face Pull / Тяга к лицу (задняя дельта + ротаторы)\n\n"
             "✅ Как делать\n"
@@ -774,7 +859,7 @@ TECH = {
     },
     "rear_delt": {
         "title": "Задняя дельта",
-        "img": "media/tech/lateralraise.jpg",
+        "img": "media/tech/rear_delt.jpg",
         "text": (
             "📚 Задняя дельта (гантели или тренажёр)\n\n"
             "✅ Как делать (гантели в наклоне)\n"
@@ -791,7 +876,7 @@ TECH = {
     },
     "hammer": {
         "title": "Молотки",
-        "img": "media/tech/biceps.jpg",
+        "img": "media/tech/hammer.jpg",
         "text": (
             "📚 Молотки (бицепс + брахиалис)\n\n"
             "✅ Как делать\n"
@@ -807,7 +892,7 @@ TECH = {
     },
     "triceps_oh": {
         "title": "Разгибание трицепса из-за головы",
-        "img": "media/tech/triceps.jpg",
+        "img": "media/tech/triceps_oh.jpg",
         "text": (
             "📚 Разгибание трицепса из-за головы (длинная головка)\n\n"
             "✅ Как делать\n"
@@ -823,7 +908,7 @@ TECH = {
     },
     "narrow_pushup": {
         "title": "Отжимания узкие",
-        "img": "media/tech/triceps.jpg",
+        "img": "media/tech/narrow_pushup.jpg",
         "text": (
             "📚 Узкие отжимания (трицепс)\n\n"
             "✅ Как делать\n"
@@ -897,7 +982,7 @@ TECH = {
     },
     "barbell_row": {
         "title": "Тяга штанги в наклоне",
-        "img": "media/tech/latpulldown.jpg",
+        "img": "media/tech/barbell_row.jpg",
         "text": (
             "📚 Тяга штанги в наклоне (середина спины)\n\n"
             "✅ Настройка\n"
@@ -917,7 +1002,7 @@ TECH = {
     },
     "incline_press": {
         "title": "Жим под углом (incline)",
-        "img": "media/tech/bench.jpg",
+        "img": "media/tech/incline_press.jpg",
         "text": (
             "📚 Жим под углом (верх груди + передняя дельта)\n\n"
             "✅ Настройка\n"
@@ -935,7 +1020,7 @@ TECH = {
     },
     "ohp_barbell": {
         "title": "Жим штанги стоя (OHP)",
-        "img": "media/tech/ohp.jpg",
+        "img": "media/tech/ohp_barbell.jpg",
         "text": (
             "📚 Жим штанги стоя — Overhead Press\n\n"
             "✅ Настройка\n"
@@ -1060,7 +1145,7 @@ TECH = {
     },
     "ohp_dumbbell": {
         "title": "Жим гантелей стоя/сидя",
-        "img": "media/tech/ohp.jpg",
+        "img": "media/tech/ohp_dumbbell.jpg",
         "text": (
             "📚 Жим гантелей над головой (плечи)\n\n"
             "✅ Настройка\n"
@@ -1080,7 +1165,7 @@ TECH = {
     },
     "ohp_machine": {
         "title": "Жим в тренажёре вверх",
-        "img": "media/tech/ohp.jpg",
+        "img": "media/tech/ohp_machine.jpg",
         "text": (
             "📚 Жим в тренажёре над головой (плечи)\n\n"
             "✅ Настройка\n"
@@ -1099,7 +1184,7 @@ TECH = {
     },
     "rdl_barbell": {
         "title": "Румынская тяга со штангой",
-        "img": "media/tech/rdl_barbel.jpg",
+        "img": "media/tech/rdl_barbell.jpg",
         "text": (
             "📚 Румынская тяга со штангой (задняя поверхность бедра)\n\n"
             "✅ Настройка\n"
@@ -1198,7 +1283,7 @@ TECH = {
     },
     "pullup_chinup": {
         "title": "Подтягивания обратным хватом",
-        "img": "media/tech/pullup.jpg",
+        "img": "media/tech/pullup_chinup.jpg",
         "text": (
             "📚 Подтягивания обратным хватом (бицепс + спина)\n\n"
             "✅ Как делать\n"
@@ -1215,7 +1300,7 @@ TECH = {
     },
     "pullup_wide": {
         "title": "Подтягивания широким хватом",
-        "img": "media/tech/pullup.jpg",
+        "img": "media/tech/pullup_wide.jpg",
         "text": (
             "📚 Подтягивания широким хватом (широчайшие мышцы)\n\n"
             "✅ Как делать\n"
@@ -1232,7 +1317,7 @@ TECH = {
     },
     "latpulldown_wide": {
         "title": "Тяга верхнего блока широким хватом",
-        "img": "media/tech/latpulldown.jpg",
+        "img": "media/tech/latpulldown_wide.jpg",
         "text": (
             "📚 Тяга верхнего блока широким хватом\n\n"
             "✅ Настройка\n"
@@ -1251,7 +1336,7 @@ TECH = {
     },
     "latpulldown_narrow": {
         "title": "Тяга верхнего блока узким хватом",
-        "img": "media/tech/latpulldown.jpg",
+        "img": "media/tech/latpulldown_narrow.jpg",
         "text": (
             "📚 Тяга верхнего блока узким/нейтральным хватом\n\n"
             "✅ Настройка\n"
@@ -1269,7 +1354,7 @@ TECH = {
         )
     },
     "incline_press_barbell": {
-        "title": "Жим штанги под углом",
+        "title": "Жим под углом (штанга)",
         "img": "media/tech/incline_press_barbell.jpg",
         "text": (
             "📚 Жим штанги под углом (верх груди)\n\n"
@@ -1288,7 +1373,7 @@ TECH = {
         )
     },
     "incline_press_dumbbell": {
-        "title": "Жим гантелей под углом",
+        "title": "Жим под углом (гантели)",
         "img": "media/tech/incline_press_dumbbell.jpg",
         "text": (
             "📚 Жим гантелей под углом (верх груди)\n\n"
@@ -1308,7 +1393,7 @@ TECH = {
     },
     "biceps_barbell": {
         "title": "Сгибания со штангой (бицепс)",
-        "img": "media/tech/biceps.jpg",
+        "img": "media/tech/biceps_barbell.jpg",
         "text": (
             "📚 Сгибания со штангой — бицепс\n\n"
             "✅ Как делать\n"
@@ -1326,7 +1411,7 @@ TECH = {
     },
     "biceps_dumbbell": {
         "title": "Сгибания с гантелями (бицепс)",
-        "img": "media/tech/biceps.jpg",
+        "img": "media/tech/biceps_dumbbell.jpg",
         "text": (
             "📚 Сгибания с гантелями — бицепс\n\n"
             "✅ Как делать\n"
@@ -1382,7 +1467,7 @@ TECH = {
         )
     },
     "crossover": {
-        "title": "Сведения в кроссовере",
+        "title": "Кроссовер",
         "img": "media/tech/crossover.jpg",
         "text": (
             "📚 Сведения в кроссовере (изоляция груди)\n\n"
@@ -1402,6 +1487,16 @@ TECH = {
         )
     },
 }
+
+# =========================
+# ВАЛИДАЦИЯ: TECH_GIFS ↔ TECH
+# Если кто-то добавит gif, но забудет написать текст техники —
+# бот не упадёт, но покажет warning при старте.
+# =========================
+_tech_missing = [k for k in TECH_GIFS if k not in TECH]
+if _tech_missing:
+    import logging as _log
+    _log.getLogger("trainer_bot").warning(f"TECH missing keys: {_tech_missing}")
 
 
 def tech_kb():
@@ -6560,6 +6655,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
-
