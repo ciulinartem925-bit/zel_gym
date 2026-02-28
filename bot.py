@@ -42,16 +42,18 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 # СЛОВАРИ МЕДИА-ФАЙЛОВ
 # =========================
 IMAGE_PATHS = {
-    "welcome":      "media/tech/welcome.jpg",
-    "restart":      "media/tech/restart.jpg",
-    "profile":      "media/tech/profile.jpg",
-    "menu":         "media/tech/menu.jpg",
-    "workouts":     "media/tech/workouts.jpg",
-    "nutrition":    "media/tech/nutrition.jpg",
-    "diary":        "media/tech/diary.jpg",
-    "measurements": "media/tech/measurements.jpg",
-    "upgrade":      "media/tech/upgrade.jpg",
-    "faq":          "media/tech/faq.jpg",
+    "welcome":      "media2/tech/welcome.jpg",
+    "restart":      "media2/tech/restart.jpg",
+    "profile":      "media2/tech/profile.jpg",
+    "menu":         "media2/tech/menu.jpg",
+    # ── Разделы (media/sections/) ────────────────────────────────────────────
+    "workouts":     "media2/sections/workouts.jpg",
+    "nutrition":    "media2/sections/nutrition.jpg",
+    "diary":        "media2/sections/diary.jpg",
+    "measurements": "media2/sections/measurements.jpg",
+    # ────────────────────────────────────────────────────────────────────────
+    "upgrade":      "media2/tech/upgrade.jpg",
+    "faq":          "media2/tech/faq.jpg",
 }
 
 TECH_GIFS = {
@@ -1985,6 +1987,93 @@ async def _send_with_image(
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     await set_last_bot_msg_id(user_id, m.message_id)
     return m.message_id
+
+
+async def send_section(
+    bot: Bot,
+    chat_id: int,
+    user_id: int,
+    image_path: str,
+    text: str,
+    reply_markup=None,
+    callback: Optional[CallbackQuery] = None,
+):
+    """Универсальная отправка раздела с картинкой из локального файла.
+
+    Логика:
+    - Если callback передан — сначала пытается edit_text (без фото, быстро).
+      При наличии файла: удаляет старое сообщение и отправляет send_photo.
+    - Если файл существует → send_photo(caption=text).
+      Если текст > 1020 символов → фото без caption + отдельное send_message.
+    - Если файла нет (или ошибка) → обычный send_message / edit_text.
+    - Бот никогда не падает: все ошибки обёрнуты в try/except + warning-лог.
+    """
+    TG_CAPTION_LIMIT = 1020
+
+    # ── определяем наличие файла ────────────────────────────────────────────
+    has_image = bool(image_path and os.path.exists(image_path))
+
+    # ── ветка callback: редактирование существующего сообщения ──────────────
+    if callback:
+        if has_image:
+            # Удаляем старое сообщение, отправляем фото
+            last_id = await get_last_bot_msg_id(user_id)
+            if last_id:
+                try:
+                    await bot.delete_message(chat_id=chat_id, message_id=last_id)
+                except Exception:
+                    pass
+            try:
+                photo = FSInputFile(image_path)
+                if len(text) <= TG_CAPTION_LIMIT:
+                    m = await bot.send_photo(
+                        chat_id=chat_id, photo=photo,
+                        caption=text, reply_markup=reply_markup
+                    )
+                    await set_last_bot_msg_id(user_id, m.message_id)
+                else:
+                    m = await bot.send_photo(chat_id=chat_id, photo=photo)
+                    m2 = await bot.send_message(
+                        chat_id=chat_id, text=text, reply_markup=reply_markup
+                    )
+                    await set_last_bot_msg_id(user_id, m2.message_id)
+                return
+            except Exception as e:
+                logger.warning(f"send_section: не удалось отправить фото {image_path}: {e}")
+        # fallback — просто редактируем текст
+        await clean_edit(callback, user_id, text, reply_markup=reply_markup)
+        return
+
+    # ── ветка без callback: отправка нового сообщения ───────────────────────
+    last_id = await get_last_bot_msg_id(user_id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if has_image:
+        try:
+            photo = FSInputFile(image_path)
+            if len(text) <= TG_CAPTION_LIMIT:
+                m = await bot.send_photo(
+                    chat_id=chat_id, photo=photo,
+                    caption=text, reply_markup=reply_markup
+                )
+                await set_last_bot_msg_id(user_id, m.message_id)
+            else:
+                m = await bot.send_photo(chat_id=chat_id, photo=photo)
+                m2 = await bot.send_message(
+                    chat_id=chat_id, text=text, reply_markup=reply_markup
+                )
+                await set_last_bot_msg_id(user_id, m2.message_id)
+            return
+        except Exception as e:
+            logger.warning(f"send_section: не удалось отправить фото {image_path}: {e}")
+
+    # финальный fallback — только текст
+    m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    await set_last_bot_msg_id(user_id, m.message_id)
 
 
 async def send_screen(
@@ -5453,9 +5542,16 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
     display_text = (plan_text or "🏋️ План не найден.") + "\n\n" + week_progress
 
     if callback:
-        await clean_edit(callback, user_id, display_text, reply_markup=kb)
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["workouts"], display_text, reply_markup=kb,
+            callback=callback,
+        )
     else:
-        await _send_with_image(bot, chat_id, user_id, display_text, "workouts", reply_markup=kb)
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["workouts"], display_text, reply_markup=kb,
+        )
 
 
 # =========================
@@ -5766,9 +5862,16 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
     )
 
     if callback:
-        await clean_edit(callback, user_id, summary, reply_markup=nutrition_examples_kb())
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["nutrition"], summary, reply_markup=nutrition_examples_kb(),
+            callback=callback,
+        )
     else:
-        await _send_with_image(bot, chat_id, user_id, summary, "nutrition", reply_markup=nutrition_examples_kb())
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["nutrition"], summary, reply_markup=nutrition_examples_kb(),
+        )
 
 
 async def open_measures(user_id: int, chat_id: int, bot: Bot, state: FSMContext, callback: Optional[CallbackQuery] = None):
@@ -5782,9 +5885,16 @@ async def open_measures(user_id: int, chat_id: int, bot: Bot, state: FSMContext,
     await state.set_state(MeasureFlow.choose_type)
     text = "Замеры\n\nВыбери параметр — дату поставлю сам."
     if callback:
-        await clean_edit(callback, user_id, text, reply_markup=measures_kb())
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["measurements"], text, reply_markup=measures_kb(),
+            callback=callback,
+        )
     else:
-        await _send_with_image(bot, chat_id, user_id, text, "measurements", reply_markup=measures_kb())
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["measurements"], text, reply_markup=measures_kb(),
+        )
 
 
 async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, callback: Optional[CallbackQuery] = None):
@@ -5809,9 +5919,16 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
         "Записывай каждую тренировку — через 4–8 недель увидишь рост в цифрах."
     )
     if callback:
-        await clean_edit(callback, user_id, text, reply_markup=diary_exercises_kb())
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["diary"], text, reply_markup=diary_exercises_kb(),
+            callback=callback,
+        )
     else:
-        await _send_with_image(bot, chat_id, user_id, text, "diary", reply_markup=diary_exercises_kb())
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["diary"], text, reply_markup=diary_exercises_kb(),
+        )
 
 
 # =========================
@@ -6655,4 +6772,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
