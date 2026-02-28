@@ -41,9 +41,9 @@ WELCOME_IMAGE = os.getenv("WELCOME_IMAGE", "media/welcome.jpg")
 # ТАРИФЫ
 TARIFFS = {
     "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 3,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 4, "plan_regens": None},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 399,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 899,  "plan_regens": 10},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -1366,25 +1366,6 @@ def control_reply_kb():
     )
 
 
-def control_reply_kb_support_only():
-    """Клавиатура для пользователей без активной подписки — только Поддержка."""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🆘 Поддержка")],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
-        input_field_placeholder="Оформи подписку для доступа 👇"
-    )
-
-
-async def get_reply_kb_for_user(user_id: int) -> ReplyKeyboardMarkup:
-    """Возвращает полную клавиатуру если есть активная подписка (включая пробную), иначе только Поддержка."""
-    if await is_access_active(user_id):
-        return control_reply_kb()
-    return control_reply_kb_support_only()
-
-
 # =========================
 # ✅ Inline меню разделов
 # =========================
@@ -1412,30 +1393,33 @@ def simple_back_to_menu_inline_kb():
 # =========================
 # ✅ Тренировки: кнопки дней
 # =========================
-def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict = None, active_day: int = 0):
-    """Клавиатура выбора дня тренировки.
-    - Метки: строго «День N» (✅ День N если active_day совпадает)
-    - Количество кнопок = freq (из профиля) или длина плана
-    - Раскладка: 2 кнопки в строке
-    """
-    # Определяем количество дней: freq из аргумента, но не больше реально доступных дней в плане
-    plan_days_count = len((plan_struct.get("days") or {}) if plan_struct else {})
-    if plan_days_count > 0:
-        # Показываем ровно freq кнопок (не больше реально сгенерированных дней)
-        n = max(1, min(int(freq or 3), plan_days_count))
-    else:
-        n = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
-
-    btns = []
-    for i in range(1, n + 1):
-        if i == active_day:
-            label = f"✅ День {i}"
-        else:
-            label = f"День {i}"
-        btns.append(InlineKeyboardButton(text=label, callback_data=f"wday:{i}"))
-
-    # Раскладка 2 в строку
+def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict = None):
+    freq = max(MIN_DAYS, min(int(freq or 3), MAX_DAYS))
     rows = []
+    btns = []
+    for i in range(1, freq + 1):
+        if plan_struct:
+            day_text = (plan_struct.get("days") or {}).get(str(i), "")
+            label = get_day_display_name(i, day_text)
+            # Короткие метки для кнопок
+            t = day_text.lower()
+            if "фулбади" in t or "fullbody" in t:
+                suffix = {1: "A", 2: "B", 3: "C"}.get(i, str(i))
+                label = f"Full Body {suffix}"
+            elif "верх тела" in t:
+                label = "Верх"
+            elif "низ тела" in t or ("ниж" in t and "тел" in t):
+                label = "Низ"
+            elif "грудь и плеч" in t or "толчок" in t:
+                label = "Грудь/Плечи"
+            elif ("тяга" in t and "спина" in t) or "спина и бицепс" in t:
+                label = "Спина/Бицепс"
+            elif "ноги" in t and "квадрицепс" in t:
+                label = "Ноги"
+            btn_text = f"📅 {label}"
+        else:
+            btn_text = f"📅 День {i}"
+        btns.append(InlineKeyboardButton(text=btn_text, callback_data=f"wday:{i}"))
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
@@ -2820,70 +2804,37 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
-    if "фулбади" in t or "fullbody" in t:
-        # Full Body — A/B/C без подписи «всё тело»
-        suffix_map = {1: "A", 2: "B", 3: "C"}
-        s = suffix_map.get(day_num, str(day_num))
-        day_type = f"Full Body {s}"
-        day_emoji = "💪"
-        day_note = ""
-    elif "верх а" in t or ("верх" in t and "вариант а" in t):
-        day_type = "Верх А"
-        day_emoji = "💪"
-        day_note = "Грудь, спина, плечи, руки — вариант А"
-    elif "верх б" in t or ("верх" in t and "вариант б" in t):
-        day_type = "Верх Б"
-        day_emoji = "💪"
-        day_note = "Грудь, спина, плечи, руки — вариант Б"
-    elif "низ а" in t or ("низ" in t and "вариант а" in t):
-        day_type = "Низ А"
-        day_emoji = "🦵"
-        day_note = "Квадрицепс, бицепс бедра, ягодицы, икры — вариант А"
-    elif "низ б" in t or ("низ" in t and "вариант б" in t):
-        day_type = "Низ Б"
-        day_emoji = "🦵"
-        day_note = "Ягодицы, бицепс бедра, кор — вариант Б"
-    elif "верх тела" in t:
-        # Верх/Низ — без подписи групп мышц
+    # Верх тела (включая А/Б варианты для обратной совместимости)
+    if "верх тела" in t or "верх а" in t or "верх б" in t or (
+            "верх" in t and ("вариант а" in t or "вариант б" in t)):
         day_type = "Верх"
-        day_emoji = "💪"
         day_note = ""
-    elif "низ тела" in t or ("ниж" in t and "тел" in t):
+    elif ("низ тела" in t or ("ниж" in t and "тел" in t) or
+          "низ а" in t or "низ б" in t or
+          ("низ" in t and ("вариант а" in t or "вариант б" in t))):
         day_type = "Низ"
-        day_emoji = "🦵"
         day_note = ""
     elif "толчок" in t or ("грудь и плеч" in t):
-        # Сплит — оставляем группы мышц
         day_type = "Грудь и Плечи"
-        day_emoji = "🏋️"
         day_note = "Грудь, дельты, трицепс"
     elif ("тяга" in t and "спина" in t) or ("спина и бицепс" in t):
         day_type = "Спина и Бицепс"
-        day_emoji = "🔙"
         day_note = "Широчайшие, ромбовидные, бицепс"
     elif "ноги" in t and "квадрицепс" in t:
         day_type = "Ноги"
-        day_emoji = "🦵"
         day_note = "Квадрицепс, бицепс бедра, ягодицы, икры"
-    elif "push" in t or ("толч" in t):
-        day_type = "Толчок"
-        day_emoji = "🏋️"
-        day_note = "Грудь, дельты, трицепс"
-    elif "pull" in t or ("тяга" in t and "спина" in t) or ("спина и бицепс" in t):
-        day_type = "Тяга"
-        day_emoji = "🔙"
-        day_note = "Широчайшие, ромбовидные, бицепс"
-    elif "legs" in t or ("ног" in t and "квадр" in t):
-        day_type = "Ноги"
-        day_emoji = "🦵"
-        day_note = "Квадрицепс, бицепс бедра, ягодицы, икры"
+    elif "фулбади" in t or "fullbody" in t:
+        # Full Body — A/B/C
+        suffix_map = {1: "A", 2: "B", 3: "C"}
+        s = suffix_map.get(day_num, str(day_num))
+        day_type = f"Full Body {s}"
+        day_note = ""
     else:
         day_type = get_day_display_name(day_num, day_text) or "Тренировка"
-        day_emoji = "💪"
         day_note = ""
 
     lines = []
-    # Заголовок строго в формате "🏋️ День N: фокус"
+    # Заголовок строго: 🏋️ День N: фокус
     lines.append(f"🏋️ День {day_num}: {day_type}")
     if day_note:
         lines.append(f"📌 {day_note}")
@@ -3161,7 +3112,8 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         template = ["FB-A", "FB-B", "FB-C"]
     elif f == 4:
         system = "Верх/Низ"
-        template = ["UPPER-A", "LOWER-A", "UPPER-B", "LOWER-B"]
+        # Фиксированное чередование: нечётный → Верх, чётный → Низ
+        template = ["UPPER", "LOWER", "UPPER", "LOWER"]
     else:
         system = "PPL + Верх/Низ"
         template = ["PUSH", "PULL", "LEGS", "UPPER", "LOWER"]
@@ -3192,79 +3144,41 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 lines.append(f"• {fmt(pick(CORE, avoid_keys), '2', '30–60 сек')}")
             return lines
 
-        if kind == "UPPER-A":
-            # Upper A — фиксированный шаблон: жим лёжа, блок, жим гантелей сидя, тяга гантели, разведения, бицепс, трицепс
-            upper_a_gym = [
+        if kind == "UPPER":
+            # Верх — ФИКСИРОВАННЫЙ шаблон (чередование верх-низ)
+            upper_gym = [
                 ("Жим штанги лёжа", base_sets, reps_base),
                 ("Верхний блок широким хватом", base_sets, reps_base),
                 ("Жим гантелей стоя/сидя", iso_sets, reps_iso),
-                ("Тяга гантели одной рукой", base_sets, reps_base),
-                ("Разведения гантелей в стороны", iso_sets, reps_iso),
+                ("Тяга штанги в наклоне", base_sets, reps_base),
                 ("Сгибания гантелей стоя", iso_sets, reps_iso),
                 ("Разгибания на верхнем блоке (прямая рукоять)", iso_sets, reps_iso),
             ]
-            upper_a_home = [
+            upper_home = [
                 ("Отжимания (классика)", base_sets, reps_base),
                 ("Подтягивания (прямой хват)", base_sets, reps_base),
                 ("Пайк-отжимания", iso_sets, reps_iso),
                 ("Тяга гантели одной рукой (в наклоне)", base_sets, reps_base),
-                ("Разведения гантелей в стороны", iso_sets, reps_iso),
                 ("Сгибания гантелей стоя", iso_sets, reps_iso),
                 ("Отжимания узкие (трицепс)", iso_sets, reps_iso),
             ]
-            items = upper_a_gym if is_gym else upper_a_home
+            items = upper_gym if is_gym else upper_home
             lines.append("База:")
             for name, s, r in items[:4]:
-                if tags["shoulder"] and any(x in name.lower() for x in ["жим стоя", "пайк", "жим гантелей стоя"]):
+                if tags["shoulder"] and any(x in name.lower() for x in ["жим стоя", "пайк", "армейский"]):
                     continue
                 lines.append(f"• {fmt(name, s, r)}")
             lines.append("")
             lines.append("Изоляция:")
             for name, s, r in items[4:]:
-                if tags["shoulder"] and any(x in name.lower() for x in ["разведен", "дельт"]):
+                if tags["elbow"] and "разгибан" in name.lower():
                     continue
                 lines.append(f"• {fmt(name, s, r)}")
             return lines
 
-        if kind == "UPPER-B":
-            # Upper B — наклонный жим, горизонтальная тяга, армейский жим, тяга в наклоне, face pull, молотки, французский жим
-            upper_b_gym = [
-                ("Жим гантелей под углом (incline)", base_sets, reps_base),
-                ("Тяга горизонтального блока", base_sets, reps_base),
-                ("Армейский жим", base_sets, reps_base),
-                ("Тяга штанги в наклоне", base_sets, reps_base),
-                ("Face pull на блоке (канат)", iso_sets, reps_iso),
-                ("Молотки с гантелями", iso_sets, reps_iso),
-                ("Французский жим лёжа с гантелями", iso_sets, reps_iso),
-            ]
-            upper_b_home = [
-                ("Отжимания от возвышения (ноги на стуле)", base_sets, reps_base),
-                ("Горизонтальные подтягивания (под столом)", base_sets, reps_base),
-                ("Жим резинки вверх (стоя)", base_sets, reps_base),
-                ("Тяга резинки в наклоне", base_sets, reps_base),
-                ("Тяга резинки к лицу (face pull)", iso_sets, reps_iso),
-                ("Молотки с гантелями", iso_sets, reps_iso),
-                ("Разгибание гантели из-за головы", iso_sets, reps_iso),
-            ]
-            items = upper_b_gym if is_gym else upper_b_home
-            lines.append("База:")
-            for name, s, r in items[:4]:
-                if tags["shoulder"] and any(x in name.lower() for x in ["армейский", "жим резинки", "жим гантелей под"]):
-                    continue
-                if tags["elbow"] and "французский" in name.lower():
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            for name, s, r in items[4:]:
-                if tags["elbow"] and "французский" in name.lower():
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            return lines
-
-        if kind == "LOWER-A":
-            # Lower A — присед, румынская тяга, жим ногами, сгибания ног, икры стоя, планка
-            lower_a_gym = [
+        if kind == "LOWER":
+            # Низ — ФИКСИРОВАННЫЙ шаблон (чередование верх-низ)
+            lower_gym = [
                 ("Присед со штангой", base_sets, reps_base),
                 ("Румынская тяга со штангой", base_sets, reps_base),
                 ("Жим ногами в тренажёре", base_sets, reps_base),
@@ -3272,7 +3186,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 ("Подъёмы на носки стоя в тренажёре", iso_sets, "15–20"),
                 ("Планка (статика)", "2", "40–60 сек"),
             ]
-            lower_a_home = [
+            lower_home = [
                 ("Приседания (собственный вес)", base_sets, reps_base),
                 ("Румынская тяга с гантелями (если есть)", base_sets, reps_base),
                 ("Болгарские выпады (нога на стуле)", base_sets, reps_base),
@@ -3280,7 +3194,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 ("Подъёмы на носки стоя", iso_sets, "15–20"),
                 ("Планка (статика)", "2", "40–60 сек"),
             ]
-            items = lower_a_gym if is_gym else lower_a_home
+            items = lower_gym if is_gym else lower_home
             lines.append("База:")
             for name, s, r in items[:3]:
                 if tags["knee"] and any(x in name.lower() for x in avoid_knee):
@@ -3294,79 +3208,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 if tags["knee"] and any(x in name.lower() for x in avoid_knee):
                     continue
                 lines.append(f"• {fmt(name, s, r)}")
-            return lines
-
-        if kind == "LOWER-B":
-            # Lower B — фронтальный присед/хип-траст, болгарские выпады, разгибания ног, икры сидя, подъём ног в висе
-            lower_b_gym = [
-                ("Хакк-присед в тренажёре", base_sets, reps_base),
-                ("Ягодичный мост со штангой", base_sets, reps_base),
-                ("Болгарские выпады с гантелями", base_sets, reps_base),
-                ("Гиперэкстензия с весом", iso_sets, reps_iso),
-                ("Подъёмы на носки сидя в тренажёре", iso_sets, "15–20"),
-                ("Подъёмы ног в висе", "2", "12–15"),
-            ]
-            lower_b_home = [
-                ("Присед сумо", base_sets, reps_base),
-                ("Ягодичный мост на одной ноге", base_sets, reps_base),
-                ("Выпады ходьбой", base_sets, reps_base),
-                ("Гиперэкстензия на полу", iso_sets, reps_iso),
-                ("Подъёмы на носки на одной ноге", iso_sets, "15–20"),
-                ("Подъёмы ног лёжа", "2", "12–15"),
-            ]
-            items = lower_b_gym if is_gym else lower_b_home
-            lines.append("База:")
-            for name, s, r in items[:3]:
-                if tags["knee"] and any(x in name.lower() for x in avoid_knee):
-                    continue
-                if tags["back"] and any(x in name.lower() for x in avoid_back):
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            for name, s, r in items[3:]:
-                if tags["knee"] and any(x in name.lower() for x in avoid_knee):
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            return lines
-
-        if kind == "UPPER":
-            # Generic UPPER (используется в PPL)
-            hpush = pick(HPUSH, avoid_keys)
-            hpull = pick(HPULL, avoid_keys)
-            vpush = pick(VPUSH, avoid_keys)
-            vpull = pick(VPULL, avoid_keys)
-            should = pick(SHOULD, avoid_keys)
-            bi = pick(BI, avoid_keys)
-            tri = pick(TRI, avoid_keys)
-
-            lines.append("База:")
-            lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
-            lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
-            if not tags["shoulder"]:
-                lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
-            lines.append(f"• {fmt(bi, iso_sets, reps_iso)}")
-            lines.append(f"• {fmt(tri, iso_sets, reps_iso)}")
-            return lines
-
-        if kind == "LOWER":
-            # Generic LOWER (используется в PPL)
-            squat = pick(SQUAT, avoid_keys)
-            hinge = pick(HINGE, avoid_keys)
-            calves = pick(CALVES, avoid_keys)
-            core = pick(CORE, avoid_keys)
-
-            lines.append("База:")
-            lines.append(f"• {fmt(squat, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            lines.append(f"• {fmt(calves, iso_sets, reps_iso)}")
-            lines.append(f"• {fmt(core, '2', '30–60 сек')}")
             return lines
 
         if kind == "PUSH":
@@ -3434,10 +3275,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         "FB-C": ("Фулбади В", "Всё тело: комплексный день"),
         "UPPER": ("Верх тела", "Грудь, спина, плечи, руки"),
         "LOWER": ("Низ тела", "Квадрицепс, бицепс бедра, ягодицы, икры"),
-        "UPPER-A": ("Верх А", "Грудь, спина, плечи, руки — вариант А"),
-        "UPPER-B": ("Верх Б", "Грудь, спина, плечи, руки — вариант Б"),
-        "LOWER-A": ("Низ А", "Квадрицепс, бицепс бедра, ягодицы, икры — вариант А"),
-        "LOWER-B": ("Низ Б", "Ягодицы, бицепс бедра, кор — вариант Б"),
         "PUSH": ("Толчок — Грудь и Плечи", "Грудь, передние/средние дельты, трицепс"),
         "PULL": ("Тяга — Спина и Бицепс", "Широчайшие, ромбовидные, бицепс, задняя дельта"),
         "LEGS": ("Ноги", "Квадрицепс, бицепс бедра, ягодицы, икры"),
@@ -4036,13 +3873,6 @@ async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
         "6. 🍽 Питание — КБЖУ + примеры рационов\n\n"
         "Нет результата? Загляни в «Частые вопросы»."
     )
-    # Обновляем reply-клавиатуру в зависимости от активности подписки
-    reply_kb = await get_reply_kb_for_user(user_id)
-    try:
-        kb_msg = await bot.send_message(chat_id=chat_id, text="​", reply_markup=reply_kb)
-        await bot.delete_message(chat_id=chat_id, message_id=kb_msg.message_id)
-    except Exception:
-        pass
     await clean_send(bot, chat_id, user_id, text, reply_markup=menu_main_inline_kb())
 
 
@@ -4059,7 +3889,7 @@ async def cmd_start(message: Message, bot: Bot):
     await bot.send_message(
         chat_id=message.chat.id,
         text="✅ Я на месте. Кнопки снизу 👇",
-        reply_markup=await get_reply_kb_for_user(message.from_user.id)
+        reply_markup=control_reply_kb()
     )
 
     welcome_text = (
@@ -5081,16 +4911,6 @@ async def cb_check_payment(callback: CallbackQuery, bot: Bot):
                 reply_markup=menu_main_inline_kb()
             )
 
-            # Обновляем reply-клавиатуру на полную после активации подписки
-            try:
-                kb_msg = await bot.send_message(
-                    chat_id=callback.message.chat.id, text="​",
-                    reply_markup=control_reply_kb()
-                )
-                await bot.delete_message(chat_id=callback.message.chat.id, message_id=kb_msg.message_id)
-            except Exception:
-                pass
-
             # Уведомляем админа
             if ADMIN_ID:
                 try:
@@ -5157,15 +4977,6 @@ async def admin_actions(callback: CallbackQuery, bot: Bot):
         await set_paid_tariff(user_id, tariff)
 
         a = await get_access(user_id)
-        # Уведомляем пользователя и обновляем reply-клавиатуру
-        try:
-            kb_msg = await bot.send_message(
-                chat_id=user_id, text="​",
-                reply_markup=control_reply_kb()
-            )
-            await bot.delete_message(chat_id=user_id, message_id=kb_msg.message_id)
-        except Exception:
-            pass
         await bot.send_message(
             chat_id=user_id,
             text=f"✅ Оплата подтверждена.\nТариф: {TARIFFS[tariff]['title']}\n{access_status_str(a)}",
@@ -5351,11 +5162,11 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
 
 
 # =========================
-# ✅ Клавиатура дня тренировки — упражнения + навигация по дням
+# ✅ Клавиатура дня тренировки — только управление и техники
+# убраны кнопки «Статистика» и «Меню»
 # =========================
-def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int],
-                              freq: int = 3, plan_struct: dict = None) -> InlineKeyboardMarkup:
-    """Клавиатура упражнений дня с чекбоксами, кнопкой техники и мини-навигацией по дням (✅ — текущий день)."""
+def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
+    """Клавиатура упражнений дня с чекбоксами и кнопкой техники."""
     rows = []
     for idx, name in enumerate(exercises):
         is_done = idx in done
@@ -5379,17 +5190,7 @@ def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int],
         else:
             rows.append([done_btn])
 
-    # Мини-навигация: переключение дней с ✅ на текущем
-    plan_days_count = len((plan_struct.get("days") or {}) if plan_struct else {})
-    n_days = max(1, min(int(freq or 3), plan_days_count if plan_days_count > 0 else MAX_DAYS))
-    day_btns = []
-    for i in range(1, n_days + 1):
-        label = f"✅ День {i}" if i == day else f"День {i}"
-        day_btns.append(InlineKeyboardButton(text=label, callback_data=f"wday:{i}"))
-    # 2 кнопки в строку
-    for i in range(0, len(day_btns), 2):
-        rows.append(day_btns[i:i+2])
-
+    # Только кнопка «Назад к программе»
     rows.append([InlineKeyboardButton(text="📋 Программа", callback_data="nav:workouts")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -5432,12 +5233,10 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
     done = await get_day_done_exercises(uid, day_num)
     already_done_today = await is_day_completed_today(uid, day_num)
 
-    u = await get_user(uid)
-    freq = int(u.get("freq") or plan_struct.get("freq") or 3)
     text = build_day_display_text(day_num, day_text, exercises, done)
     if already_done_today:
         text += "\n\n🎉 День уже засчитан сегодня! Можешь пройти снова."
-    kb = workout_day_exercises_kb(day_num, exercises, done, freq=freq, plan_struct=plan_struct)
+    kb = workout_day_exercises_kb(day_num, exercises, done)
     await clean_edit(callback, uid, text, reply_markup=kb)
     await callback.answer()
 
@@ -5481,17 +5280,13 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
         day_title = get_day_display_name(day_num, day_text)
         await mark_day_completed(uid, day_num, day_title)
         await clear_day_progress(uid, day_num)
-        u = await get_user(uid)
-        freq = int(u.get("freq") or plan_struct.get("freq") or 3)
         text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True)
-        kb = workout_day_exercises_kb(day_num, exercises, list(range(total)), freq=freq, plan_struct=plan_struct)
+        kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer("🎉 День завершён!", show_alert=True)
     else:
-        u = await get_user(uid)
-        freq = int(u.get("freq") or plan_struct.get("freq") or 3)
         text = build_day_display_text(day_num, day_text, exercises, done)
-        kb = workout_day_exercises_kb(day_num, exercises, done, freq=freq, plan_struct=plan_struct)
+        kb = workout_day_exercises_kb(day_num, exercises, done)
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer(f"{'✅' if ex_idx in done else '↩️'} {done_count}/{total}")
 
@@ -6625,4 +6420,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
