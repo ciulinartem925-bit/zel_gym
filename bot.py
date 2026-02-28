@@ -3889,11 +3889,7 @@ async def cmd_start(message: Message, bot: Bot):
             "✅ поможет отслеживать прогресс\n\n"
             "Чтобы продолжить, выбери доступ 👇"
         )
-        spec_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🟢 Пробный доступ — 1₽", callback_data="tariff:trial")],
-            [InlineKeyboardButton(text="📌 Ознакомиться с другими тарифами", callback_data="nav:upgrade")],
-        ])
-        await bot.send_message(chat_id=message.chat.id, text=spec_text, reply_markup=spec_kb)
+        await bot.send_message(chat_id=message.chat.id, text=spec_text, reply_markup=build_program_tariff_kb())
         return
 
     await bot.send_message(
