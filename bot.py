@@ -21,6 +21,7 @@ from aiogram.types import (
 )
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from aiogram.enums import ParseMode
 
 # =========================
 # НАСТРОЙКИ (через ENV — безопасно для GitHub/Render)
@@ -6771,6 +6772,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
 
