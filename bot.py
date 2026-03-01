@@ -2357,6 +2357,15 @@ async def init_db():
             PRIMARY KEY (user_id, day_num)
         )
         """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS nutrition_completions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            completed_date TEXT,
+            created_at TEXT,
+            UNIQUE(user_id, completed_date)
+        )
+        """)
         await conn.commit()
 
 
@@ -3780,6 +3789,7 @@ def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float)
 
 
 def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str, float]) -> Dict[str, float]:
+    # Грубая настройка (крупные шаги)
     for _ in range(80):
         t = _totals_of_day(day_meals)
         dk = target["kcal"] - t["kcal"]
@@ -3787,29 +3797,52 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
         df = target["f"] - t["f"]
         dc = target["c"] - t["c"]
 
-        if abs(dk) <= 40 and abs(dp) <= 5 and abs(df) <= 4 and abs(dc) <= 8:
-            return t
+        if abs(dk) <= 20 and abs(dp) <= 3 and abs(df) <= 3 and abs(dc) <= 6:
+            break
 
-        if dp > 5:
-            _add_grams(day_meals, "chicken", 25.0)
+        if dp > 3:
+            _add_grams(day_meals, "chicken", 20.0)
             continue
-        if dp < -8:
-            _add_grams(day_meals, "chicken", -25.0)
-            continue
-
-        if df > 4:
-            _add_grams(day_meals, "oil_olive", 4.0)
-            continue
-        if df < -5:
-            _add_grams(day_meals, "oil_olive", -4.0)
+        if dp < -5:
+            _add_grams(day_meals, "chicken", -20.0)
             continue
 
-        if dc > 10 or dk > 80:
-            _add_grams(day_meals, "rice", 10.0)
+        if df > 3:
+            _add_grams(day_meals, "oil_olive", 3.0)
             continue
-        if dc < -10 or dk < -80:
-            _add_grams(day_meals, "rice", -10.0)
+        if df < -4:
+            _add_grams(day_meals, "oil_olive", -3.0)
             continue
+
+        if dc > 6 or dk > 50:
+            _add_grams(day_meals, "rice", 8.0)
+            continue
+        if dc < -6 or dk < -50:
+            _add_grams(day_meals, "rice", -8.0)
+            continue
+
+    # Тонкая настройка (мелкие шаги 5 г / 2 г)
+    for step in (5.0, 2.0):
+        for _ in range(40):
+            t = _totals_of_day(day_meals)
+            dk = target["kcal"] - t["kcal"]
+            dp = target["p"] - t["p"]
+            df = target["f"] - t["f"]
+            dc = target["c"] - t["c"]
+
+            if abs(dk) <= 15 and abs(dp) <= 2 and abs(df) <= 2 and abs(dc) <= 4:
+                break
+
+            if abs(dp) >= 2:
+                _add_grams(day_meals, "chicken", step if dp > 0 else -step)
+                continue
+            if abs(df) >= 2:
+                _add_grams(day_meals, "oil_olive", step if df > 0 else -step)
+                continue
+            if abs(dc) >= 4 or abs(dk) >= 15:
+                _add_grams(day_meals, "rice", step if (dc > 0 or dk > 0) else -step)
+                continue
+            break
 
     return _totals_of_day(day_meals)
 
@@ -3934,11 +3967,16 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 
 def nutrition_examples_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🥣 Вариант 1 (классика)", callback_data="nutr:ex:1")],
-        [InlineKeyboardButton(text="🍖 Вариант 2 (говядина)", callback_data="nutr:ex:2")],
-        [InlineKeyboardButton(text="🐟 Вариант 3 (лосось)", callback_data="nutr:ex:3")],
-        [InlineKeyboardButton(text="🥚 Вариант 4 (лёгкий)", callback_data="nutr:ex:4")],
-        [InlineKeyboardButton(text="⚡️ Вариант 5 (быстрый)", callback_data="nutr:ex:5")],
+        [
+            InlineKeyboardButton(text="Вариант 1 (классика)", callback_data="nutr:ex:1"),
+            InlineKeyboardButton(text="Вариант 2 (говядина)", callback_data="nutr:ex:2"),
+        ],
+        [
+            InlineKeyboardButton(text="Вариант 3 (лосось)", callback_data="nutr:ex:3"),
+            InlineKeyboardButton(text="Вариант 4 (лёгкий)", callback_data="nutr:ex:4"),
+        ],
+        [InlineKeyboardButton(text="Вариант 5 (быстрый)", callback_data="nutr:ex:5")],
+        [InlineKeyboardButton(text="💡 Фишки в питании", callback_data="nutr:tips")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -3972,7 +4010,12 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
         f"🍚 Углеводы: {c} г  ({int(round(c_kcal/total_check*100))}%)\n"
         f"🍽 Приёмов пищи: {meals}\n\n"
         "Выбери готовый пример рациона 👇\n"
-        "(Все 3 варианта подходят под твои цифры)"
+        "(Все варианты подходят под твои цифры)\n\n"
+        "📱 FatSecret — как удобно вносить:\n"
+        "• Взвешивай продукты в сыром виде\n"
+        "• Выбирай 'сырой/dry' (рис сухой, курица сырая)\n"
+        "• Сначала база (крупа/мясо), потом жиры/добавки\n"
+        "• Оставь 1–2 позиции на вечерний добор калорий"
     )
     return summary, calories, p, f, c, meals
 
@@ -4229,17 +4272,43 @@ async def cb_faq_question(callback: CallbackQuery, bot: Bot):
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
     sub = await get_subscription(user_id)
     tariff_line = format_tariff_line(sub)
+
+    u = await get_user(user_id)
+    freq = int(u.get("freq") or 3)
+
+    workouts_done = await get_workouts_done_last_7_days(user_id)
+    nutrition_done = await get_nutrition_done_last_7_days(user_id)
+
+    def pbar(done: int, total: int, width: int = 10) -> str:
+        if total <= 0:
+            return "░" * width
+        filled = min(int(round(done / total * width)), width)
+        return "█" * filled + "░" * (width - filled)
+
+    w_pct = min(int(round(workouts_done / max(freq, 1) * 100)), 100)
+    n_pct = min(int(round(nutrition_done / 7 * 100)), 100)
+    overall_pct = (w_pct + n_pct) // 2
+
+    if overall_pct >= 70:
+        trend_line = "📈 Отличный темп"
+    elif overall_pct >= 40:
+        trend_line = "📊 Нормально, можно плотнее"
+    else:
+        trend_line = "📉 Пора возвращаться в режим"
+
     text = (
         "Главное меню\n\n"
         f"{tariff_line}\n\n"
-        "Шаги для старта:\n"
-        "1. ⚙️ Профиль — цель, параметры, место тренировок\n"
-        "2. 💳 Оплата — выбери тариф, программа сформируется сразу\n"
-        "3. 🏋️ Тренировки — дни, упражнения, техника\n"
-        "4. 📓 Дневник — записывай веса и повторения после тренировки\n"
-        "5. 📏 Замеры — вес тела и обхваты раз в 1–2 недели\n"
-        "6. 🍽 Питание — КБЖУ + примеры рационов\n\n"
-        "Нет результата? Загляни в «Частые вопросы»."
+        "📊 Прогресс за 7 дней\n"
+        f"🏋️ Тренировки: {workouts_done}/{freq}\n"
+        f"{pbar(workouts_done, freq)} {w_pct}%\n\n"
+        f"🍽 Питание: {nutrition_done}/7\n"
+        f"{pbar(nutrition_done, 7)} {n_pct}%\n\n"
+        f"📈 Общий прогресс: {overall_pct}%\n"
+        f"{trend_line}\n\n"
+        "Разделы:\n"
+        "🏋️ Тренировки  🍽 Питание  📓 Дневник\n"
+        "📏 Замеры  🔥 Улучшить доступ  ❓ FAQ"
     )
     await _send_with_image(bot, chat_id, user_id, text, "menu", reply_markup=menu_main_inline_kb())
 
@@ -5478,6 +5547,47 @@ def measures_kb():
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+async def get_workouts_done_last_7_days(user_id: int) -> int:
+    """Считает уникальные дни тренировок за последние 7 дней (включая сегодня)."""
+    since = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT COUNT(DISTINCT completed_date) FROM workout_completions
+            WHERE user_id=? AND completed_date >= ? AND completed_date <= ?
+        """, (user_id, since, today)) as cur:
+            row = await cur.fetchone()
+    return int(row[0]) if row else 0
+
+
+async def mark_nutrition_day(user_id: int):
+    """Отмечает сегодня как закрытый день питания (идемпотентно)."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        try:
+            await conn.execute(
+                "INSERT OR IGNORE INTO nutrition_completions (user_id, completed_date, created_at) VALUES (?,?,?)",
+                (user_id, today, now)
+            )
+            await conn.commit()
+        except Exception:
+            pass
+
+
+async def get_nutrition_done_last_7_days(user_id: int) -> int:
+    """Считает закрытые дни питания за последние 7 дней."""
+    since = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT COUNT(DISTINCT completed_date) FROM nutrition_completions
+            WHERE user_id=? AND completed_date >= ? AND completed_date <= ?
+        """, (user_id, since, today)) as cur:
+            row = await cur.fetchone()
+    return int(row[0]) if row else 0
+
+
 async def get_week_progress(user_id: int, freq: int) -> str:
     """Блок прогресса недели: выполнено/осталось."""
     today = datetime.now().date()
@@ -6216,7 +6326,35 @@ async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
         freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
     )
     day_text = build_meal_day_text(day_i, calories, p, f, c, meals)
+
+    # Отмечаем сегодняшний день питания как закрытый
+    await mark_nutrition_day(callback.from_user.id)
+
     await clean_edit(callback, callback.from_user.id, day_text, reply_markup=nutrition_back_kb())
+    await callback.answer()
+
+
+async def cb_nutr_tips(callback: CallbackQuery, bot: Bot):
+    """Фишки в питании — как добрать калории."""
+    text = (
+        "💡 Фишки в питании\n\n"
+        "Как закрыть калории без стресса:\n\n"
+        "• Добавь 1–2 ст. л. масла (+120–240 ккал)\n"
+        "• Замени обезжиренное на 2–5% (+калории, +жиры)\n"
+        "• Орехи / паста / авокадо — удобный источник жиров\n"
+        "• Добавь углей: рис, хлеб, банан, финики\n"
+        "• Шейк: молоко + банан + овсянка (~400 ккал)\n"
+        "• Не лезет еда — часть калорий жидкими (соки, молоко)\n"
+        "• Творог + варенье / мёд на ночь — белок + калории\n"
+        "• Паста с мясом + сыр сверху — быстро и питательно\n\n"
+        "Цель — закрыть калории без стресса."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к питанию", callback_data="nutr:back")],
+        [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb)
     await callback.answer()
 
 
@@ -6593,6 +6731,7 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_example, F.data.startswith("nutr:ex:"))
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
     dp.callback_query.register(cb_nutr_basket, F.data == "nutr:basket")
+    dp.callback_query.register(cb_nutr_tips, F.data == "nutr:tips")
 
     dp.callback_query.register(cb_faq_question, F.data.startswith("faq:"))
 
@@ -6776,4 +6915,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
