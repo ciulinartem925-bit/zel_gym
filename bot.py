@@ -3789,129 +3789,160 @@ def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float)
 
 
 def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str, float]) -> Dict[str, float]:
-    # Грубая настройка (крупные шаги)
-    for _ in range(80):
+    """
+    Подгоняет граммовки к цели так, чтобы итоговая калорийность была НИЖЕ target на 50–80 ккал.
+    Стратегия: стреляем в pseudo_target = target - 65. Останавливаемся как только
+    abs(real_dk) попадает в [50, 80]. Храним best_solution по приоритету.
+    Правила: меняем только продукты, которые уже есть в варианте. Шаг 10г (масло 5г).
+    """
+    # Определяем, какие ключи уже присутствуют в шаблоне
+    present_keys: set = set()
+    for meal in day_meals:
+        for k, _ in meal:
+            present_keys.add(k)
+
+    # Псевдо-цель: хотим итоговые калории ≈ target - 65
+    OFFSET = 65.0
+    adj_target_kcal = target["kcal"] - OFFSET
+
+    # Приоритеты корректировки: сначала основной белок, потом крупа, потом масло (если есть)
+    # Определяем "главный белок" и "главную крупу" варианта
+    protein_keys = ["chicken", "turkey", "beef", "fish", "salmon", "eggs", "curd_0", "curd_5"]
+    carb_keys = ["rice", "buckwheat", "oats", "pasta", "potato", "bread_rye", "banana"]
+    fat_keys = ["oil_olive", "oil_linseed"]
+
+    main_protein = next((k for k in protein_keys if k in present_keys), None)
+    main_carb = next((k for k in carb_keys if k in present_keys), None)
+    main_fat = next((k for k in fat_keys if k in present_keys), None)
+
+    def real_dk():
+        return _totals_of_day(day_meals)["kcal"] - target["kcal"]
+
+    def in_window(dk_val):
+        return 50.0 <= abs(dk_val) <= 80.0
+
+    def score(dk_val):
+        """Меньше — лучше. Приоритет: попасть в окно 50–80, цель внутри окна 65."""
+        adk = abs(dk_val)
+        if in_window(dk_val):
+            return abs(adk - OFFSET)  # чем ближе к 65 — тем лучше
+        return 1000.0 + abs(adk - OFFSET)
+
+    import copy
+    best_meals = copy.deepcopy(day_meals)
+    best_dk = real_dk()
+
+    for _ in range(70):
         t = _totals_of_day(day_meals)
-        dk = target["kcal"] - t["kcal"]
-        dp = target["p"] - t["p"]
-        df = target["f"] - t["f"]
-        dc = target["c"] - t["c"]
+        cur_kcal = t["kcal"]
+        diff = adj_target_kcal - cur_kcal  # сколько ккал не хватает до pseudo_target
 
-        if abs(dk) <= 20 and abs(dp) <= 3 and abs(df) <= 3 and abs(dc) <= 6:
+        if abs(diff) < 10:
             break
 
-        if dp > 3:
-            _add_grams(day_meals, "chicken", 20.0)
-            continue
-        if dp < -5:
-            _add_grams(day_meals, "chicken", -20.0)
-            continue
-
-        if df > 3:
-            _add_grams(day_meals, "oil_olive", 3.0)
-            continue
-        if df < -4:
-            _add_grams(day_meals, "oil_olive", -3.0)
-            continue
-
-        if dc > 6 or dk > 50:
-            _add_grams(day_meals, "rice", 8.0)
-            continue
-        if dc < -6 or dk < -50:
-            _add_grams(day_meals, "rice", -8.0)
-            continue
-
-    # Тонкая настройка (мелкие шаги 5 г / 2 г)
-    for step in (5.0, 2.0):
-        for _ in range(40):
-            t = _totals_of_day(day_meals)
-            dk = target["kcal"] - t["kcal"]
-            dp = target["p"] - t["p"]
-            df = target["f"] - t["f"]
-            dc = target["c"] - t["c"]
-
-            if abs(dk) <= 15 and abs(dp) <= 2 and abs(df) <= 2 and abs(dc) <= 4:
-                break
-
-            if abs(dp) >= 2:
-                _add_grams(day_meals, "chicken", step if dp > 0 else -step)
-                continue
-            if abs(df) >= 2:
-                _add_grams(day_meals, "oil_olive", step if df > 0 else -step)
-                continue
-            if abs(dc) >= 4 or abs(dk) >= 15:
-                _add_grams(day_meals, "rice", step if (dc > 0 or dk > 0) else -step)
-                continue
+        # Выбираем, какой продукт и с каким шагом крутим
+        if abs(diff) >= 30 and main_carb:
+            # Крупа: 10г ≈ 30–35 ккал (рис/гречка), 10г картофель ≈ 8 ккал
+            # Подбираем шаг так, чтобы не промахнуться далеко
+            kcal_per_10g = FOOD_DB[main_carb]["kcal"] / 10.0
+            if kcal_per_10g > 0:
+                steps = max(1, int(round(abs(diff) / kcal_per_10g))) * 10
+                steps = min(steps, 40)  # не более 40г за итерацию
+            else:
+                steps = 10
+            _add_grams(day_meals, main_carb, steps if diff > 0 else -steps)
+        elif main_protein:
+            kcal_per_10g = FOOD_DB[main_protein]["kcal"] / 10.0
+            if kcal_per_10g > 0:
+                steps = max(1, int(round(abs(diff) / kcal_per_10g))) * 10
+                steps = min(steps, 30)
+            else:
+                steps = 10
+            _add_grams(day_meals, main_protein, steps if diff > 0 else -steps)
+        elif main_fat:
+            _add_grams(day_meals, main_fat, 5.0 if diff > 0 else -5.0)
+        else:
             break
 
+        dk_now = real_dk()
+        if score(dk_now) < score(best_dk):
+            best_meals[:] = copy.deepcopy(day_meals)
+            best_dk = dk_now
+
+        if in_window(dk_now):
+            break
+
+    # Восстанавливаем лучшее решение
+    day_meals[:] = best_meals
     return _totals_of_day(day_meals)
 
 
 def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]]:
+    """Простые «ленивые» шаблоны: 1 крупа + 1 белок + овощи. Перекусы — творог/йогурт/банан."""
     meals = max(3, min(int(meals or 3), 5))
 
     if variant == 1:
-        # Классика: овсянка + курица + гречка
+        # Классика: овсянка + курица + рис (обед и ужин — одна заготовка)
         day = [
-            [("oats", 80.0), ("eggs", 120.0), ("banana", 100.0)],
-            [("rice", 90.0), ("chicken", 180.0), ("veg", 150.0), ("oil_olive", 10.0)],
-            [("buckwheat", 80.0), ("fish", 180.0), ("veg", 150.0), ("oil_olive", 8.0)],
+            [("oats", 80.0), ("curd_0", 150.0), ("banana", 100.0)],
+            [("rice", 100.0), ("chicken", 170.0), ("veg", 150.0), ("oil_olive", 10.0)],
+            [("rice", 80.0), ("chicken", 140.0), ("veg", 150.0)],
         ]
         if meals >= 4:
-            day.append([("curd_0", 200.0), ("berries", 100.0)])
+            day.append([("curd_0", 180.0), ("apple", 120.0)])
         if meals >= 5:
-            day.append([("apple", 150.0), ("nuts_alm", 20.0)])
+            day.append([("banana", 100.0)])
         return day
 
     if variant == 2:
-        # Говядина + картофель + паста
+        # Говядина + гречка
         day = [
-            [("eggs", 150.0), ("bread_rye", 60.0), ("cheese_20", 30.0)],
-            [("potato", 250.0), ("beef", 160.0), ("veg", 150.0), ("oil_olive", 8.0)],
-            [("pasta", 80.0), ("turkey", 180.0), ("veg", 150.0), ("oil_olive", 5.0)],
+            [("eggs", 180.0), ("bread_rye", 50.0)],
+            [("buckwheat", 100.0), ("beef", 150.0), ("veg", 150.0), ("oil_olive", 10.0)],
+            [("buckwheat", 80.0), ("beef", 120.0), ("veg", 150.0)],
         ]
         if meals >= 4:
             day.append([("greek_yog", 200.0), ("banana", 100.0)])
         if meals >= 5:
-            day.append([("curd_5", 150.0), ("nuts_alm", 15.0)])
+            day.append([("curd_0", 150.0)])
         return day
 
     if variant == 3:
-        # Лосось + греческий йогурт
+        # Лосось + рис
         day = [
-            [("oats", 70.0), ("greek_yog", 150.0), ("berries", 100.0)],
-            [("rice", 90.0), ("salmon", 150.0), ("veg", 150.0), ("oil_olive", 5.0)],
-            [("buckwheat", 80.0), ("turkey", 160.0), ("avocado", 60.0), ("veg", 150.0)],
+            [("greek_yog", 200.0), ("oats", 70.0), ("banana", 100.0)],
+            [("rice", 100.0), ("salmon", 150.0), ("veg", 150.0)],
+            [("rice", 80.0), ("turkey", 150.0), ("veg", 150.0), ("oil_olive", 10.0)],
         ]
         if meals >= 4:
-            day.append([("curd_0", 200.0), ("apple", 120.0)])
+            day.append([("curd_0", 180.0), ("apple", 120.0)])
         if meals >= 5:
-            day.append([("eggs", 60.0), ("nuts_alm", 15.0)])
+            day.append([("banana", 100.0)])
         return day
 
     if variant == 4:
-        # Лёгкий вариант: творог + куриная грудка + рис (легко готовить)
+        # Лёгкий: творог + курица + рис
         day = [
-            [("curd_0", 250.0), ("banana", 100.0), ("berries", 80.0)],
-            [("rice", 100.0), ("chicken", 200.0), ("veg", 200.0)],
-            [("eggs", 180.0), ("veg", 150.0), ("bread_rye", 40.0)],
+            [("curd_0", 200.0), ("banana", 120.0)],
+            [("rice", 110.0), ("chicken", 180.0), ("veg", 200.0), ("oil_olive", 10.0)],
+            [("rice", 80.0), ("chicken", 140.0), ("veg", 150.0)],
         ]
         if meals >= 4:
-            day.append([("greek_yog", 200.0), ("apple", 120.0)])
+            day.append([("greek_yog", 200.0)])
         if meals >= 5:
-            day.append([("curd_5", 150.0), ("berries", 80.0)])
+            day.append([("apple", 150.0)])
         return day
 
-    # Вариант 5: лёгкий быстрый (минимум готовки)
+    # Вариант 5: минимум готовки — рыба + гречка
     day = [
-        [("greek_yog", 200.0), ("oats", 50.0), ("banana", 100.0)],
-        [("buckwheat", 90.0), ("fish", 200.0), ("veg", 200.0)],
-        [("chicken", 180.0), ("potato", 200.0), ("veg", 150.0), ("oil_olive", 8.0)],
+        [("greek_yog", 200.0), ("oats", 70.0), ("banana", 100.0)],
+        [("buckwheat", 100.0), ("fish", 200.0), ("veg", 200.0), ("oil_olive", 10.0)],
+        [("buckwheat", 80.0), ("fish", 160.0), ("veg", 150.0)],
     ]
     if meals >= 4:
-        day.append([("curd_0", 200.0), ("nuts_alm", 20.0)])
+        day.append([("curd_0", 200.0), ("banana", 100.0)])
     if meals >= 5:
-        day.append([("apple", 150.0), ("egg_white", 80.0)])
+        day.append([("apple", 150.0)])
     return day
 
 
@@ -3927,12 +3958,16 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 
     dk = final_k - calories
     dk_str = f"{'+' if dk >= 0 else ''}{dk}"
+    adk = abs(dk)
+    if 50 <= adk <= 80:
+        diff_comment = f"Разница от цели: {dk_str} ккал (норма 50–80)"
+    else:
+        diff_comment = f"Разница от цели: {dk_str} ккал (старался держать ≤120)"
 
     meal_names = ["🌅 Завтрак", "🌞 Обед", "🌆 Ужин", "🥗 Перекус 1", "🍎 Перекус 2"]
 
     lines = [f"📅 Пример {day_i}  (цель: {calories} ккал)", ""]
     for mi, m in enumerate(day_meals, start=1):
-        # Фильтруем позиции с нулевыми граммами
         m_filtered = [(k, g) for k, g in m if g > 0.5]
         if not m_filtered:
             continue
@@ -3953,9 +3988,7 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 
     lines.append(f"✅ Итог дня: {final_k} ккал ({dk_str} от цели)")
     lines.append(f"   Б {final_p}г / Ж {final_f}г / У {final_c}г")
-    lines.append("")
-    lines.append("💡 Небольшая погрешность ±5–10% — абсолютно нормально.")
-    lines.append("   Главное — держать общий вектор, а не ловить граммы.")
+    lines.append(f"   {diff_comment}")
     lines.append("")
     lines.append("⚠️ Заметки по порциям:")
     lines.append("   • Крупы и макароны — граммы в СУХОМ (сыром) виде")
@@ -6915,3 +6948,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
