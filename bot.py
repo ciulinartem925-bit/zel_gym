@@ -6740,7 +6740,10 @@ async def main():
 
     await init_db()
 
-    bot = Bot(token=BOT_TOKEN)
+    bot = Bot(
+    token=BOT_TOKEN,
+    parse_mode=ParseMode.HTML
+)
     await bot.delete_webhook(drop_pending_updates=True)
     logger.info("Webhook cleared, starting polling...")
 
@@ -6772,6 +6775,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
 
