@@ -1586,7 +1586,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
         rows.append(btns[i:i+2])
 
     rows.append([InlineKeyboardButton(text="📊 Статистика", callback_data="wday:stats:0")])
-    rows.append([InlineKeyboardButton(text="🔄 Сменить план тренировок", callback_data="p:edit")])
+    rows.append([InlineKeyboardButton(text="🔄 Сменить план", callback_data="workout:rebuild")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -1596,8 +1596,8 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
 # =========================
 def pay_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
-        [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟡 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🟣 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
         [InlineKeyboardButton(text=f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽ (3 дня)", callback_data="tariff:trial")],
         [InlineKeyboardButton(text="📋 Ознакомиться с другими тарифами", callback_data="nav:upgrade")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
@@ -3892,8 +3892,11 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
     final_f = int(round(tot["f"]))
     final_c = int(round(tot["c"]))
 
-    dk = final_k - calories
-    dk_str = f"{'+' if dk >= 0 else ''}{dk}"
+    # Погрешность калорий в %
+    if calories > 0:
+        deviation_pct = abs(final_k - calories) / calories * 100
+    else:
+        deviation_pct = 0.0
 
     meal_names = ["🌅 Завтрак", "🌞 Обед", "🌆 Ужин", "🥗 Перекус 1", "🍎 Перекус 2"]
 
@@ -3918,17 +3921,30 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
         lines.append("")
 
-    lines.append(f"✅ Итог дня: {final_k} ккал ({dk_str} от цели)")
-    lines.append(f"   Б {final_p}г / Ж {final_f}г / У {final_c}г")
-    lines.append("")
-    lines.append("💡 Небольшая погрешность ±5–10% — абсолютно нормально.")
-    lines.append("   Главное — держать общий вектор, а не ловить граммы.")
+    lines.append("📊 Итого за день:")
+    lines.append(f"   Калории: {final_k} ккал")
+    lines.append(f"   Белки: {final_p} г")
+    lines.append(f"   Жиры: {final_f} г")
+    lines.append(f"   Углеводы: {final_c} г")
+    lines.append(f"   Погрешность: {deviation_pct:.1f}%")
     lines.append("")
     lines.append("⚠️ Заметки по порциям:")
     lines.append("   • Крупы и макароны — граммы в СУХОМ (сыром) виде")
     lines.append("   • Рис при варке увеличивается ~в 3 раза, гречка ~в 2.5")
     lines.append("   • Курица, рыба, мясо — ГОТОВЫЙ (варёный/жареный) вес")
     lines.append("   • Яйца: 1 среднее яйцо ≈ 55–65 г")
+    lines.append("")
+    lines.append("💡 Как удобно внести в FatSecret:")
+    lines.append("   – Вводи продукты по отдельности (курица 150 г, рис 80 г и т.д.)")
+    lines.append("   – Используй граммы, не порции")
+    lines.append("   – Если продукт отличается — выбирай ближайший по КБЖУ")
+    lines.append("   – Проверяй итог в конце дня")
+    lines.append("")
+    lines.append("🔥 Как легче добрать калории:")
+    lines.append("   – Добавь 1–2 ст.л. оливкового масла (+180 ккал)")
+    lines.append("   – Горсть орехов (+150–200 ккал)")
+    lines.append("   – Банан + мёд")
+    lines.append("   – Смузи (молоко + банан + арахисовая паста)")
     return "\n".join(lines)
 
 
@@ -3939,7 +3955,9 @@ def nutrition_examples_kb():
         [InlineKeyboardButton(text="🐟 Вариант 3 (лосось)", callback_data="nutr:ex:3")],
         [InlineKeyboardButton(text="🥚 Вариант 4 (лёгкий)", callback_data="nutr:ex:4")],
         [InlineKeyboardButton(text="⚡️ Вариант 5 (быстрый)", callback_data="nutr:ex:5")],
+        [InlineKeyboardButton(text="🍽 Готовые блюда", callback_data="nutr:ready_meals")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
+        [InlineKeyboardButton(text="🔄 Сменить план", callback_data="workout:rebuild")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -3948,6 +3966,7 @@ def nutrition_back_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад к рациону", callback_data="nutr:back")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
+        [InlineKeyboardButton(text="🔄 Сменить план", callback_data="workout:rebuild")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -4313,16 +4332,19 @@ async def cmd_start(message: Message, bot: Bot):
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
     text = (
         "💳 Тарифы\n\n"
-        f"🟩 1 месяц — {TARIFFS['t1']['price']}₽\n"
+        f"🟢 Пробный доступ (3 дня) — {TARIFFS['trial']['price']}₽\n"
+        "• Тренировки + ответы на вопросы\n"
+        "• Без питания и дневника\n\n"
+        f"🔵 1 месяц — {TARIFFS['t1']['price']}₽\n"
         "• Тренировки + дневник + замеры\n"
         "• Поддержка\n"
         "• Обновление плана: 3 раза\n\n"
-        f"🟦 3 месяца — {TARIFFS['t3']['price']}₽\n"
+        f"🟣 3 месяца — {TARIFFS['t3']['price']}₽\n"
         "• Всё, что в 1 месяце + питание\n"
         "• Смена программы\n"
         "• Обновление плана: 10 раз\n"
         "• Выгоднее по цене\n\n"
-        f"🟨 Навсегда — {TARIFFS['life']['price']}₽\n"
+        f"🟡 Навсегда — {TARIFFS['life']['price']}₽\n"
         "• Полный доступ: тренировки + питание + дневник\n"
         "• Смена программы\n"
         "• Обновление плана: безлимит\n\n"
@@ -4330,9 +4352,10 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🟢 Пробный доступ (3 дня) — {TARIFFS['trial']['price']}₽", callback_data="tariff:trial")],
+        [InlineKeyboardButton(text=f"🔵 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟣 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟡 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
             callback_data="nav:back_to_program_tariff" if source == "after_profile" else "nav:menu"
@@ -6251,6 +6274,130 @@ async def cb_nutr_basket(callback: CallbackQuery, bot: Bot):
     await callback.answer()
 
 
+def build_ready_meals_text(calories: int, protein_g: int, fat_g: int, carbs_g: int) -> str:
+    """
+    Генерирует 6–7 готовых вариантов блюд с точными КБЖУ,
+    адаптированных под цели пользователя.
+    Структура расширяемая: в будущем можно добавить цели, дни, вариативность.
+    """
+    lines = ["🍽 Готовые блюда\n"]
+    lines.append("Каждый вариант — удобный приём пищи с точными КБЖУ.")
+    lines.append("Внеси в FatSecret по отдельности (по продуктам).\n")
+
+    # --- Завтрак 1: Овсянка + яйца + арахисовая паста
+    b1_items = [("oats", 80.0), ("eggs", 180.0), ("nuts_alm", 20.0), ("banana", 100.0)]
+    b1 = _sum_nutr(b1_items)
+    lines.append("🥗 Завтрак 1:")
+    lines.append("  Овсянка 80 г")
+    lines.append("  Яйца 3 шт (~180 г)")
+    lines.append("  Миндаль 20 г")
+    lines.append("  Банан 100 г")
+    lines.append(f"  → {int(round(b1['kcal']))} ккал / Б {int(round(b1['p']))} / Ж {int(round(b1['f']))} / У {int(round(b1['c']))}\n")
+
+    # --- Завтрак 2: Творог + ягоды + банан
+    b2_items = [("curd_0", 250.0), ("berries", 100.0), ("banana", 100.0), ("nuts_alm", 15.0)]
+    b2 = _sum_nutr(b2_items)
+    lines.append("🥣 Завтрак 2:")
+    lines.append("  Творог 0% — 250 г")
+    lines.append("  Ягоды — 100 г")
+    lines.append("  Банан — 100 г")
+    lines.append("  Миндаль — 15 г")
+    lines.append(f"  → {int(round(b2['kcal']))} ккал / Б {int(round(b2['p']))} / Ж {int(round(b2['f']))} / У {int(round(b2['c']))}\n")
+
+    # --- Обед 1: Рис + куриная грудка + овощи
+    l1_items = [("rice", 90.0), ("chicken", 200.0), ("veg", 200.0), ("oil_olive", 10.0)]
+    l1 = _sum_nutr(l1_items)
+    lines.append("🍗 Обед 1:")
+    lines.append("  Рис 90 г (сухой)")
+    lines.append("  Куриная грудка 200 г (готовая)")
+    lines.append("  Овощи 200 г")
+    lines.append("  Масло оливковое 10 г")
+    lines.append(f"  → {int(round(l1['kcal']))} ккал / Б {int(round(l1['p']))} / Ж {int(round(l1['f']))} / У {int(round(l1['c']))}\n")
+
+    # --- Обед 2: Гречка + говядина + овощи
+    l2_items = [("buckwheat", 80.0), ("beef", 160.0), ("veg", 150.0), ("oil_olive", 8.0)]
+    l2 = _sum_nutr(l2_items)
+    lines.append("🥩 Обед 2:")
+    lines.append("  Гречка 80 г (сухая)")
+    lines.append("  Говядина 160 г (готовая)")
+    lines.append("  Овощи 150 г")
+    lines.append("  Масло оливковое 8 г")
+    lines.append(f"  → {int(round(l2['kcal']))} ккал / Б {int(round(l2['p']))} / Ж {int(round(l2['f']))} / У {int(round(l2['c']))}\n")
+
+    # --- Ужин 1: Рыба + картофель + овощи
+    d1_items = [("fish", 200.0), ("potato", 250.0), ("veg", 150.0), ("oil_olive", 8.0)]
+    d1 = _sum_nutr(d1_items)
+    lines.append("🐟 Ужин 1:")
+    lines.append("  Рыба белая 200 г (готовая)")
+    lines.append("  Картофель 250 г")
+    lines.append("  Овощи 150 г")
+    lines.append("  Масло оливковое 8 г")
+    lines.append(f"  → {int(round(d1['kcal']))} ккал / Б {int(round(d1['p']))} / Ж {int(round(d1['f']))} / У {int(round(d1['c']))}\n")
+
+    # --- Ужин 2: Лосось + рис + овощи
+    d2_items = [("salmon", 150.0), ("rice", 70.0), ("veg", 150.0), ("oil_olive", 5.0)]
+    d2 = _sum_nutr(d2_items)
+    lines.append("🍣 Ужин 2:")
+    lines.append("  Лосось 150 г")
+    lines.append("  Рис 70 г (сухой)")
+    lines.append("  Овощи 150 г")
+    lines.append("  Масло оливковое 5 г")
+    lines.append(f"  → {int(round(d2['kcal']))} ккал / Б {int(round(d2['p']))} / Ж {int(round(d2['f']))} / У {int(round(d2['c']))}\n")
+
+    # --- Перекус: Греческий йогурт + яблоко
+    sn_items = [("greek_yog", 200.0), ("apple", 150.0), ("nuts_alm", 20.0)]
+    sn = _sum_nutr(sn_items)
+    lines.append("🍎 Перекус:")
+    lines.append("  Греческий йогурт 200 г")
+    lines.append("  Яблоко 150 г")
+    lines.append("  Миндаль 20 г")
+    lines.append(f"  → {int(round(sn['kcal']))} ккал / Б {int(round(sn['p']))} / Ж {int(round(sn['f']))} / У {int(round(sn['c']))}\n")
+
+    lines.append("💡 Как вносить в FatSecret:")
+    lines.append("  – Вводи каждый продукт отдельно с граммами")
+    lines.append("  – Крупы — в СУХОМ виде")
+    lines.append("  – Мясо/рыба — в ГОТОВОМ виде")
+    lines.append("  – Проверяй итог в конце дня")
+
+    return "\n".join(lines)
+
+
+async def cb_nutr_ready_meals(callback: CallbackQuery, bot: Bot):
+    """Показывает готовые блюда с КБЖУ."""
+    if not await is_full_access_active(callback.from_user.id):
+        text = (
+            "🍽 Питание открывается на тарифах 3 месяца и Навсегда.\n\n"
+            f"Выбери тариф 👇"
+        )
+        upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"🟣 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+            [InlineKeyboardButton(text=f"🟡 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+            [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+        ])
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=upgrade_kb)
+        await callback.answer()
+        return
+
+    if not await ensure_profile_ready(callback.from_user.id):
+        await clean_edit(callback, callback.from_user.id, "⚠️ Сначала заполни профиль (⚙️ Профиль).")
+        await callback.answer()
+        return
+
+    u = await get_user(callback.from_user.id)
+    _, calories, p, f, c, meals = generate_nutrition_summary(
+        u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
+        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
+    )
+
+    text = build_ready_meals_text(calories, p, f, c)
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к рациону", callback_data="nutr:back")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
+    await callback.answer()
+
+
 # =========================
 # ✅ ТЕХНИКИ: ХЕНДЛЕРЫ (с GIF-анимациями)
 # =========================
@@ -6457,26 +6604,50 @@ async def forward_to_admin(message: Message, bot: Bot):
 # ✅ СМЕНА ПРОГРАММЫ ТРЕНИРОВОК (для full access)
 # =========================
 async def cb_workout_rebuild(callback: CallbackQuery, bot: Bot):
-    """Пересобирает план тренировок (только для месячной подписки и выше)."""
+    """Пересобирает план тренировок с учётом лимита смен (plan_regens)."""
     uid = callback.from_user.id
-    if not await is_full_access_active(uid):
+
+    # Проверяем, есть ли активный доступ
+    if not await is_access_active(uid):
+        await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
+        return
+
+    if not await ensure_profile_ready(uid):
+        await clean_edit(callback, uid, "⚠️ Сначала заполни профиль (⚙️ Профиль).")
+        await callback.answer()
+        return
+
+    # Проверяем: полный доступ или нет
+    full_access = await is_full_access_active(uid)
+    if not full_access:
         await callback.answer(
             "🔒 Смена программы доступна на тарифах 3 месяца и Навсегда.",
             show_alert=True
         )
         return
 
+    # Проверяем лимит обновлений
+    regens_left, is_unlimited = await get_plan_regens(uid)
+    if not is_unlimited and regens_left is not None and int(regens_left) <= 0:
+        a = await get_access(uid)
+        tariff_name = TARIFFS.get(a.get("tariff", ""), {}).get("title", "текущий")
+        await clean_edit(callback, uid,
+            f"⚠️ Лимит обновлений плана исчерпан.\n\nТариф: {tariff_name}\nЧтобы обновлять план чаще — перейди в «Оплата».",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="💳 Оплата", callback_data="nav:upgrade")],
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:workouts")],
+            ])
+        )
+        await callback.answer()
+        return
+
     await callback.answer("🔄 Пересобираю программу…")
 
-    # Меняем seed (сдвигаем на случайное число) чтобы получить другой рандом
-    u = await get_user(uid)
     import random as _rnd
     shift = _rnd.randint(1, 9999)
-    # Сохраняем сдвиг в поле state (временно), чтобы gen функция получила другой seed
-    original_id = uid
-    # Генерируем с изменённым user_id (seed) для разнообразия
     varied_id = uid + shift * 100
 
+    u = await get_user(uid)
     intro, plan_struct = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"] or 3),
         limits=u.get("limits") or "",
@@ -6484,15 +6655,28 @@ async def cb_workout_rebuild(callback: CallbackQuery, bot: Bot):
     )
     await save_workout_plan(uid, intro, dumps_plan(plan_struct))
 
+    # Уменьшаем счётчик (только если не безлимит)
+    if not is_unlimited:
+        await decrement_plan_regens(uid)
+
     # Сбрасываем прогресс дней
     async with db() as conn:
         await conn.execute("DELETE FROM workout_day_progress WHERE user_id=?", (uid,))
         await conn.commit()
 
-    full_access = await is_full_access_active(uid)
+    # Получаем обновлённый счётчик для отображения
+    regens_after, is_unlim_after = await get_plan_regens(uid)
+    if is_unlim_after:
+        regens_str = "Безлимит"
+    elif regens_after is not None:
+        regens_str = f"Осталось обновлений: {regens_after}"
+    else:
+        regens_str = ""
+
     kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access, plan_struct=plan_struct)
+    suffix = f"\n\n{regens_str}" if regens_str else ""
     await clean_edit(callback, uid,
-        intro + "\n\n✅ Программа обновлена! Прогресс дней сброшен.",
+        intro + "\n\n✅ Программа обновлена! Прогресс дней сброшен." + suffix,
         reply_markup=kb
     )
 
@@ -6593,6 +6777,7 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_example, F.data.startswith("nutr:ex:"))
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
     dp.callback_query.register(cb_nutr_basket, F.data == "nutr:basket")
+    dp.callback_query.register(cb_nutr_ready_meals, F.data == "nutr:ready_meals")
 
     dp.callback_query.register(cb_faq_question, F.data.startswith("faq:"))
 
@@ -6776,15 +6961,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
-
-
-
-
-
-
-
-
-
-
