@@ -2290,10 +2290,12 @@ async def send_tech(
     """Универсальная отправка техники упражнения.
 
     Приоритет медиа:
-      1. TECH_VIDEOS  (mp4)    — send_video + отдельное сообщение с текстом
-      2. TECH_IMAGES  (jpg/png) — send_photo + отдельное сообщение с текстом
+      1. TECH_VIDEOS  (mp4)    — send_video, текст в caption
+      2. TECH_IMAGES  (jpg/png) — send_photo, текст в caption
       3. TECH_GIFS    (gif)    — send_animation, текст в caption
       4. только текст          — send_message (graceful fallback)
+
+    Текст всегда в одном сообщении с медиа — caption обрезается умно по \n.
 
     Как добавить mp4-видео:
       1. Положи файл: media/tech/<ключ>.mp4  (до ~50 МБ, 480p, до 30 сек)
@@ -2312,13 +2314,22 @@ async def send_tech(
 
     tech_item = TECH.get(tech_key, {})
 
-    # caption для видео/фото — ограничен 1024 символами Telegram
-    # Текст техники вставляем прямо в caption, обрезая если нужно
-    CAPTION_LIMIT = 1024
-    caption = text[:CAPTION_LIMIT] + ("…" if len(text) > CAPTION_LIMIT else "")
+    # ── Умная обрезка caption ────────────────────────────────────────────────
+    # Telegram: caption для video/photo/animation — максимум 1024 символа.
+    # Обрезаем по последнему переносу строки перед лимитом.
+    LIMIT = 1020
+    def make_caption(t: str) -> str:
+        if len(t) <= LIMIT:
+            return t
+        cut = t[:LIMIT]
+        last_nl = cut.rfind("\n")
+        if last_nl > LIMIT // 2:
+            return cut[:last_nl] + "\n…"
+        return cut + "…"
+
+    caption = make_caption(text)
 
     # ── Вариант 1: MP4 из TECH_VIDEOS ────────────────────────────────────────
-    # Текст идёт в caption видео — одно сообщение, кнопки тоже здесь
     video_path = TECH_VIDEOS.get(tech_key, "")
     if video_path and os.path.exists(video_path):
         try:
@@ -2335,12 +2346,9 @@ async def send_tech(
             pass  # fallback → jpg → gif → text
 
     # ── Вариант 2: JPG/PNG из TECH_IMAGES ────────────────────────────────────
-    # Текст идёт в caption фото — одно сообщение, кнопки тоже здесь
     img_path = TECH_IMAGES.get(tech_key, "")
-    # Запасной источник: TECH[key].get("img")
     if not img_path:
         img_path = tech_item.get("img", "")
-
     if img_path and os.path.exists(img_path):
         try:
             m = await bot.send_photo(
@@ -2358,18 +2366,13 @@ async def send_tech(
     gif_path = TECH_GIFS.get(tech_key, "")
     if gif_path and os.path.exists(gif_path):
         try:
-            animation = FSInputFile(gif_path)
-            caption = text[:1020] + ("…" if len(text) > 1020 else "")
             m = await bot.send_animation(
-                chat_id=chat_id, animation=animation,
-                caption=caption, reply_markup=reply_markup
+                chat_id=chat_id,
+                animation=FSInputFile(gif_path),
+                caption=caption,
+                reply_markup=reply_markup,
             )
-            rest = text[1020:].strip()
-            if rest:
-                m2 = await bot.send_message(chat_id=chat_id, text=rest, reply_markup=reply_markup)
-                await set_last_bot_msg_id(user_id, m2.message_id)
-            else:
-                await set_last_bot_msg_id(user_id, m.message_id)
+            await set_last_bot_msg_id(user_id, m.message_id)
             return
         except Exception:
             pass  # fallback → text
