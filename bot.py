@@ -61,7 +61,7 @@ IMAGE_PATHS = {
 # Приоритет над GIF: если здесь есть путь и файл существует — отправляем картинку.
 # Чтобы добавить картинку: создай файл и пропиши путь ниже — хендлеры менять не нужно.
 TECH_IMAGES: Dict[str, str] = {
-    # Формат: "ключ_упражнения": "media/tech/<название>.jpg"
+    # Формат: "ключ_упражнения": "media/tech/<название>.mp4"
     # Примеры (раскомментируй и добавь файл):
     # "squat":          "media/tech/squat.jpg",
     # "bench":          "media/tech/bench.jpg",
@@ -600,7 +600,7 @@ TECH = {
     },
     "legpress": {
         "title": "Жим ногами",
-        "img": "media/tech/legpress.jpg",
+        "mp4": "media/tech/legpress.mp4",
         "text": (
             "📚 Жим ногами (ноги, безопасно)\n\n"
             "✅ Настройка\n"
@@ -7443,4 +7443,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
