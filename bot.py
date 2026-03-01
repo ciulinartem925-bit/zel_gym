@@ -2337,13 +2337,13 @@ async def send_tech(
                 chat_id=chat_id,
                 video=FSInputFile(video_path),
                 caption=caption,
-                supports_streaming=True,
                 reply_markup=reply_markup,
             )
             await set_last_bot_msg_id(user_id, m.message_id)
             return
-        except Exception:
-            pass  # fallback → jpg → gif → text
+        except Exception as _e:
+            logging.warning(f"[send_tech] send_video failed key={tech_key!r} path={video_path!r}: {_e}")
+            # fallback → gif
 
     # ── Вариант 2: JPG/PNG из TECH_IMAGES ────────────────────────────────────
     img_path = TECH_IMAGES.get(tech_key, "")
@@ -2374,8 +2374,9 @@ async def send_tech(
             )
             await set_last_bot_msg_id(user_id, m.message_id)
             return
-        except Exception:
-            pass  # fallback → text
+        except Exception as _e:
+            logging.warning(f"[send_tech] send_animation failed key={tech_key!r}: {_e}")
+            # fallback → text
 
     # ── Вариант 4: только текст ───────────────────────────────────────────────
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
