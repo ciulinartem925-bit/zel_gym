@@ -57,6 +57,20 @@ IMAGE_PATHS = {
     "faq":          "media2/tech/faq.jpg",
 }
 
+# Словарь JPG/PNG картинок для техник упражнений.
+# Приоритет над GIF: если здесь есть путь и файл существует — отправляем картинку.
+# Чтобы добавить картинку: создай файл и пропиши путь ниже — хендлеры менять не нужно.
+TECH_IMAGES: Dict[str, str] = {
+    # Формат: "ключ_упражнения": "media/tech/<название>.jpg"
+    # Примеры (раскомментируй и добавь файл):
+    # "squat":          "media/tech/squat.jpg",
+    # "bench":          "media/tech/bench.jpg",
+    # "deadlift":       "media/tech/deadlift.jpg",
+    # "rdl_barbell":    "media/tech/rdl_barbell.jpg",
+    # "pullup_wide":    "media/tech/pullup_wide.jpg",
+    # "ohp_barbell":    "media/tech/ohp_barbell.jpg",
+}
+
 TECH_GIFS = {
     # ── Ноги / нижний блок ──────────────────────────────────────────────────
     "squat":             "media/tech/squat.gif",
@@ -2206,14 +2220,15 @@ async def send_screen(
     await set_last_bot_msg_id(user_id, m.message_id)
 
 
-async def _send_tech_with_gif(
+async def send_tech(
     bot: Bot, chat_id: int, user_id: int,
     tech_key: str, text: str, reply_markup=None
 ):
-    """Отправляет технику упражнения с GIF если есть, иначе — текст.
-    Удаляет предыдущее главное сообщение (чистый чат)."""
-    gif_path = TECH_GIFS.get(tech_key, "")
-
+    """Универсальная отправка техники упражнения.
+    Приоритет: TECH_IMAGES (jpg/png) → TECH_GIFS (gif) → только текст.
+    Удаляет предыдущее главное сообщение (чистый чат).
+    Чтобы добавить картинку — пропиши путь в TECH_IMAGES[key], файл создавать рядом."""
+    # Удаляем предыдущее сообщение
     last_id = await get_last_bot_msg_id(user_id)
     if last_id:
         try:
@@ -2221,6 +2236,35 @@ async def _send_tech_with_gif(
         except Exception:
             pass
 
+    # --- Вариант 1: JPG/PNG из TECH_IMAGES ---
+    img_path = TECH_IMAGES.get(tech_key, "")
+    # Также смотрим в TECH[key].get("img") как запасной источник
+    if not img_path:
+        tech_item = TECH.get(tech_key, {})
+        img_path = tech_item.get("img", "")
+
+    if img_path and os.path.exists(img_path):
+        try:
+            photo = FSInputFile(img_path)
+            # caption ограничен 1024 символами — берём заголовок
+            tech_item = TECH.get(tech_key, {})
+            short_title = tech_item.get("title", text[:80])
+            caption = f"📚 {short_title}"
+            m = await bot.send_photo(
+                chat_id=chat_id, photo=photo,
+                caption=caption, reply_markup=None
+            )
+            # Полный текст техники — отдельным сообщением
+            m2 = await bot.send_message(
+                chat_id=chat_id, text=text, reply_markup=reply_markup
+            )
+            await set_last_bot_msg_id(user_id, m2.message_id)
+            return
+        except Exception:
+            pass  # graceful fallback → gif → text
+
+    # --- Вариант 2: GIF из TECH_GIFS ---
+    gif_path = TECH_GIFS.get(tech_key, "")
     if gif_path and os.path.exists(gif_path):
         try:
             animation = FSInputFile(gif_path)
@@ -2239,9 +2283,13 @@ async def _send_tech_with_gif(
         except Exception:
             pass  # fallback to text
 
-    # Нет GIF или ошибка — отправляем текст
+    # --- Вариант 3: только текст ---
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     await set_last_bot_msg_id(user_id, m.message_id)
+
+
+# Обратная совместимость — старое имя перенаправляет на новое
+_send_tech_with_gif = send_tech
 
 
 # =========================
@@ -3432,173 +3480,140 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     avoid_keys = avoid_keys_for_base()
 
     if is_gym:
-        # --- ЗАЛ: пулы с ОБЯЗАТЕЛЬНЫМИ базовыми упражнениями ---
-        SQUAT = [
-            "Присед со штангой",                   # БАЗА — всегда включён   → squat_barbell
-            "Жим ногами в тренажёре",               # → legpress
-            "Гоблет-присед с гантелей",             # → goblet
-            "Хакк-присед в тренажёре",              # → hack_squat
-            "Болгарские выпады с гантелями",        # → bulgarian
-            "Выпады с гантелями (ходьба)",          # → lunge_walking
-            "Выпады со штангой",                    # → lunge_barbell  ← добавлено
+        # ══ ЗАЛ: WHITELIST упражнений для генерации ══════════════════════════
+        # БАЗА — только многосуставные движения (3–4 на тренировку)
+        # Каждое упражнение имеет ключ в TECH_GIFS/TECH_IMAGES
+
+        BASE_SQUAT = [
+            "Присед со штангой",              # squat_barbell ★
+            "Жим ногами в тренажёре",         # legpress
+            "Болгарские выпады с гантелями",  # bulgarian
+            "Гоблет-присед с гантелями",      # goblet
         ]
-        HINGE = [
-            "Румынская тяга со штангой",            # БАЗА → rdl_barbell
-            "Становая тяга (техника)",              # БАЗА → deadlift
-            "Становая тяга сумо",                   # → deadlift_sumo  ← добавлено
-            "Румынская тяга с гантелями",           # → rdl_dumbbell
-            "Ягодичный мост со штангой",            # → hinge
-            "Сгибания ног в тренажёре",             # → legcurl
-            "Гиперэкстензия с весом",               # → hyperext
+        BASE_HINGE = [
+            "Становая тяга",                  # deadlift ★
+            "Становая тяга сумо",             # deadlift_sumo
+            "Румынская тяга со штангой",       # rdl_barbell
+            "Румынская тяга с гантелями",      # rdl_dumbbell
         ]
-        HPUSH = [
-            "Жим штанги лёжа",                      # БАЗА → bench
-            "Жим гантелей лёжа",                    # БАЗА → bench_dumbbell
-            "Жим штанги под углом (incline)",       # → incline_press_barbell
-            "Жим гантелей под углом (incline)",     # → incline_press_dumbbell  ← поднято
-            "Жим в тренажёре (грудь)",              # → bench_machine
-            "Сведения в кроссовере (грудь)",        # → crossover
-            "Разведения гантелей лёжа",             # → chest_fly  ← добавлено
+        BASE_HPUSH = [
+            "Жим штанги лёжа",                # bench ★
+            "Жим гантелей лёжа",              # bench_dumbbell
+            "Жим штанги под углом",           # incline_press_barbell
+            "Жим гантелей под углом",         # incline_press_dumbbell
         ]
-        HPULL = [
-            "Тяга штанги в наклоне",                # БАЗА → barbell_row
-            "Тяга горизонтального блока",           # → rowtrain
-            "Тяга гантели одной рукой",             # → dumbbell_row
-            "Тяга Т-грифа",                         # → barbell_row
-            "Тяга нижнего блока параллельным хватом",  # → rowtrain
+        BASE_HPULL = [
+            "Тяга штанги в наклоне",          # barbell_row ★
+            "Тяга гантели одной рукой",       # dumbbell_row
+            "Тяга горизонтального блока",     # rowtrain
         ]
-        VPULL = [
-            "Подтягивания (широкий хват)",          # БАЗА → pullup_wide
-            "Подтягивания (обратный хват)",         # → pullup_chinup  ← добавлено
-            "Подтягивания нейтральным хватом",      # → pullup
-            "Верхний блок широким хватом",          # → latpulldown_wide
-            "Верхний блок узким хватом",            # → latpulldown_narrow
+        BASE_VPULL = [
+            "Подтягивания (широкий хват)",    # pullup_wide ★
+            "Подтягивания (обратный хват)",   # pullup_chinup
+            "Верхний блок широким хватом",    # latpulldown_wide
+            "Верхний блок узким хватом",      # latpulldown_narrow
         ]
-        VPUSH = [
-            "Жим штанги стоя (overhead press)",     # БАЗА → ohp_barbell
-            "Армейский жим",                        # БАЗА → ohp_barbell
-            "Жим гантелей стоя/сидя",              # → ohp_dumbbell
-            "Жим в тренажёре вверх",                # → ohp_machine
+        BASE_VPUSH = [
+            "Жим штанги стоя",                # ohp_barbell ★
+            "Жим гантелей стоя",              # ohp_dumbbell
         ]
-        SHOULD = [
-            "Разведения гантелей в стороны",        # → lateralraise
-            "Face pull на блоке (канат)",           # → face_pull
-            "Задняя дельта в тренажёре (pec deck)", # → rear_delt
-            "Разведения гантелей в наклоне (задняя дельта)",  # → rear_delt
-            "Тяга штанги к подбородку (широкий хват)",        # → lateralraise
+        # ИЗОЛЯЦИЯ — добивочные (максимум 1–2 на тренировку)
+        ISO_CHEST = [
+            "Разведения гантелей лёжа",       # chest_fly
         ]
-        BI = [
-            "Сгибания гантелей стоя",               # → biceps_dumbbell
-            "Сгибания со штангой (бицепс)",         # → biceps_barbell  ← заменено (было "Сгибания на блоке (нижний)")
-            "Молотки с гантелями",                  # → hammer
-            "Сгибания на скамье Скотта",            # → biceps
-            "Концентрированные сгибания",           # → biceps
+        ISO_SHOULD = [
+            "Разведения гантелей в стороны",  # lateralraise
+            "Face pull на блоке",             # face_pull
+            "Задняя дельта в тренажёре",      # rear_delt
         ]
-        TRI = [
-            "Разгибания на верхнем блоке (прямая рукоять)",  # → triceps
-            "Разгибания на блоке (канат, одной рукой)",      # → triceps
-            "Французский жим лёжа с гантелями",              # → triceps_oh
-            "Отжимания узкие",                               # → narrow_pushup
-            "Разгибание гантели из-за головы",               # → triceps_oh
+        ISO_BI = [
+            "Сгибания гантелей стоя",         # biceps
+            "Молотки с гантелями",            # hammer
         ]
-        CALVES = [
-            "Подъёмы на носки стоя в тренажёре",    # → calves
-            "Подъёмы на носки сидя в тренажёре",    # → calves
-            "Подъёмы на носки с гантелями (одна нога)",  # → calves
+        ISO_TRI = [
+            "Разгибания на верхнем блоке",    # triceps
+            "Французский жим с гантелями",    # triceps_oh
         ]
-        CORE = [
-            "Планка (статика)",                     # → core
-            "Скручивания (пресс)",                  # → ab_crunch  ← переименовано
-            "Подъёмы ног в висе",                   # → hanging_leg_raise
-            "Подъёмы ног в упоре на локтях",        # → elbow_leg_raise
-            "Ролик для пресса (ab wheel)",           # → ab_rollout
+        ISO_LEGS = [
+            "Сгибания ног в тренажёре",       # legcurl
+            "Подъёмы на носки в тренажёре",   # calves
         ]
-    else:
-        # --- ДОМА: пулы с ОБЯЗАТЕЛЬНЫМИ базовыми упражнениями ---
-        SQUAT = [
-            "Приседания (собственный вес)",         # БАЗА → squat_bodyweight
-            "Присед с паузой внизу",                # → squat_bodyweight
-            "Присед сумо",                          # → squat_sumo
-            "Болгарские выпады (нога на стуле)",    # → bulgarian
-            "Выпады на месте",                      # → lunge
-            "Выпады ходьбой",                       # → lunge_walking
-            "Приседания на одной ноге (пистолет, облегчённо)",  # → squat_bodyweight
-        ]
-        HINGE = [
-            "Ягодичный мост",                       # БАЗА → hinge
-            "Ягодичный мост на одной ноге",         # → hinge
-            "Гиперэкстензия на полу",               # → hyperext
-            "Good-morning (без веса, техника)",     # → good_morning
-            "Румынская тяга с гантелями (если есть)",  # → rdl_dumbbell
-        ]
-        HPUSH = [
-            "Отжимания (классика)",                 # БАЗА → row
-            "Отжимания с паузой 2 сек",             # → row
-            "Отжимания узкие (трицепс)",            # БАЗА → narrow_pushup
-            "Отжимания от возвышения (ноги на стуле)",  # → row
-            "Отжимания с хлопком (взрывные)",       # → row
-        ]
-        HPULL = [
-            "Горизонтальные подтягивания (под столом)",  # БАЗА → pullup
-            "Тяга резинки к поясу",                 # → band_row
-            "Тяга гантели одной рукой (в наклоне)", # → dumbbell_row
-            "Тяга резинки в наклоне",               # → band_row
-        ]
-        VPULL = [
-            "Подтягивания (обратный хват)",         # БАЗА → pullup_chinup
-            "Подтягивания (прямой хват)",           # БАЗА → pullup
-            "Негативные подтягивания",              # → pullup
-            "Тяга резинки сверху",                  # → band_pull
-            "Подтягивания на петлях (TRX-стиль)",   # → pullup
-        ]
-        VPUSH = [
-            "Пайк-отжимания",                       # БАЗА → pike_pushup
-            "Жим резинки вверх (стоя)",             # → band_ohp
-            "Отжимания (ноги высоко на стуле)",     # → pike_pushup
-        ]
-        SHOULD = [
-            "Разведения гантелей в стороны",        # → lateralraise
-            "Тяга резинки к лицу (face pull)",      # → face_pull
-            "Разведения гантелей в наклоне (задняя дельта)",  # → rear_delt
-            "Тяга резинки к подбородку",            # → lateralraise
-        ]
-        BI = [
-            "Сгибания гантелей стоя",               # → biceps_dumbbell (или biceps)
-            "Молотки с гантелями",                  # → hammer
-            "Сгибания на резинке",                  # → biceps
-        ]
-        TRI = [
-            "Отжимания узкие",                      # → narrow_pushup
-            "Разгибание гантели из-за головы",      # → triceps_oh
-            "Обратные отжимания от стула/лавки",    # → triceps
-        ]
-        CALVES = [
-            "Подъёмы на носки стоя",                # → calves
-            "Подъёмы на носки на одной ноге",       # → calves
-            "Подъёмы на носки с гантелями",         # → calves
-        ]
-        CORE = [
-            "Планка (статика)",                     # → core
-            "Боковая планка",                       # → side_plank
-            "Скручивания (пресс)",                  # → ab_crunch  ← переименовано
-            "Подъёмы ног лёжа",                     # → leg_raise_lying
-            "Велосипед (скручивания с поворотом)",  # → ab_crunch
-            "Обратные скручивания",                 # → ab_crunch
+        CORE_POOL = [
+            "Подъёмы ног в висе",             # hanging_leg_raise
+            "Планка (статика)",               # core
+            "Ролик для пресса (ab wheel)",    # ab_rollout
         ]
 
+    else:
+        # ══ ДОМА: WHITELIST упражнений для генерации ═════════════════════════
+
+        BASE_SQUAT = [
+            "Приседания (собственный вес)",   # squat_bodyweight ★
+            "Присед сумо",                    # squat_sumo
+            "Болгарские выпады",              # bulgarian
+        ]
+        BASE_HINGE = [
+            "Ягодичный мост",                 # hinge ★
+            "Румынская тяга с гантелями",      # rdl_dumbbell
+            "Гиперэкстензия на полу",         # hyperext
+        ]
+        BASE_HPUSH = [
+            "Отжимания",                      # row ★
+            "Отжимания с паузой",             # row
+        ]
+        BASE_HPULL = [
+            "Горизонтальные подтягивания",    # pullup ★
+            "Тяга гантели одной рукой",       # dumbbell_row
+        ]
+        BASE_VPULL = [
+            "Подтягивания (прямой хват)",     # pullup ★
+            "Подтягивания (обратный хват)",   # pullup_chinup
+            "Негативные подтягивания",        # pullup
+        ]
+        BASE_VPUSH = [
+            "Пайк-отжимания",                 # pike_pushup ★
+        ]
+        ISO_CHEST = [
+            "Отжимания узкие",                # narrow_pushup
+        ]
+        ISO_SHOULD = [
+            "Разведения гантелей в стороны",  # lateralraise
+            "Тяга резинки к лицу",            # face_pull
+        ]
+        ISO_BI = [
+            "Сгибания гантелей стоя",         # biceps
+            "Молотки с гантелями",            # hammer
+        ]
+        ISO_TRI = [
+            "Отжимания узкие",                # narrow_pushup
+            "Разгибание гантели из-за головы",# triceps_oh
+        ]
+        ISO_LEGS = [
+            "Ягодичный мост на одной ноге",   # hinge
+            "Подъёмы на носки стоя",          # calves
+        ]
+        CORE_POOL = [
+            "Планка (статика)",               # core
+            "Боковая планка",                 # side_plank
+            "Подъёмы ног лёжа",               # leg_raise_lying
+        ]
+
+    # Фильтры ограничений
     if tags["elbow"]:
-        TRI = [x for x in TRI if "француз" not in x.lower()]
+        ISO_TRI = [x for x in ISO_TRI if "француз" not in x.lower()
+                   and "разгибани" not in x.lower()]
     if tags["knee"]:
-        SQUAT = [x for x in SQUAT if "выпад" not in x.lower() and "болгар" not in x.lower()]
+        BASE_SQUAT = [x for x in BASE_SQUAT
+                      if "выпад" not in x.lower() and "болгар" not in x.lower()]
     if tags["back"]:
-        HINGE = [x for x in HINGE if "румын" not in x.lower()]
+        BASE_HINGE = [x for x in BASE_HINGE
+                      if "румын" not in x.lower() and "становая" not in x.lower()]
 
     if f == 3:
         system = "Фулбади"
         template = ["FB-A", "FB-B", "FB-C"]
     elif f == 4:
         system = "Верх/Низ"
-        # Фиксированное чередование: нечётный → Верх, чётный → Низ
         template = ["UPPER", "LOWER", "UPPER", "LOWER"]
     else:
         system = "PPL + Верх/Низ"
@@ -3607,140 +3622,186 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     def fmt(name: str, sets: str, reps: str) -> str:
         return f"{name} — {sets}×{reps}"
 
+    def pick1(pool: List[str], avoid: List[str], exclude: List[str] = None) -> str:
+        """Выбрать одно упражнение из пула, избегая ключевых слов и уже выбранных."""
+        ex = exclude or []
+        safe = [x for x in pool
+                if not any(k in x.lower() for k in avoid)
+                and x not in ex]
+        if not safe:
+            safe = [x for x in pool if x not in ex]
+        return rnd.choice(safe) if safe else (rnd.choice(pool) if pool else "—")
+
     def day_block(kind: str) -> List[str]:
         lines = [f"RIR: {rir}", ""]
-        if kind.startswith("FB"):
-            squat = pick(SQUAT, avoid_keys)
-            hinge = pick(HINGE, avoid_keys)
-            hpush = pick(HPUSH, avoid_keys)
-            hpull = pick(HPULL, avoid_keys)
-            should = pick(SHOULD, avoid_keys)
-            arms = pick(BI if rnd.random() < 0.5 else TRI, avoid_keys)
+        used: List[str] = []  # уже выбранные упражнения в этот день
 
+        # ── ФУЛБАДИ А: ноги + горизонтальный жим/тяга ───────────────────────
+        if kind == "FB-A":
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            hinge = pick1(BASE_HINGE, avoid_keys, used); used.append(hinge)
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            # 1 изоляция: ноги или плечи
+            iso1 = pick1(ISO_LEGS if rnd.random() < 0.6 else ISO_SHOULD, avoid_keys, used)
+            used.append(iso1)
+            lines += ["База:",
+                      f"• {fmt(squat, base_sets, reps_base)}",
+                      f"• {fmt(hinge, base_sets, reps_base)}",
+                      f"• {fmt(hpush, base_sets, reps_base)}",
+                      f"• {fmt(vpull, base_sets, reps_base)}", "",
+                      "Изоляция:",
+                      f"• {fmt(iso1, iso_sets, reps_iso)}"]
+            if not is_novice:
+                core = pick1(CORE_POOL, avoid_keys, used)
+                lines.append(f"• {fmt(core, '2', '30–60 сек')}")
+            return lines
+
+        # ── ФУЛБАДИ Б: спина + жим вверх ────────────────────────────────────
+        if kind == "FB-B":
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            vpush = (pick1(BASE_VPUSH, avoid_keys, used)
+                     if not tags["shoulder"]
+                     else pick1(BASE_HPUSH, avoid_keys, used))
+            used.append(vpush)
+            # 1 изоляция: бицепс
+            iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
+            lines += ["База:",
+                      f"• {fmt(squat, base_sets, reps_base)}",
+                      f"• {fmt(vpull, base_sets, reps_base)}",
+                      f"• {fmt(hpull, base_sets, reps_base)}",
+                      f"• {fmt(vpush, base_sets, reps_base)}", "",
+                      "Изоляция:",
+                      f"• {fmt(iso1, iso_sets, reps_iso)}"]
+            if not is_novice:
+                core = pick1(CORE_POOL, avoid_keys, used)
+                lines.append(f"• {fmt(core, '2', '30–60 сек')}")
+            return lines
+
+        # ── ФУЛБАДИ В: грудь + задняя цепь ──────────────────────────────────
+        if kind == "FB-C":
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            hinge = pick1(BASE_HINGE, avoid_keys, used); used.append(hinge)
+            # 1-2 изоляции: грудь + трицепс (или только трицепс)
+            iso1_pool = ISO_CHEST if is_gym else ISO_TRI
+            iso1 = pick1(iso1_pool, avoid_keys, used); used.append(iso1)
+            lines += ["База:",
+                      f"• {fmt(squat, base_sets, reps_base)}",
+                      f"• {fmt(hpush, base_sets, reps_base)}",
+                      f"• {fmt(hpull, base_sets, reps_base)}",
+                      f"• {fmt(hinge, base_sets, reps_base)}", "",
+                      "Изоляция:",
+                      f"• {fmt(iso1, iso_sets, reps_iso)}"]
+            if not is_novice and not tags["elbow"]:
+                iso2 = pick1(ISO_TRI, avoid_keys, used)
+                lines.append(f"• {fmt(iso2, iso_sets, reps_iso)}")
+            return lines
+
+        # ── ВЕРХ/НИЗ: UPPER ──────────────────────────────────────────────────
+        if kind == "UPPER":
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            lines.append("База:")
+            lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
+            lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
+            lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
+            if not tags["shoulder"]:
+                vpush = pick1(BASE_VPUSH, avoid_keys, used); used.append(vpush)
+                lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
+            lines += ["", "Изоляция:"]
+            iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
+            if not tags["elbow"]:
+                iso2 = pick1(ISO_TRI, avoid_keys, used)
+                lines.append(f"• {fmt(iso2, iso_sets, reps_iso)}")
+            return lines
+
+        # ── ВЕРХ/НИЗ: LOWER ──────────────────────────────────────────────────
+        if kind == "LOWER":
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            hinge = pick1(BASE_HINGE, avoid_keys, used); used.append(hinge)
             lines.append("База:")
             lines.append(f"• {fmt(squat, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
             lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
-            lines.append(f"• {fmt(arms, iso_sets, reps_iso)}")
-            if not is_novice:
-                lines.append(f"• {fmt(pick(CORE, avoid_keys), '2', '30–60 сек')}")
+            pool2 = [x for x in BASE_SQUAT if x != squat]
+            if pool2 and not tags["knee"]:
+                sq2 = pick1(pool2, avoid_keys, used); used.append(sq2)
+                lines.append(f"• {fmt(sq2, base_sets, reps_base)}")
+            lines += ["", "Изоляция:"]
+            iso1 = pick1(ISO_LEGS, avoid_keys, used); used.append(iso1)
+            reps_iso1 = "15–20" if "носки" in iso1.lower() else reps_iso
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso1)}")
+            core = pick1(CORE_POOL, avoid_keys, used)
+            lines.append(f"• {fmt(core, '2', '40–60 сек')}")
             return lines
 
-        if kind == "UPPER":
-            # Верх — ФИКСИРОВАННЫЙ шаблон (чередование верх-низ)
-            upper_gym = [
-                ("Жим штанги лёжа", base_sets, reps_base),
-                ("Верхний блок широким хватом", base_sets, reps_base),
-                ("Жим гантелей стоя/сидя", iso_sets, reps_iso),
-                ("Тяга штанги в наклоне", base_sets, reps_base),
-                ("Сгибания гантелей стоя", iso_sets, reps_iso),
-                ("Разгибания на верхнем блоке (прямая рукоять)", iso_sets, reps_iso),
-            ]
-            upper_home = [
-                ("Отжимания (классика)", base_sets, reps_base),
-                ("Подтягивания (прямой хват)", base_sets, reps_base),
-                ("Пайк-отжимания", iso_sets, reps_iso),
-                ("Тяга гантели одной рукой (в наклоне)", base_sets, reps_base),
-                ("Сгибания гантелей стоя", iso_sets, reps_iso),
-                ("Отжимания узкие (трицепс)", iso_sets, reps_iso),
-            ]
-            items = upper_gym if is_gym else upper_home
-            lines.append("База:")
-            for name, s, r in items[:4]:
-                if tags["shoulder"] and any(x in name.lower() for x in ["жим стоя", "пайк", "армейский"]):
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            for name, s, r in items[4:]:
-                if tags["elbow"] and "разгибан" in name.lower():
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            return lines
-
-        if kind == "LOWER":
-            # Низ — ФИКСИРОВАННЫЙ шаблон (чередование верх-низ)
-            lower_gym = [
-                ("Присед со штангой", base_sets, reps_base),
-                ("Румынская тяга со штангой", base_sets, reps_base),
-                ("Жим ногами в тренажёре", base_sets, reps_base),
-                ("Сгибания ног в тренажёре", iso_sets, reps_iso),
-                ("Подъёмы на носки стоя в тренажёре", iso_sets, "15–20"),
-                ("Планка (статика)", "2", "40–60 сек"),
-            ]
-            lower_home = [
-                ("Приседания (собственный вес)", base_sets, reps_base),
-                ("Румынская тяга с гантелями (если есть)", base_sets, reps_base),
-                ("Болгарские выпады (нога на стуле)", base_sets, reps_base),
-                ("Ягодичный мост", iso_sets, reps_iso),
-                ("Подъёмы на носки стоя", iso_sets, "15–20"),
-                ("Планка (статика)", "2", "40–60 сек"),
-            ]
-            items = lower_gym if is_gym else lower_home
-            lines.append("База:")
-            for name, s, r in items[:3]:
-                if tags["knee"] and any(x in name.lower() for x in avoid_knee):
-                    continue
-                if tags["back"] and any(x in name.lower() for x in avoid_back):
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            for name, s, r in items[3:]:
-                if tags["knee"] and any(x in name.lower() for x in avoid_knee):
-                    continue
-                lines.append(f"• {fmt(name, s, r)}")
-            return lines
-
+        # ── PPL: PUSH ────────────────────────────────────────────────────────
         if kind == "PUSH":
-            hpush = pick(HPUSH, avoid_keys)
-            vpush = pick(VPUSH, avoid_keys)
-            should = pick(SHOULD, avoid_keys)
-            tri = pick(TRI, avoid_keys)
-
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
             lines.append("База:")
             lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
             if not tags["shoulder"]:
+                vpush = pick1(BASE_VPUSH, avoid_keys, used); used.append(vpush)
                 lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            lines.append(f"• {fmt(should, iso_sets, reps_iso)}")
-            lines.append(f"• {fmt(tri, iso_sets, reps_iso)}")
+            pool2 = [x for x in BASE_HPUSH if x != hpush]
+            if pool2:
+                hp2 = pick1(pool2, avoid_keys, used); used.append(hp2)
+                lines.append(f"• {fmt(hp2, base_sets, reps_base)}")
+            lines += ["", "Изоляция:"]
+            iso_c = pick1(ISO_CHEST if is_gym else ISO_TRI, avoid_keys, used)
+            used.append(iso_c)
+            lines.append(f"• {fmt(iso_c, iso_sets, reps_iso)}")
+            if not tags["elbow"]:
+                iso_s = pick1(ISO_SHOULD, avoid_keys, used)
+                lines.append(f"• {fmt(iso_s, iso_sets, reps_iso)}")
             return lines
 
+        # ── PPL: PULL ────────────────────────────────────────────────────────
         if kind == "PULL":
-            vpull = pick(VPULL, avoid_keys)
-            hpull = pick(HPULL, avoid_keys)
-            bi = pick(BI, avoid_keys)
-            rear = pick(SHOULD, avoid_keys)
-
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
             lines.append("База:")
             lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
             lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            lines.append(f"• {fmt(rear, iso_sets, reps_iso)}")
-            lines.append(f"• {fmt(bi, iso_sets, reps_iso)}")
+            pool2 = [x for x in BASE_HPULL if x != hpull]
+            if pool2:
+                hp2 = pick1(pool2, avoid_keys, used); used.append(hp2)
+                lines.append(f"• {fmt(hp2, base_sets, reps_base)}")
+            lines += ["", "Изоляция:"]
+            iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
+            iso2 = pick1(ISO_SHOULD, avoid_keys, used)
+            lines.append(f"• {fmt(iso2, iso_sets, reps_iso)}")
             return lines
 
+        # ── PPL: LEGS ────────────────────────────────────────────────────────
         if kind == "LEGS":
-            squat = pick(SQUAT, avoid_keys)
-            hinge = pick(HINGE, avoid_keys)
-            calves = pick(CALVES, avoid_keys)
-
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            hinge = pick1(BASE_HINGE, avoid_keys, used); used.append(hinge)
+            pool2 = [x for x in BASE_SQUAT if x != squat]
             lines.append("База:")
             lines.append(f"• {fmt(squat, base_sets, reps_base)}")
             lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
-            lines.append("")
-            lines.append("Изоляция:")
-            lines.append(f"• {fmt(calves, iso_sets, reps_iso)}")
+            if pool2 and not tags["knee"]:
+                sq2 = pick1(pool2, avoid_keys, used); used.append(sq2)
+                lines.append(f"• {fmt(sq2, base_sets, reps_base)}")
+            lines += ["", "Изоляция:"]
+            for ex in ISO_LEGS:
+                if ex not in used and not (tags["knee"] and any(k in ex.lower() for k in avoid_knee)):
+                    reps_ex = "15–20" if "носки" in ex.lower() else reps_iso
+                    lines.append(f"• {fmt(ex, iso_sets, reps_ex)}")
+                    used.append(ex)
+            core = pick1(CORE_POOL, avoid_keys, used)
+            lines.append(f"• {fmt(core, '2', '30–60 сек')}")
             return lines
 
         return ["—"]
+
 
     limits_line = (limits or "").strip() or "нет"
 
