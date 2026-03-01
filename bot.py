@@ -71,6 +71,69 @@ TECH_IMAGES: Dict[str, str] = {
     # "ohp_barbell":    "media/tech/ohp_barbell.jpg",
 }
 
+# Словарь MP4-видео для техник упражнений.
+# Приоритет: TECH_VIDEOS (mp4) > TECH_IMAGES (jpg) > TECH_GIFS (gif) > текст.
+# Как добавить видео:
+#   1. Положи файл: media/tech/squat.mp4  (mp4, до ~50 МБ, 480p, до 30 сек)
+#   2. Пропиши путь ниже — хендлеры менять не нужно, заработает автоматически.
+TECH_VIDEOS: Dict[str, str] = {
+    # ── Ноги / нижний блок ──────────────────────────────────────────────────
+    # "squat":               "media/tech/squat.mp4",
+    # "squat_barbell":       "media/tech/squat_barbell.mp4",
+    # "squat_sumo":          "media/tech/squat_sumo.mp4",
+    # "squat_bodyweight":    "media/tech/squat_bodyweight.mp4",
+    # "goblet":              "media/tech/goblet.mp4",
+    # "hack_squat":          "media/tech/hack_squat.mp4",
+    # "bulgarian":           "media/tech/bulgarian.mp4",
+    # "lunge":               "media/tech/lunge.mp4",
+    # "lunge_barbell":       "media/tech/lunge_barbell.mp4",
+    # "lunge_walking":       "media/tech/lunge_walking.mp4",
+    # "legpress":            "media/tech/legpress.mp4",
+    # "legcurl":             "media/tech/legcurl.mp4",
+    # "hyperext":            "media/tech/hyperext.mp4",
+    # "hinge":               "media/tech/hinge.mp4",
+    # "calves":              "media/tech/calves.mp4",
+    # ── Грудь / жим ─────────────────────────────────────────────────────────
+    # "bench":               "media/tech/bench.mp4",
+    # "bench_dumbbell":      "media/tech/bench_dumbbell.mp4",
+    # "bench_machine":       "media/tech/bench_machine.mp4",
+    # "incline_press_barbell":  "media/tech/incline_press_barbell.mp4",
+    # "incline_press_dumbbell": "media/tech/incline_press_dumbbell.mp4",
+    # "chest_fly":           "media/tech/chest_fly.mp4",
+    # ── Спина / тяга ────────────────────────────────────────────────────────
+    # "latpulldown_wide":    "media/tech/latpulldown_wide.mp4",
+    # "latpulldown_narrow":  "media/tech/latpulldown_narrow.mp4",
+    # "pullup":              "media/tech/pullup.mp4",
+    # "pullup_chinup":       "media/tech/pullup_chinup.mp4",
+    # "pullup_wide":         "media/tech/pullup_wide.mp4",
+    # "rowtrain":            "media/tech/rowtrain.mp4",
+    # "dumbbell_row":        "media/tech/dumbbell_row.mp4",
+    # "barbell_row":         "media/tech/barbell_row.mp4",
+    # "face_pull":           "media/tech/face_pull.mp4",
+    # "rear_delt":           "media/tech/rear_delt.mp4",
+    # ── Тяга / поясница ─────────────────────────────────────────────────────
+    # "rdl_barbell":         "media/tech/rdl_barbell.mp4",
+    # "rdl_dumbbell":        "media/tech/rdl_dumbbell.mp4",
+    # "deadlift":            "media/tech/deadlift.mp4",
+    # "deadlift_sumo":       "media/tech/deadlift_sumo.mp4",
+    # ── Плечи ───────────────────────────────────────────────────────────────
+    # "ohp_barbell":         "media/tech/ohp_barbell.mp4",
+    # "ohp_dumbbell":        "media/tech/ohp_dumbbell.mp4",
+    # "lateralraise":        "media/tech/lateralraise.mp4",
+    # "pike_pushup":         "media/tech/pike_pushup.mp4",
+    # ── Бицепс / трицепс ────────────────────────────────────────────────────
+    # "biceps":              "media/tech/biceps.mp4",
+    # "biceps_barbell":      "media/tech/biceps_barbell.mp4",
+    # "hammer":              "media/tech/hammer.mp4",
+    # "triceps":             "media/tech/triceps.mp4",
+    # "triceps_oh":          "media/tech/triceps_oh.mp4",
+    # "narrow_pushup":       "media/tech/narrow_pushup.mp4",
+    # ── Кор / пресс ─────────────────────────────────────────────────────────
+    # "core":                "media/tech/core.mp4",
+    # "hanging_leg_raise":   "media/tech/hanging_leg_raise.mp4",
+    # "ab_rollout":          "media/tech/ab_rollout.mp4",
+}
+
 TECH_GIFS = {
     # ── Ноги / нижний блок ──────────────────────────────────────────────────
     "squat":             "media/tech/squat.gif",
@@ -2225,9 +2288,20 @@ async def send_tech(
     tech_key: str, text: str, reply_markup=None
 ):
     """Универсальная отправка техники упражнения.
-    Приоритет: TECH_IMAGES (jpg/png) → TECH_GIFS (gif) → только текст.
-    Удаляет предыдущее главное сообщение (чистый чат).
-    Чтобы добавить картинку — пропиши путь в TECH_IMAGES[key], файл создавать рядом."""
+
+    Приоритет медиа:
+      1. TECH_VIDEOS  (mp4)    — send_video + отдельное сообщение с текстом
+      2. TECH_IMAGES  (jpg/png) — send_photo + отдельное сообщение с текстом
+      3. TECH_GIFS    (gif)    — send_animation, текст в caption
+      4. только текст          — send_message (graceful fallback)
+
+    Как добавить mp4-видео:
+      1. Положи файл: media/tech/<ключ>.mp4  (до ~50 МБ, 480p, до 30 сек)
+      2. Пропиши в TECH_VIDEOS: "ключ": "media/tech/<ключ>.mp4"
+      Хендлеры менять не нужно — заработает автоматически.
+
+    Удаляет предыдущее главное сообщение (чистый чат)."""
+
     # Удаляем предыдущее сообщение
     last_id = await get_last_bot_msg_id(user_id)
     if last_id:
@@ -2236,23 +2310,20 @@ async def send_tech(
         except Exception:
             pass
 
-    # --- Вариант 1: JPG/PNG из TECH_IMAGES ---
-    img_path = TECH_IMAGES.get(tech_key, "")
-    # Также смотрим в TECH[key].get("img") как запасной источник
-    if not img_path:
-        tech_item = TECH.get(tech_key, {})
-        img_path = tech_item.get("img", "")
+    tech_item = TECH.get(tech_key, {})
+    short_title = tech_item.get("title", "")
+    caption_title = f"📚 {short_title}" if short_title else "📚"
 
-    if img_path and os.path.exists(img_path):
+    # ── Вариант 1: MP4 из TECH_VIDEOS ────────────────────────────────────────
+    video_path = TECH_VIDEOS.get(tech_key, "")
+    if video_path and os.path.exists(video_path):
         try:
-            photo = FSInputFile(img_path)
-            # caption ограничен 1024 символами — берём заголовок
-            tech_item = TECH.get(tech_key, {})
-            short_title = tech_item.get("title", text[:80])
-            caption = f"📚 {short_title}"
-            m = await bot.send_photo(
-                chat_id=chat_id, photo=photo,
-                caption=caption, reply_markup=None
+            m = await bot.send_video(
+                chat_id=chat_id,
+                video=FSInputFile(video_path),
+                caption=caption_title,
+                supports_streaming=True,
+                reply_markup=None,
             )
             # Полный текст техники — отдельным сообщением
             m2 = await bot.send_message(
@@ -2261,9 +2332,32 @@ async def send_tech(
             await set_last_bot_msg_id(user_id, m2.message_id)
             return
         except Exception:
-            pass  # graceful fallback → gif → text
+            pass  # fallback → jpg → gif → text
 
-    # --- Вариант 2: GIF из TECH_GIFS ---
+    # ── Вариант 2: JPG/PNG из TECH_IMAGES ────────────────────────────────────
+    img_path = TECH_IMAGES.get(tech_key, "")
+    # Запасной источник: TECH[key].get("img")
+    if not img_path:
+        img_path = tech_item.get("img", "")
+
+    if img_path and os.path.exists(img_path):
+        try:
+            m = await bot.send_photo(
+                chat_id=chat_id,
+                photo=FSInputFile(img_path),
+                caption=caption_title,
+                reply_markup=None,
+            )
+            # Полный текст техники — отдельным сообщением
+            m2 = await bot.send_message(
+                chat_id=chat_id, text=text, reply_markup=reply_markup
+            )
+            await set_last_bot_msg_id(user_id, m2.message_id)
+            return
+        except Exception:
+            pass  # fallback → gif → text
+
+    # ── Вариант 3: GIF из TECH_GIFS ──────────────────────────────────────────
     gif_path = TECH_GIFS.get(tech_key, "")
     if gif_path and os.path.exists(gif_path):
         try:
@@ -2281,9 +2375,9 @@ async def send_tech(
                 await set_last_bot_msg_id(user_id, m.message_id)
             return
         except Exception:
-            pass  # fallback to text
+            pass  # fallback → text
 
-    # --- Вариант 3: только текст ---
+    # ── Вариант 4: только текст ───────────────────────────────────────────────
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     await set_last_bot_msg_id(user_id, m.message_id)
 
@@ -7348,5 +7442,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
