@@ -787,7 +787,7 @@ TECH = {
     },
     "goblet": {
         "title": "Гоблет-присед",
-        "img": "media/tech/goblet.jpg",
+        "img": "media/tech/goblet.mp4",
         "text": (
             "📚 Гоблет-присед (ноги + корпус)\n\n"
             "✅ Настройка\n"
@@ -7443,3 +7443,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
