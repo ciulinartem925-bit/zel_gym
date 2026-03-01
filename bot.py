@@ -1558,11 +1558,14 @@ def menu_main_inline_kb():
             InlineKeyboardButton(text="🍽 Моё питание", callback_data="nav:nutrition"),
         ],
         [
-            InlineKeyboardButton(text="📓 Дневник", callback_data="nav:diary"),
-            InlineKeyboardButton(text="📏 Замеры", callback_data="nav:measures"),
+            InlineKeyboardButton(text="📖 Дневник", callback_data="nav:diary"),
+            InlineKeyboardButton(text="📊 Замеры", callback_data="nav:measures"),
         ],
-        [InlineKeyboardButton(text="🔥 Улучшить доступ", callback_data="nav:upgrade")],
-        [InlineKeyboardButton(text="❓ Ответы на вопросы", callback_data="nav:faq")],
+        [
+            InlineKeyboardButton(text="👤 Профиль", callback_data="p:edit"),
+            InlineKeyboardButton(text="❓ FAQ", callback_data="nav:faq"),
+        ],
+        [InlineKeyboardButton(text="⚙️ Тарифы / доступ", callback_data="nav:upgrade")],
     ])
 
 
@@ -2364,6 +2367,17 @@ async def init_db():
             completed_date TEXT,
             created_at TEXT,
             UNIQUE(user_id, completed_date)
+        )
+        """)
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS nutrition_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            log_date TEXT,
+            target_kcal INTEGER,
+            actual_kcal INTEGER,
+            created_at TEXT,
+            UNIQUE(user_id, log_date)
         )
         """)
         await conn.commit()
@@ -4303,45 +4317,40 @@ async def cb_faq_question(callback: CallbackQuery, bot: Bot):
 
 
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
+    u = await get_user(user_id)
     sub = await get_subscription(user_id)
     tariff_line = format_tariff_line(sub)
 
-    u = await get_user(user_id)
     freq = int(u.get("freq") or 3)
+    goal_key = u.get("goal") or ""
+    goal_label = GOAL_DISPLAY.get(goal_key, goal_key or "не указана")
 
     workouts_done = await get_workouts_done_last_7_days(user_id)
     nutrition_done = await get_nutrition_done_last_7_days(user_id)
 
-    def pbar(done: int, total: int, width: int = 10) -> str:
-        if total <= 0:
-            return "░" * width
-        filled = min(int(round(done / total * width)), width)
-        return "█" * filled + "░" * (width - filled)
+    latest_weight = await get_latest_weight(user_id)
+    weight_line = f"{latest_weight} кг" if latest_weight else "не записан"
 
     w_pct = min(int(round(workouts_done / max(freq, 1) * 100)), 100)
     n_pct = min(int(round(nutrition_done / 7 * 100)), 100)
     overall_pct = (w_pct + n_pct) // 2
 
     if overall_pct >= 70:
-        trend_line = "📈 Отличный темп"
+        week_comment = "Отличный темп."
     elif overall_pct >= 40:
-        trend_line = "📊 Нормально, можно плотнее"
+        week_comment = "Нормально, можно плотнее."
     else:
-        trend_line = "📉 Пора возвращаться в режим"
+        week_comment = "Пора возвращаться в режим."
 
     text = (
-        "Главное меню\n\n"
+        f"Цель: {goal_label}\n\n"
         f"{tariff_line}\n\n"
-        "📊 Прогресс за 7 дней\n"
-        f"🏋️ Тренировки: {workouts_done}/{freq}\n"
-        f"{pbar(workouts_done, freq)} {w_pct}%\n\n"
-        f"🍽 Питание: {nutrition_done}/7\n"
-        f"{pbar(nutrition_done, 7)} {n_pct}%\n\n"
-        f"📈 Общий прогресс: {overall_pct}%\n"
-        f"{trend_line}\n\n"
-        "Разделы:\n"
-        "🏋️ Тренировки  🍽 Питание  📓 Дневник\n"
-        "📏 Замеры  🔥 Улучшить доступ  ❓ FAQ"
+        "Текущая позиция:\n\n"
+        f"Вес: {weight_line}\n"
+        f"Тренировки: {workouts_done} / {freq}\n"
+        f"Питание: {nutrition_done} / 7\n\n"
+        f"Неделя закрыта на {overall_pct}%.\n"
+        f"{week_comment}"
     )
     await _send_with_image(bot, chat_id, user_id, text, "menu", reply_markup=menu_main_inline_kb())
 
@@ -5621,6 +5630,79 @@ async def get_nutrition_done_last_7_days(user_id: int) -> int:
     return int(row[0]) if row else 0
 
 
+async def get_latest_weight(user_id: int) -> Optional[float]:
+    """Возвращает последнее значение веса тела из замеров."""
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT value FROM measurements
+            WHERE user_id=? AND mtype='weight'
+            ORDER BY id DESC LIMIT 1
+        """, (user_id,)) as cur:
+            row = await cur.fetchone()
+    return float(row[0]) if row else None
+
+
+async def log_nutrition_day(user_id: int, target_kcal: int, actual_kcal: int):
+    """Сохраняет фактическое потребление ккал за сегодня."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.utcnow().isoformat()
+    async with db() as conn:
+        try:
+            await conn.execute(
+                """INSERT INTO nutrition_daily (user_id, log_date, target_kcal, actual_kcal, created_at)
+                   VALUES (?,?,?,?,?)
+                   ON CONFLICT(user_id, log_date) DO UPDATE SET
+                       actual_kcal=excluded.actual_kcal, created_at=excluded.created_at""",
+                (user_id, today, target_kcal, actual_kcal, now)
+            )
+            await conn.commit()
+        except Exception:
+            pass
+
+
+async def get_nutrition_today(user_id: int) -> Optional[dict]:
+    """Возвращает запись питания за сегодня (или None)."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT target_kcal, actual_kcal FROM nutrition_daily WHERE user_id=? AND log_date=?",
+            (user_id, today)
+        ) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return None
+    target, actual = int(row[0]), int(row[1])
+    deviation = actual - target
+    closed = abs(deviation) <= 100
+    return {"target": target, "actual": actual, "deviation": deviation, "closed": closed}
+
+
+async def get_nutrition_week_stats(user_id: int) -> dict:
+    """Возвращает статистику питания за последние 7 дней."""
+    since = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
+    async with db() as conn:
+        async with conn.execute("""
+            SELECT target_kcal, actual_kcal FROM nutrition_daily
+            WHERE user_id=? AND log_date >= ? AND log_date <= ?
+        """, (user_id, since, today)) as cur:
+            rows = await cur.fetchall()
+    if not rows:
+        return {"closed": 0, "total": 0, "avg_deviation": 0}
+    closed = sum(1 for t, a in rows if abs(a - t) <= 100)
+    avg_dev = int(sum(abs(a - t) for t, a in rows) / len(rows))
+    return {"closed": closed, "total": len(rows), "avg_deviation": avg_dev}
+
+
+GOAL_DISPLAY = {
+    "mass": "Набор мышечной массы",
+    "cut": "Похудение / сушка",
+    "strength": "Рост силы",
+    "endurance": "Выносливость",
+    "keep": "Поддержание формы",
+}
+
+
 async def get_week_progress(user_id: int, freq: int) -> str:
     """Блок прогресса недели: выполнено/осталось."""
     today = datetime.now().date()
@@ -6000,21 +6082,50 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
         return
 
     u = await get_user(user_id)
-    summary, _, _, _, _, _ = generate_nutrition_summary(
+    summary, calories, _, _, _, _ = generate_nutrition_summary(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
         freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
     )
 
+    # Блок: сегодня
+    today_data = await get_nutrition_today(user_id)
+    if today_data:
+        dev = today_data["deviation"]
+        dev_str = f"{'+' if dev >= 0 else ''}{dev}"
+        status_str = "Закрыто ✅" if today_data["closed"] else "Не закрыто ❌"
+        today_block = (
+            "\nСегодня:\n"
+            f"Цель: {today_data['target']} ккал\n"
+            f"Факт: {today_data['actual']} ккал\n"
+            f"Отклонение: {dev_str} ккал\n"
+            f"Статус: {status_str}\n"
+        )
+    else:
+        today_block = "\nСегодня данных ещё нет.\nВыбери пример рациона — день отметится автоматически.\n"
+
+    # Блок: неделя
+    week = await get_nutrition_week_stats(user_id)
+    if week["total"] > 0:
+        week_block = (
+            f"\nПитание за 7 дней:\n"
+            f"Закрыто: {week['closed']} / 7\n"
+            f"Среднее отклонение: {week['avg_deviation']} ккал\n"
+        )
+    else:
+        week_block = ""
+
+    full_text = summary + today_block + week_block
+
     if callback:
         await send_section(
             bot, chat_id, user_id,
-            IMAGE_PATHS["nutrition"], summary, reply_markup=nutrition_examples_kb(),
+            IMAGE_PATHS["nutrition"], full_text, reply_markup=nutrition_examples_kb(),
             callback=callback,
         )
     else:
         await send_section(
             bot, chat_id, user_id,
-            IMAGE_PATHS["nutrition"], summary, reply_markup=nutrition_examples_kb(),
+            IMAGE_PATHS["nutrition"], full_text, reply_markup=nutrition_examples_kb(),
         )
 
 
@@ -6360,7 +6471,14 @@ async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     )
     day_text = build_meal_day_text(day_i, calories, p, f, c, meals)
 
-    # Отмечаем сегодняшний день питания как закрытый
+    # Вычисляем фактические ккал из текста варианта
+    target_obj = {"kcal": float(calories), "p": float(p), "f": float(f), "c": float(c)}
+    day_meals_tmp = _build_day_variant(day_i, meals)
+    tot = _adjust_to_target(day_meals_tmp, target_obj)
+    actual_kcal = int(round(tot["kcal"]))
+
+    # Записываем день в nutrition_daily и nutrition_completions
+    await log_nutrition_day(callback.from_user.id, calories, actual_kcal)
     await mark_nutrition_day(callback.from_user.id)
 
     await clean_edit(callback, callback.from_user.id, day_text, reply_markup=nutrition_back_kb())
@@ -6948,4 +7066,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
