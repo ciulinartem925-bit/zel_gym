@@ -206,7 +206,7 @@ TECH_GIFS = {
     "ab_crunch":         "media/tech/ab_crunch.mp4",
     "ab_rollout":        "media/tech/ab_rollout.mp4",
     # ── Разное ──────────────────────────────────────────────────────────────
-    "pushup":            "media/tech/pushup.mp4",  # "row" = отжимания (так в файле)
+    "row":            "media/tech/pushup.mp4", 
 }
 
 # =========================
@@ -7443,5 +7443,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
 
