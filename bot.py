@@ -4706,7 +4706,7 @@ async def cmd_start(message: Message, bot: Bot):
         "— Считаю КБЖУ индивидуально — с учётом веса, цели и активности\n"
         "— Даю готовый план питания\n"
         "— Веду дневник тренировок: веса, повторения, история\n"
-        "— Показываю технику с картинкой — кнопка под каждым упражнением\n"
+        "— Показываю технику с видео — кнопка под каждым упражнением\n"
         "— Отвечаю на частые вопросы: плато, питание, мотивация\n\n"
         "Как начать:\n\n"
         "1. Жми на «📋 Заполнить профиль» и пройди короткий опрос\n"
@@ -4723,26 +4723,28 @@ async def cmd_start(message: Message, bot: Bot):
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
     text = (
         "💳 Тарифы\n\n"
-        f"🟩 1 месяц — {TARIFFS['t1']['price']}₽\n"
-        "• Тренировки + дневник + замеры\n"
-        "• Поддержка\n"
-        "• Обновление плана: 3 раза\n\n"
-        f"🟦 3 месяца — {TARIFFS['t3']['price']}₽\n"
+        f"🔵 1 месяц — {TARIFFS['t1']['price']}₽\n"
+        "• Персональная программа тренировок\n"
+        "• Дневник прогресса\n"
+        "• Замеры тела\n"
+        "• Обновление плана — до 3 раз\n\n"
+        f"🟡 3 месяца — {TARIFFS['t3']['price']}₽\n"
         "• Всё, что в 1 месяце + питание\n"
         "• Смена программы\n"
         "• Обновление плана: 10 раз\n"
         "• Выгоднее по цене\n\n"
-        f"🟨 Навсегда — {TARIFFS['life']['price']}₽\n"
+        f"🟢 Навсегда — {TARIFFS['life']['price']}₽\n"
         "• Полный доступ: тренировки + питание + дневник\n"
-        "• Смена программы\n"
-        "• Обновление плана: безлимит\n\n"
-        "После оплаты программа активируется автоматически."
+        "• Неограниченные обновления плана\n"
+        "• Доступ ко всем целям (масса / сушка / форма)\n"
+        "• Смена программы в любой момент\n\n"
+        "⚡️ После оплаты доступ открывается автоматически."
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🔵 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟡 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟢 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
             callback_data="nav:back_to_program_tariff" if source == "after_profile" else "nav:menu"
@@ -7443,3 +7445,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
