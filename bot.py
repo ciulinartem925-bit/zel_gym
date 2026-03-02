@@ -3986,17 +3986,17 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
 FOOD_DB = {
     # Крупы и углеводы
-    "oats":      {"name": "Овсянка (сухая)",                "kcal": 352, "p": 12.0, "f": 6.2,  "c": 60.0},
-    "rice":      {"name": "Рис белый (сухой)",              "kcal": 344, "p": 6.7,  "f": 0.7,  "c": 76.0},
+    "oats":      {"name": "Овсянка (сухая)",                "kcal": 344, "p": 12.0, "f": 6.2,  "c": 60.0},
+    "rice":      {"name": "Рис белый (сухой)",              "kcal": 337, "p": 6.7,  "f": 0.7,  "c": 76.0},
     "buckwheat": {"name": "Гречка (сухая)",                 "kcal": 313, "p": 12.6, "f": 3.3,  "c": 57.0},
-    "pasta":     {"name": "Макароны (сухие)",               "kcal": 350, "p": 10.4, "f": 1.1,  "c": 73.0},
-    "bread_rye": {"name": "Хлеб ржаной",                   "kcal": 210, "p": 6.6,  "f": 1.2,  "c": 41.0},
+    "pasta":     {"name": "Макароны (сухие)",               "kcal": 344, "p": 10.4, "f": 1.1,  "c": 73.0},
+    "bread_rye": {"name": "Хлеб ржаной",                   "kcal": 201, "p": 6.6,  "f": 1.2,  "c": 41.0},
     "potato":    {"name": "Картофель",                      "kcal": 80,  "p": 2.0,  "f": 0.1,  "c": 17.0},
     "veg":       {"name": "Овощи (огурец/помидор/капуста)", "kcal": 25,  "p": 1.2,  "f": 0.2,  "c": 4.5},
     # Белковые продукты
-    "chicken":   {"name": "Куриная грудка (варёная)",       "kcal": 165, "p": 31.0, "f": 3.6,  "c": 0.0},
+    "chicken":   {"name": "Куриная грудка (варёная)",       "kcal": 156, "p": 31.0, "f": 3.6,  "c": 0.0},
     "chicken_thigh": {"name": "Куриное бедро (без кожи)",   "kcal": 185, "p": 27.0, "f": 8.0,  "c": 0.0},
-    "turkey":    {"name": "Индейка (варёная)",              "kcal": 158, "p": 29.0, "f": 4.0,  "c": 0.0},
+    "turkey":    {"name": "Индейка (варёная)",              "kcal": 152, "p": 29.0, "f": 4.0,  "c": 0.0},
     "fish":      {"name": "Рыба белая (минтай/хек)",        "kcal": 82,  "p": 18.0, "f": 0.7,  "c": 0.0},
     "tuna_can":  {"name": "Тунец консервированный",         "kcal": 96,  "p": 22.0, "f": 1.0,  "c": 0.0},
     "eggs":      {"name": "Яйца куриные",                   "kcal": 157, "p": 12.7, "f": 11.5, "c": 0.7},
@@ -4004,10 +4004,10 @@ FOOD_DB = {
     "kefir":     {"name": "Кефир 1%",                       "kcal": 41,  "p": 3.2,  "f": 1.0,  "c": 4.7},
     "milk":      {"name": "Молоко 2.5%",                    "kcal": 54,  "p": 2.8,  "f": 2.5,  "c": 4.7},
     # Жиры
-    "oil_sunfl": {"name": "Масло подсолнечное",             "kcal": 884, "p": 0.0,  "f": 100.0,"c": 0.0},
-    "oil_olive": {"name": "Масло оливковое",                "kcal": 884, "p": 0.0,  "f": 100.0,"c": 0.0},
+    "oil_sunfl": {"name": "Масло подсолнечное",             "kcal": 900, "p": 0.0,  "f": 100.0,"c": 0.0},
+    "oil_olive": {"name": "Масло оливковое",                "kcal": 900, "p": 0.0,  "f": 100.0,"c": 0.0},
     # Фрукты
-    "banana":    {"name": "Банан",                          "kcal": 89,  "p": 1.1,  "f": 0.3,  "c": 22.0},
+    "banana":    {"name": "Банан",                          "kcal": 95,  "p": 1.1,  "f": 0.3,  "c": 22.0},
     "apple":     {"name": "Яблоко",                         "kcal": 52,  "p": 0.3,  "f": 0.2,  "c": 12.0},
 }
 
@@ -4706,7 +4706,7 @@ async def cmd_start(message: Message, bot: Bot):
         "— Считаю КБЖУ индивидуально — с учётом веса, цели и активности\n"
         "— Даю готовый план питания\n"
         "— Веду дневник тренировок: веса, повторения, история\n"
-        "— Показываю технику с видео — кнопка под каждым упражнением\n"
+        "— Показываю технику с картинкой — кнопка под каждым упражнением\n"
         "— Отвечаю на частые вопросы: плато, питание, мотивация\n\n"
         "Как начать:\n\n"
         "1. Жми на «📋 Заполнить профиль» и пройди короткий опрос\n"
@@ -4723,28 +4723,26 @@ async def cmd_start(message: Message, bot: Bot):
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
     text = (
         "💳 Тарифы\n\n"
-        f"🔵 1 месяц — {TARIFFS['t1']['price']}₽\n"
-        "• Персональная программа тренировок\n"
-        "• Дневник прогресса\n"
-        "• Замеры тела\n"
-        "• Обновление плана — до 3 раз\n\n"
-        f"🟡 3 месяца — {TARIFFS['t3']['price']}₽\n"
+        f"🟩 1 месяц — {TARIFFS['t1']['price']}₽\n"
+        "• Тренировки + дневник + замеры\n"
+        "• Поддержка\n"
+        "• Обновление плана: 3 раза\n\n"
+        f"🟦 3 месяца — {TARIFFS['t3']['price']}₽\n"
         "• Всё, что в 1 месяце + питание\n"
         "• Смена программы\n"
         "• Обновление плана: 10 раз\n"
         "• Выгоднее по цене\n\n"
-        f"🟢 Навсегда — {TARIFFS['life']['price']}₽\n"
+        f"🟨 Навсегда — {TARIFFS['life']['price']}₽\n"
         "• Полный доступ: тренировки + питание + дневник\n"
-        "• Неограниченные обновления плана\n"
-        "• Доступ ко всем целям (масса / сушка / форма)\n"
-        "• Смена программы в любой момент\n\n"
-        "⚡️ После оплаты доступ открывается автоматически."
+        "• Смена программы\n"
+        "• Обновление плана: безлимит\n\n"
+        "После оплаты программа активируется автоматически."
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🔵 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟡 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟢 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
             callback_data="nav:back_to_program_tariff" if source == "after_profile" else "nav:menu"
@@ -7445,4 +7443,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
