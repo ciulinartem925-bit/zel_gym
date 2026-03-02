@@ -415,7 +415,7 @@ TECH = {
             "Слабые трицепсы → узкий хват помогает их нагрузить."
         )
     },
-    "pushup": {
+    "row": {
         "title": "Отжимания",
         "mp4": "media/tech/pushup.mp4",
         "text": (
@@ -7443,4 +7443,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
