@@ -61,7 +61,7 @@ IMAGE_PATHS = {
 # Приоритет над GIF: если здесь есть путь и файл существует — отправляем картинку.
 # Чтобы добавить картинку: создай файл и пропиши путь ниже — хендлеры менять не нужно.
 TECH_IMAGES: Dict[str, str] = {
-    # Формат: "ключ_упражнения": "media/tech/<название>.mp4"
+    # Формат: "ключ_упражнения": "media/tech/<название>.jpg"
     # Примеры (раскомментируй и добавь файл):
     # "squat":          "media/tech/squat.jpg",
     # "bench":          "media/tech/bench.jpg",
@@ -136,77 +136,77 @@ TECH_VIDEOS: Dict[str, str] = {
 
 TECH_GIFS = {
     # ── Ноги / нижний блок ──────────────────────────────────────────────────
-    "squat":             "media/tech/squat.mp4",
-    "squat_barbell":     "media/tech/squat_barbell.mp4",   # fix: был squat_barbel.gif
-    "squat_sumo":        "media/tech/squat_sumo.mp4",
-    "squat_bodyweight":  "media/tech/squat_bodyweight.mp4",
-    "goblet":            "media/tech/goblet.mp4",
-    "hack_squat":        "media/tech/hack_squat.mp4",
-    "bulgarian":         "media/tech/bulgarian.mp4",
-    "lunge":             "media/tech/lunge.mp4",
-    "lunge_barbell":     "media/tech/lunge_barbell.mp4",
-    "lunge_dumbbell":    "media/tech/lunge_dumbbell.mp4",
-    "lunge_walking":     "media/tech/lunge_walking.mp4",
-    "legpress":          "media/tech/legpress.mp4",
-    "legcurl":           "media/tech/legcurl.mp4",
-    "hyperext":          "media/tech/hyperext.mp4",
-    "hinge":             "media/tech/hinge.mp4",
-    "calves":            "media/tech/calves.mp4",
+    "squat":             "media/tech/squat.gif",
+    "squat_barbell":     "media/tech/squat_barbell.gif",   # fix: был squat_barbel.gif
+    "squat_sumo":        "media/tech/squat_sumo.gif",
+    "squat_bodyweight":  "media/tech/squat_bodyweight.gif",
+    "goblet":            "media/tech/goblet.gif",
+    "hack_squat":        "media/tech/hack_squat.gif",
+    "bulgarian":         "media/tech/bulgarian.gif",
+    "lunge":             "media/tech/lunge.gif",
+    "lunge_barbell":     "media/tech/lunge_barbell.gif",
+    "lunge_dumbbell":    "media/tech/lunge_dumbbell.gif",
+    "lunge_walking":     "media/tech/lunge_walking.gif",
+    "legpress":          "media/tech/legpress.gif",
+    "legcurl":           "media/tech/legcurl.gif",
+    "hyperext":          "media/tech/hyperext.gif",
+    "hinge":             "media/tech/hinge.gif",
+    "calves":            "media/tech/calves.gif",
     # ── Грудь / жим ─────────────────────────────────────────────────────────
-    "bench":             "media/tech/bench.mp4",
-    "bench_dumbbell":    "media/tech/bench_dumbbell.mp4",
-    "bench_machine":     "media/tech/bench_machine.mp4",
-    "incline_press":     "media/tech/incline_press.mp4",
-    "incline_press_barbell":  "media/tech/incline_press_barbell.mp4",
-    "incline_press_dumbbell": "media/tech/incline_press_dumbbell.mp4",
-    "chest_fly":         "media/tech/chest_fly.mp4",
-    "crossover":         "media/tech/crossover.mp4",
+    "bench":             "media/tech/bench.gif",
+    "bench_dumbbell":    "media/tech/bench_dumbbell.gif",
+    "bench_machine":     "media/tech/bench_machine.gif",
+    "incline_press":     "media/tech/incline_press.gif",
+    "incline_press_barbell":  "media/tech/incline_press_barbell.gif",
+    "incline_press_dumbbell": "media/tech/incline_press_dumbbell.gif",
+    "chest_fly":         "media/tech/chest_fly.gif",
+    "crossover":         "media/tech/crossover.gif",
     # ── Спина / тяга ────────────────────────────────────────────────────────
-    "latpulldown":       "media/tech/latpulldown.mp4",
-    "latpulldown_wide":  "media/tech/latpulldown_wide.mp4",
-    "latpulldown_narrow": "media/tech/latpulldown_narrow.mp4",
-    "pullup":            "media/tech/pullup.mp4",
-    "pullup_chinup":     "media/tech/pullup_chinup.mp4",
-    "pullup_wide":       "media/tech/pullup_wide.mp4",
-    "rowtrain":          "media/tech/rowtrain.mp4",
-    "dumbbell_row":      "media/tech/dumbbell_row.mp4",
-    "barbell_row":       "media/tech/barbell_row.mp4",
-    "band_row":          "media/tech/band_row.mp4",
-    "band_pull":         "media/tech/band_pull.mp4",
-    "face_pull":         "media/tech/face_pull.mp4",
-    "rear_delt":         "media/tech/rear_delt.mp4",
+    "latpulldown":       "media/tech/latpulldown.gif",
+    "latpulldown_wide":  "media/tech/latpulldown_wide.gif",
+    "latpulldown_narrow": "media/tech/latpulldown_narrow.gif",
+    "pullup":            "media/tech/pullup.gif",
+    "pullup_chinup":     "media/tech/pullup_chinup.gif",
+    "pullup_wide":       "media/tech/pullup_wide.gif",
+    "rowtrain":          "media/tech/rowtrain.gif",
+    "dumbbell_row":      "media/tech/dumbbell_row.gif",
+    "barbell_row":       "media/tech/barbell_row.gif",
+    "band_row":          "media/tech/band_row.gif",
+    "band_pull":         "media/tech/band_pull.gif",
+    "face_pull":         "media/tech/face_pull.gif",
+    "rear_delt":         "media/tech/rear_delt.gif",
     # ── Тяга / поясница ─────────────────────────────────────────────────────
-    "rdl":               "media/tech/rdl.mp4",
-    "rdl_barbell":       "media/tech/rdl_barbell.mp4",
-    "rdl_dumbbell":      "media/tech/rdl_dumbbell.mp4",
-    "deadlift":          "media/tech/deadlift.mp4",
-    "deadlift_sumo":     "media/tech/deadlift_sumo.mp4",
-    "good_morning":      "media/tech/good_morning.mp4",
+    "rdl":               "media/tech/rdl.gif",
+    "rdl_barbell":       "media/tech/rdl_barbell.gif",
+    "rdl_dumbbell":      "media/tech/rdl_dumbbell.gif",
+    "deadlift":          "media/tech/deadlift.gif",
+    "deadlift_sumo":     "media/tech/deadlift_sumo.gif",
+    "good_morning":      "media/tech/good_morning.gif",
     # ── Плечи ───────────────────────────────────────────────────────────────
-    "ohp":               "media/tech/ohp.mp4",
-    "ohp_barbell":       "media/tech/ohp_barbell.mp4",
-    "ohp_dumbbell":      "media/tech/ohp_dumbbell.mp4",
-    "ohp_machine":       "media/tech/ohp_machine.mp4",
-    "band_ohp":          "media/tech/band_ohp.mp4",
-    "lateralraise":      "media/tech/lateralraise.mp4",
-    "pike_pushup":       "media/tech/pike_pushup.mp4",
+    "ohp":               "media/tech/ohp.gif",
+    "ohp_barbell":       "media/tech/ohp_barbell.gif",
+    "ohp_dumbbell":      "media/tech/ohp_dumbbell.gif",
+    "ohp_machine":       "media/tech/ohp_machine.gif",
+    "band_ohp":          "media/tech/band_ohp.gif",
+    "lateralraise":      "media/tech/lateralraise.gif",
+    "pike_pushup":       "media/tech/pike_pushup.gif",
     # ── Бицепс / трицепс ────────────────────────────────────────────────────
-    "biceps":            "media/tech/biceps.mp4",
-    "biceps_barbell":    "media/tech/biceps_barbell.mp4",
-    "hammer":            "media/tech/hammer.mp4",
-    "triceps":           "media/tech/triceps.mp4",
-    "triceps_oh":        "media/tech/triceps_oh.mp4",
-    "narrow_pushup":     "media/tech/narrow_pushup.mp4",
+    "biceps":            "media/tech/biceps.gif",
+    "biceps_barbell":    "media/tech/biceps_barbell.gif",
+    "hammer":            "media/tech/hammer.gif",
+    "triceps":           "media/tech/triceps.gif",
+    "triceps_oh":        "media/tech/triceps_oh.gif",
+    "narrow_pushup":     "media/tech/narrow_pushup.gif",
     # ── Кор / пресс ─────────────────────────────────────────────────────────
-    "core":              "media/tech/core.mp4",
-    "side_plank":        "media/tech/side_plank.mp4",
-    "hanging_leg_raise": "media/tech/hanging_leg_raise.mp4",
-    "leg_raise_lying":   "media/tech/leg_raise_lying.mp4",
-    "elbow_leg_raise":   "media/tech/elbow_leg_raise.mp4",
-    "ab_crunch":         "media/tech/ab_crunch.mp4",
-    "ab_rollout":        "media/tech/ab_rollout.mp4",
+    "core":              "media/tech/core.gif",
+    "side_plank":        "media/tech/side_plank.gif",
+    "hanging_leg_raise": "media/tech/hanging_leg_raise.gif",
+    "leg_raise_lying":   "media/tech/leg_raise_lying.gif",
+    "elbow_leg_raise":   "media/tech/elbow_leg_raise.gif",
+    "ab_crunch":         "media/tech/ab_crunch.gif",
+    "ab_rollout":        "media/tech/ab_rollout.gif",
     # ── Разное ──────────────────────────────────────────────────────────────
-    "pushup":            "media/tech/pushup.mp4",  # "row" = отжимания (так в файле)
+    "pushup":            "media/tech/pushup.gif",  # "row" = отжимания (так в файле)
 }
 
 # =========================
@@ -389,7 +389,7 @@ TECH = {
     },
     "bench": {
         "title": "Жим лёжа",
-        "mp4": "media/tech/bench.mp4",
+        "img": "media/tech/bench.jpg",
         "text": (
             "📚 Жим лёжа\n"
             "Зачем: грудь, трицепс, передний пучок дельты.\n\n"
@@ -417,7 +417,7 @@ TECH = {
     },
     "row": {
         "title": "Отжимания",
-        "mp4": "media/tech/pushup.mp4",
+        "img": "media/tech/pushup.jpg",
         "text": (
             "📚 Отжимания\n"
             "Зачем: грудь, трицепс, передние дельты, кор.\n\n"
@@ -444,7 +444,7 @@ TECH = {
     },
     "latpulldown": {
         "title": "Тяга верхнего блока",
-        "mp4": "media/tech/latpulldown.mp4",
+        "img": "media/tech/latpulldown.jpg",
         "text": (
             "📚 Тяга верхнего блока\n"
             "Зачем: широчайшие мышцы спины, задние дельты, бицепс.\n\n"
@@ -471,7 +471,7 @@ TECH = {
     },
     "pullup": {
         "title": "Подтягивания",
-        "mp4": "media/tech/pullup.mp4",
+        "img": "media/tech/pullup.jpg",
         "text": (
             "📚 Подтягивания\n"
             "Зачем: широчайшие спины, бицепс, задние дельты.\n\n"
@@ -499,7 +499,7 @@ TECH = {
     },
     "rdl": {
         "title": "Румынская тяга",
-        "mp4": "media/tech/rdl.mp4",
+        "img": "media/tech/rdl.jpg",
         "text": (
             "📚 Румынская тяга\n"
             "Зачем: задняя поверхность бедра, ягодицы, нижняя спина.\n\n"
@@ -600,7 +600,7 @@ TECH = {
     },
     "legpress": {
         "title": "Жим ногами",
-        "mp4": "media/tech/legpress.mp4",
+        "img": "media/tech/legpress.jpg",
         "text": (
             "📚 Жим ногами (ноги, безопасно)\n\n"
             "✅ Настройка\n"
@@ -787,7 +787,7 @@ TECH = {
     },
     "goblet": {
         "title": "Гоблет-присед",
-        "mp4": "media/tech/goblet.mp4",
+        "img": "media/tech/goblet.jpg",
         "text": (
             "📚 Гоблет-присед (ноги + корпус)\n\n"
             "✅ Настройка\n"
@@ -2337,13 +2337,13 @@ async def send_tech(
                 chat_id=chat_id,
                 video=FSInputFile(video_path),
                 caption=caption,
+                supports_streaming=True,
                 reply_markup=reply_markup,
             )
             await set_last_bot_msg_id(user_id, m.message_id)
             return
-        except Exception as _e:
-            logging.warning(f"[send_tech] send_video failed key={tech_key!r} path={video_path!r}: {_e}")
-            # fallback → gif
+        except Exception:
+            pass  # fallback → jpg → gif → text
 
     # ── Вариант 2: JPG/PNG из TECH_IMAGES ────────────────────────────────────
     img_path = TECH_IMAGES.get(tech_key, "")
@@ -2374,9 +2374,8 @@ async def send_tech(
             )
             await set_last_bot_msg_id(user_id, m.message_id)
             return
-        except Exception as _e:
-            logging.warning(f"[send_tech] send_animation failed key={tech_key!r}: {_e}")
-            # fallback → text
+        except Exception:
+            pass  # fallback → text
 
     # ── Вариант 4: только текст ───────────────────────────────────────────────
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
@@ -3986,29 +3985,30 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
 FOOD_DB = {
     # Крупы и углеводы
-    "oats":      {"name": "Овсянка (сухая)",                "kcal": 352, "p": 12.0, "f": 6.2,  "c": 60.0},
-    "rice":      {"name": "Рис белый (сухой)",              "kcal": 344, "p": 6.7,  "f": 0.7,  "c": 76.0},
-    "buckwheat": {"name": "Гречка (сухая)",                 "kcal": 313, "p": 12.6, "f": 3.3,  "c": 57.0},
-    "pasta":     {"name": "Макароны (сухие)",               "kcal": 350, "p": 10.4, "f": 1.1,  "c": 73.0},
-    "bread_rye": {"name": "Хлеб ржаной",                   "kcal": 210, "p": 6.6,  "f": 1.2,  "c": 41.0},
-    "potato":    {"name": "Картофель",                      "kcal": 80,  "p": 2.0,  "f": 0.1,  "c": 17.0},
-    "veg":       {"name": "Овощи (огурец/помидор/капуста)", "kcal": 25,  "p": 1.2,  "f": 0.2,  "c": 4.5},
+    # ккал = б×4 + ж×9 + у×4 (формула соблюдена, погрешность ≤1 ккал)
+    "oats":      {"name": "Овсянка (сухая)",                "kcal": 344, "p": 12.0, "f": 6.2,  "c": 60.0},  # 48+55.8+240=343.8
+    "rice":      {"name": "Рис белый (сухой)",              "kcal": 337, "p": 6.7,  "f": 0.7,  "c": 76.0},  # 26.8+6.3+304=337.1
+    "buckwheat": {"name": "Гречка (сухая)",                 "kcal": 308, "p": 12.6, "f": 3.3,  "c": 57.0},  # 50.4+29.7+228=308.1
+    "pasta":     {"name": "Макароны (сухие)",               "kcal": 344, "p": 10.4, "f": 1.1,  "c": 73.0},  # 41.6+9.9+292=343.5
+    "bread_rye": {"name": "Хлеб ржаной",                   "kcal": 201, "p": 6.6,  "f": 1.2,  "c": 41.0},  # 26.4+10.8+164=201.2
+    "potato":    {"name": "Картофель",                      "kcal": 77,  "p": 2.0,  "f": 0.1,  "c": 17.0},  # 8+0.9+68=76.9
+    "veg":       {"name": "Овощи (огурец/помидор/капуста)", "kcal": 25,  "p": 1.2,  "f": 0.2,  "c": 4.5},   # 4.8+1.8+18=24.6
     # Белковые продукты
-    "chicken":   {"name": "Куриная грудка (варёная)",       "kcal": 165, "p": 31.0, "f": 3.6,  "c": 0.0},
-    "chicken_thigh": {"name": "Куриное бедро (без кожи)",   "kcal": 185, "p": 27.0, "f": 8.0,  "c": 0.0},
-    "turkey":    {"name": "Индейка (варёная)",              "kcal": 158, "p": 29.0, "f": 4.0,  "c": 0.0},
-    "fish":      {"name": "Рыба белая (минтай/хек)",        "kcal": 82,  "p": 18.0, "f": 0.7,  "c": 0.0},
-    "tuna_can":  {"name": "Тунец консервированный",         "kcal": 96,  "p": 22.0, "f": 1.0,  "c": 0.0},
-    "eggs":      {"name": "Яйца куриные",                   "kcal": 157, "p": 12.7, "f": 11.5, "c": 0.7},
-    "curd_2":    {"name": "Творог 2–5%",                    "kcal": 101, "p": 17.5, "f": 3.0,  "c": 1.8},
-    "kefir":     {"name": "Кефир 1%",                       "kcal": 41,  "p": 3.2,  "f": 1.0,  "c": 4.7},
-    "milk":      {"name": "Молоко 2.5%",                    "kcal": 54,  "p": 2.8,  "f": 2.5,  "c": 4.7},
+    "chicken":   {"name": "Куриная грудка (варёная)",       "kcal": 156, "p": 31.0, "f": 3.6,  "c": 0.0},   # 124+32.4+0=156.4
+    "chicken_thigh": {"name": "Куриное бедро (без кожи)",   "kcal": 180, "p": 27.0, "f": 8.0,  "c": 0.0},   # 108+72+0=180.0
+    "turkey":    {"name": "Индейка (варёная)",              "kcal": 152, "p": 29.0, "f": 4.0,  "c": 0.0},   # 116+36+0=152.0
+    "fish":      {"name": "Рыба белая (минтай/хек)",        "kcal": 78,  "p": 18.0, "f": 0.7,  "c": 0.0},   # 72+6.3+0=78.3
+    "tuna_can":  {"name": "Тунец консервированный",         "kcal": 97,  "p": 22.0, "f": 1.0,  "c": 0.0},   # 88+9+0=97.0
+    "eggs":      {"name": "Яйца куриные",                   "kcal": 157, "p": 12.7, "f": 11.5, "c": 0.7},   # 50.8+103.5+2.8=157.1
+    "curd_2":    {"name": "Творог 2–5%",                    "kcal": 104, "p": 17.5, "f": 3.0,  "c": 1.8},   # 70+27+7.2=104.2
+    "kefir":     {"name": "Кефир 1%",                       "kcal": 41,  "p": 3.2,  "f": 1.0,  "c": 4.7},   # 12.8+9+18.8=40.6
+    "milk":      {"name": "Молоко 2.5%",                    "kcal": 53,  "p": 2.8,  "f": 2.5,  "c": 4.7},   # 11.2+22.5+18.8=52.5
     # Жиры
-    "oil_sunfl": {"name": "Масло подсолнечное",             "kcal": 884, "p": 0.0,  "f": 100.0,"c": 0.0},
-    "oil_olive": {"name": "Масло оливковое",                "kcal": 884, "p": 0.0,  "f": 100.0,"c": 0.0},
+    "oil_sunfl": {"name": "Масло подсолнечное",             "kcal": 899, "p": 0.0,  "f": 99.9, "c": 0.0},   # 0+899.1+0=899.1
+    "oil_olive": {"name": "Масло оливковое",                "kcal": 899, "p": 0.0,  "f": 99.9, "c": 0.0},   # 0+899.1+0=899.1
     # Фрукты
-    "banana":    {"name": "Банан",                          "kcal": 89,  "p": 1.1,  "f": 0.3,  "c": 22.0},
-    "apple":     {"name": "Яблоко",                         "kcal": 52,  "p": 0.3,  "f": 0.2,  "c": 12.0},
+    "banana":    {"name": "Банан",                          "kcal": 95,  "p": 1.1,  "f": 0.3,  "c": 22.0},  # 4.4+2.7+88=95.1
+    "apple":     {"name": "Яблоко",                         "kcal": 51,  "p": 0.3,  "f": 0.2,  "c": 12.0},  # 1.2+1.8+48=51.0
 }
 
 
@@ -4504,7 +4504,7 @@ FAQ_QUESTIONS = {
             "• 6 часов: мышечное восстановление замедляется, кортизол растёт\n"
             "• 7–9 часов: оптимум для прогресса\n"
             "• Хронический недосып: кортизол высокий → жир копится, мышцы уходят\n\n"
-            "── Признаки плохого восстановления ──\n\n"
+            "─── Признаки плохого восстановления ───\n\n"
             "• Веса стоят несколько недель\n"
             "• Быстро устаёшь на тренировке\n"
             "• Раздражительность, плохое настроение утром\n"
@@ -4559,7 +4559,7 @@ FAQ_QUESTIONS = {
             "1. Первые 2–3 месяца — только силовые.\n"
             "   Привыкни к нагрузке, освой технику.\n"
             "2. Потом добавляй кардио по желанию.\n\n"
-            "─ Кардио ускоряет восстановление ─\n\n"
+            "─── Лёгкое кардио ускоряет восстановление ───\n\n"
             "Прогулка 20–30 мин на следующий день после тяжёлой тренировки\n"
             "улучшает кровоток и снижает боли в мышцах."
         )
@@ -6841,9 +6841,9 @@ async def cb_nutr_tips(callback: CallbackQuery, bot: Bot):
     """Фишки в питании — структурированный гайд."""
     text = (
         "💡 Фишки в питании\n\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "1. Как быстро добрать калории\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "• Добавь масло к крупе — 1 ст. л. подсолнечного = +90 ккал.\n"
         "• Хлеб ржаной к обеду — 2 ломтика (~120 ккал, просто и дёшево).\n"
         "• Кефир или молоко вместо воды к еде — стакан 200 мл = +80–110 ккал.\n"
@@ -6851,25 +6851,25 @@ async def cb_nutr_tips(callback: CallbackQuery, bot: Bot):
         "• Шейк: молоко 300 мл + банан + овсянка 40 г = ~400 ккал за 3 мин.\n"
         "• Паста с яйцами: гречка / макароны + 2 яйца = белок + углеводы.\n"
         "• Увеличь порцию крупы на 20–30 г — это ещё +60–100 ккал без лишней готовки.\n\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "2. Как добрать белок\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "• Творог 2–5% на ночь — 200 г = ~35 г белка. Самый дешёвый источник.\n"
         "• Кефир 1% — 300 мл = ~10 г белка, но выпить легко.\n"
         "• Яйца — 2 яйца = ~12 г белка, и везде доступны.\n"
         "• Тунец консервированный — 1 банка 185 г = ~40 г белка, без готовки.\n"
         "• Куриное бедро вместо грудки — чуть жирнее, зато дешевле и сочнее.\n\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "3. Если еда не лезет\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "• Ешь чаще, но меньше — 4–5 раз по 300–400 ккал легче, чем 3 раза по 700.\n"
         "• Пей калории: молоко, кефир, коктейли. Жидкость не «давит» так, как еда.\n"
         "• Убери воду за 30 мин до еды — желудок не будет переполнен.\n"
         "• Приготовь сразу на день — когда еда уже готова, съесть проще.\n"
         "• Калорийная каша: овсянка на молоке + масло + банан = ~500 ккал за один завтрак.\n\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "4. Примеры быстрых доборов\n"
-        "────────────────────\n"
+        "─────────────────────\n"
         "→ +200 ккал легко:\n"
         "   2 ломтика хлеба (50 г) + 1 ч.л. масла = ~210 ккал\n\n"
         "→ +300 ккал и 25г белка:\n"
@@ -7443,9 +7443,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
-
-
-
-
