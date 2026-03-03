@@ -5192,6 +5192,27 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
 
 
 # =========================
+# PAYWALL
+# =========================
+PAYWALL_SECTIONS = {"workouts", "nutrition", "diary", "measures"}
+
+
+async def show_paywall(callback, back_to: str = "nav:menu") -> None:
+    """Показывает экран оплаты вместо заблокированного раздела."""
+    uid = callback.from_user.id
+    text = (
+        "🔒 <b>Раздел доступен после оплаты.</b>\n\n"
+        "Выбери тариф, чтобы получить доступ к тренировкам, питанию, дневнику и замерам."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Перейти к оплате", callback_data="nav:upgrade")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_to)],
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+
+
+# =========================
 # Навигация
 # =========================
 async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -5201,6 +5222,13 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
     key = callback.data.split(":", 1)[1]
     uid = callback.from_user.id
     chat_id = callback.message.chat.id
+
+    # ── Пэйволл: закрытые разделы требуют активной подписки ────────────────────
+    if key in PAYWALL_SECTIONS:
+        sub = await get_subscription(uid)
+        if not is_subscription_active(sub):
+            await show_paywall(callback, back_to="nav:menu")
+            return
 
     if key == "menu":
         await show_main_menu(bot, chat_id, uid)
@@ -5290,6 +5318,13 @@ async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     """Показываем меню выбора — что именно менять в профиле."""
     await state.clear()
     uid = callback.from_user.id
+
+    # ── Пэйволл: редактирование профиля только с активной подпиской
+    sub = await get_subscription(uid)
+    if not is_subscription_active(sub):
+        await show_paywall(callback, back_to="nav:menu")
+        return
+
     u = await get_user(uid)
     regens_left, is_unlimited = await get_plan_regens(uid)
 
@@ -5397,8 +5432,10 @@ async def cb_rebuild_plan(callback: CallbackQuery, state: FSMContext, bot: Bot):
     Пересборка плана произойдёт после нажатия «Составить новый план» в профиле."""
     uid = callback.from_user.id
 
-    if not await is_access_active(uid):
-        await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
+    # ── Пэйволл: смена программы только с активной подпиской
+    sub = await get_subscription(uid)
+    if not is_subscription_active(sub):
+        await show_paywall(callback, back_to="nav:menu")
         return
 
     # Перенаправляем прямо в редактирование профиля
