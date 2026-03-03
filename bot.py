@@ -324,9 +324,9 @@ EXERCISE_NAMES = {
 # ТАРИФЫ
 TARIFFS = {
     "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 3,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1499, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -5171,7 +5171,7 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "Программа тренировок, техника выполнения, план питания и дневник — всё в одном боте. "
         "Бот подстраивается под твой уровень, цель и место тренировок.\n\n"
 
-        f"🟩 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n"
+        f"🔵 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n"
         "Попробуй и почувствуй разницу:\n"
         "• Персональный план тренировок (зал или дома)\n"
         "• Техника каждого упражнения — видео/картинка прямо в тренировке\n"
@@ -5180,14 +5180,14 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "• Обновление программы: 3 раза\n"
         "• Поддержка и FAQ\n\n"
 
-        f"🟦 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n"
+        f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n"
         "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n"
         "• Всё из тарифа «1 месяц»\n"
         "• <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
         "• Обновление программы: 10 раз\n"
         "• Выгоднее, чем 3 раза по «1 месяцу»\n\n"
 
-        f"🟨 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n"
+        f"🟢 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n"
         "Один раз — пользуйся сколько угодно:\n"
         "• Полный доступ ко всем функциям без ограничений\n"
         "• Тренировки + питание + дневник + замеры + техники\n"
@@ -5199,9 +5199,9 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🔵 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟡 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟢 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
             callback_data="nav:back_to_program_tariff" if source == "after_profile" else "nav:menu"
@@ -7917,3 +7917,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
