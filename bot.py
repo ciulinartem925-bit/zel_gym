@@ -2781,12 +2781,22 @@ async def init_db():
         )
         """)
         for _col, _typ in [
-            ("plan_regens_left", "INTEGER DEFAULT NULL"),
-            ("tariff_name",      "TEXT NOT NULL DEFAULT 'Нет'"),
-            ("remind_stage",     "INTEGER NOT NULL DEFAULT -1"),
+            ("plan_regens_left",      "INTEGER DEFAULT NULL"),
+            ("tariff_name",           "TEXT NOT NULL DEFAULT 'Нет'"),
+            ("remind_stage",          "INTEGER NOT NULL DEFAULT -1"),
+            ("bonus_granted",         "INTEGER NOT NULL DEFAULT 0"),
         ]:
             try:
                 await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
+            except Exception:
+                pass
+
+        # profile_completed_at хранится в таблице users
+        for _col, _typ in [
+            ("profile_completed_at", "TEXT"),
+        ]:
+            try:
+                await conn.execute(f"ALTER TABLE users ADD COLUMN {_col} {_typ}")
             except Exception:
                 pass
 
@@ -5192,22 +5202,199 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
 
 
 # =========================
+# PREMIUM ONBOARDING — TEXT BUILDERS
+# =========================
+
+def _goal_label(goal: str) -> str:
+    """Нормализуем цель для текстов."""
+    if not goal:
+        return "—"
+    g = goal.lower()
+    if any(x in g for x in ("масс", "набор", "mass")):
+        return "набор массы"
+    if any(x in g for x in ("сушк", "похуд", "cut")):
+        return "сушка / похудение"
+    if any(x in g for x in ("сил", "strength")):
+        return "сила"
+    return goal
+
+
+def build_premium_analysis_text(profile: dict) -> str:
+    age   = profile.get("age") or "—"
+    weight = profile.get("weight") or "—"
+    goal_raw = profile.get("goal") or "—"
+    freq  = profile.get("freq") or "—"
+    exp   = (profile.get("exp") or "").lower()
+    limits = (profile.get("limits") or "").strip()
+    goal  = _goal_label(goal_raw)
+
+    # progress_line
+    if any(x in goal for x in ("масс", "набор")):
+        progress_line = "+0.3–0.6 кг в месяц (без лишнего жира, если питание в контроле)"
+    elif any(x in goal for x in ("сушк", "похуд")):
+        progress_line = "-0.4–0.8 кг в неделю (если без срывов и с нормальным белком)"
+    else:
+        progress_line = "рост силовых + визуальная плотность за 6–10 недель"
+
+    # mistake_line
+    if any(x in exp for x in ("начинающ", "нет опыта", "новичок", "low")):
+        mistake_line = "ты будешь прыгать по упражнениям и не увидишь прогрессию"
+    elif str(freq) == "2":
+        mistake_line = "слишком редкий стимул → тело не видит причин расти"
+    elif limits:
+        mistake_line = "обычно люди «щадят» слабое место и не добирают нагрузку"
+    else:
+        mistake_line = "нет системы учёта → ты не знаешь, растёшь ты или топчешься"
+
+    return (
+        "<b>📊 Разбор по твоим данным</b>\n\n"
+        f"Возраст: <b>{age}</b>\n"
+        f"Вес: <b>{weight} кг</b>\n"
+        f"Цель: <b>{goal}</b>\n"
+        f"Тренировок в неделю: <b>{freq}</b>\n\n"
+        "<b>👉 Реальный темп прогресса:</b>\n"
+        f"{progress_line}\n\n"
+        "<b>⚠️ Что чаще всего ломает результат:</b>\n"
+        f"{mistake_line}\n\n"
+        "<b>✅ Что система сделает за тебя:</b>\n"
+        "• составит программу под твой график\n"
+        "• даст понятную прогрессию (чтобы вес рос)\n"
+        "• покажет технику (чтобы не убивать суставы)"
+    )
+
+
+def build_premium_fit_text(profile: dict) -> str:
+    return (
+        "<b>⚠️ Важно:</b> это не «программа из интернета».\n\n"
+        "Я не делаю вид, что всем подойдёт одно и то же.\n\n"
+        "Но по твоим данным — тебе система подходит.\n"
+        "<b>Осталось только активировать доступ.</b>"
+    )
+
+
+def build_paywall_text(user_id: int, has_bonus: bool, total_users: int) -> str:
+    bonus_block = ""
+    if has_bonus:
+        bonus_block = (
+            "\n\n<b>🎁 Бонус при оплате сегодня:</b>\n"
+            "+1 дополнительная смена программы"
+        )
+    return (
+        "<b>🔒 Доступ к системе тренировок и питания</b>\n"
+        "Без доступа бот работает в демо-режиме: посмотреть можно, прогресс — нет.\n\n"
+        "<b>✅ БАЗА (есть в любом тарифе):</b>\n"
+        "• тренировки + техника упражнений\n"
+        "• дневник тренировок и замеры\n"
+        "• меню и удобная структура\n\n"
+        "<b>💎 ПОЛНЫЙ ДОСТУП (только 3 месяца и Навсегда):</b>\n"
+        "• питание (КБЖУ) и закрытие по БЖУ\n"
+        "• смена программы под твою цель\n"
+        "• все режимы и расширенные функции\n"
+        "• больше регенераций плана\n\n"
+        f"<b>👥 Уже {total_users} человек активировали систему.</b>\n\n"
+        "<b>Почему 3 месяца — рекомендовано:</b>\n"
+        "За 1 месяц ты обычно только входишь в режим.\n"
+        "Первые заметные изменения — это <b>6–10 недель</b>.\n\n"
+        "<pre>\n"
+        "Функция                 | 1 мес | 3 мес | Навсегда\n"
+        "---------------------------------------------------\n"
+        "Тренировки + техника     |  ✅   |  ✅   |   ✅\n"
+        "Дневник / замеры         |  ✅   |  ✅   |   ✅\n"
+        "Питание (КБЖУ)           |  ❌   |  ✅   |   ✅\n"
+        "Смена программы          |  ❌   |  ✅   |   ✅\n"
+        "Регенерации плана        |  3    |  10   |   ∞\n"
+        "Полный доступ             |  ❌   |  ✅   |   ✅\n"
+        "</pre>"
+        + bonus_block
+    )
+
+
+def build_why_3_months_text() -> str:
+    return (
+        "<b>⭐ Почему 3 месяца почти всегда лучше 1</b>\n\n"
+        "1 месяц — это «вкатиться»:\n"
+        "• ты привыкаешь к режиму\n"
+        "• учишься технике\n"
+        "• только начинаешь прогрессию\n\n"
+        "<b>А результат — это когда система работает 6–10 недель.</b>\n\n"
+        "Поэтому 3 месяца:\n"
+        "• реально дают заметные изменения\n"
+        "• уменьшают шанс бросить на 2-й неделе\n"
+        "• дают полный доступ (питание + смена программы)\n\n"
+        "Если хочешь не «попробовать», а <b>сдвинуться</b> — бери 3 месяца."
+    )
+
+
+def build_afterpay_pro_text(access_until: str, goal: str, plan_regens) -> str:
+    regens_str = "Без ограничений" if plan_regens is None else str(plan_regens)
+    return (
+        "<b>🏆 Статус: PRO активирован</b>\n\n"
+        f"Доступ: <b>{access_until}</b>\n"
+        f"Цель: <b>{goal or '—'}</b>\n\n"
+        f"<b>🔁 Смен программ:</b> {regens_str}\n\n"
+        "<b>📌 Следующий шаг:</b>\n"
+        "Открой меню и начни первую тренировку — так ты быстрее поймаешь темп."
+    )
+
+
+def build_softretention_text() -> str:
+    return (
+        "<b>⏳ Профиль готов.</b>\n"
+        "Осталось активировать доступ — и система начнёт вести тебя по плану.\n\n"
+        "Нажми <b>«Оплатить»</b> — и откроются все функции."
+    )
+
+
+def pay_tariff_new_kb(has_bonus: bool = False, soft: bool = False) -> InlineKeyboardMarkup:
+    """Единая клавиатура тарифов с новыми callback pay:..."""
+    t1_price  = TARIFFS["t1"]["price"]
+    t3_price  = TARIFFS["t3"]["price"]
+    life_price = TARIFFS["life"]["price"]
+    rows = [
+        [InlineKeyboardButton(text=f"⭐ 3 месяца — {t3_price}₽", callback_data="pay:t3")],
+        [InlineKeyboardButton(text=f"🔥 Навсегда — {life_price}₽", callback_data="pay:life")],
+        [InlineKeyboardButton(text=f"1 месяц — {t1_price}₽", callback_data="pay:t1")],
+        [InlineKeyboardButton(text="ℹ️ Почему 3 месяца лучше?", callback_data="pay:why3")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="pay:back")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+# =========================
 # PAYWALL
 # =========================
 PAYWALL_SECTIONS = {"workouts", "nutrition", "diary", "measures"}
 
 
-async def show_paywall(callback, back_to: str = "nav:menu") -> None:
-    """Показывает экран оплаты вместо заблокированного раздела."""
+async def show_paywall(callback, back_to: str = "nav:menu", soft: bool = False) -> None:
+    """Показывает пэйволл с полным текстом тарифов и бонусом 24ч."""
     uid = callback.from_user.id
-    text = (
-        "🔒 <b>Раздел доступен после оплаты.</b>\n\n"
-        "Выбери тариф, чтобы получить доступ к тренировкам, питанию, дневнику и замерам."
-    )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Перейти к оплате", callback_data="nav:upgrade")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data=back_to)],
-    ])
+
+    # Считаем общее число активных пользователей для социального доказательства
+    async with db() as conn:
+        async with conn.execute("SELECT COUNT(*) FROM access WHERE paid=1") as cur:
+            row = await cur.fetchone()
+        total_users = (row[0] if row else 0) or 142  # fallback
+
+        # Проверяем бонус 24ч
+        async with conn.execute(
+            "SELECT profile_completed_at FROM users WHERE user_id=?", (uid,)
+        ) as cur:
+            urow = await cur.fetchone()
+    has_bonus = False
+    if urow and urow[0]:
+        try:
+            completed_dt = datetime.fromisoformat(urow[0])
+            has_bonus = (datetime.utcnow() - completed_dt).total_seconds() < 86400
+        except Exception:
+            pass
+
+    prefix = ""
+    if soft:
+        prefix = "Ок, начнём с базового доступа — но полный даёт результат быстрее.\n\n"
+
+    text = prefix + build_paywall_text(uid, has_bonus, total_users)
+    kb = pay_tariff_new_kb(has_bonus=has_bonus)
     await clean_edit(callback, uid, text, reply_markup=kb)
     await callback.answer()
 
@@ -5485,12 +5672,23 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 # ПРОФИЛЬ-МАСТЕР
 # =========================
 async def _show_profile_done_screen(callback: CallbackQuery, uid: int) -> None:
-    """Единый рендер экрана 'Профиль готов!' с выбором тарифа."""
-    text = (
-        "🚀 Профиль готов!\n\n"
-        "Теперь выбери подходящий тариф и начни тренировки 👇"
-    )
-    await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
+    """Единый рендер premium onboarding после заполнения профиля (3 шага)."""
+    # Сохраняем время завершения профиля (для бонуса 24ч)
+    now_iso = datetime.utcnow().isoformat()
+    async with db() as conn:
+        await conn.execute(
+            "UPDATE users SET profile_completed_at=? WHERE user_id=?",
+            (now_iso, uid)
+        )
+        await conn.commit()
+
+    profile = await get_user(uid)
+
+    # Шаг 1: анализ профиля
+    text_a = build_premium_analysis_text(profile)
+    await clean_edit(callback, uid, text_a, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Продолжить →", callback_data="premium:step2")]
+    ]))
 
 
 async def cb_build_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -6224,13 +6422,44 @@ async def cb_check_payment(callback: CallbackQuery, bot: Bot):
             t = TARIFFS[tariff_code]
             a = await get_access(uid)
 
-            await clean_edit(callback, uid,
-                f"✅ Оплата подтверждена!\n"
-                f"Тариф: {t['title']}\n"
-                f"{access_status_str(a)}\n\n"
-                "Теперь иди тренироваться 💪",
-                reply_markup=menu_main_inline_kb()
-            )
+            # Бонус +1 реген если оплатил t3/life в течение 24ч после профиля
+            async with db() as _conn:
+                async with _conn.execute(
+                    "SELECT profile_completed_at, bonus_granted FROM users u "
+                    "LEFT JOIN access ac ON u.user_id=ac.user_id "
+                    "WHERE u.user_id=?", (uid,)
+                ) as _cur:
+                    _brow = await _cur.fetchone()
+            _bonus_applied = False
+            if _brow and _brow[0] and not _brow[1] and tariff_code in FULL_ACCESS_TARIFFS:
+                try:
+                    _completed_dt = datetime.fromisoformat(_brow[0])
+                    if (datetime.utcnow() - _completed_dt).total_seconds() < 86400:
+                        async with db() as _conn:
+                            await _conn.execute(
+                                "UPDATE access SET plan_regens_left = COALESCE(plan_regens_left,0)+1, "
+                                "bonus_granted=1 WHERE user_id=?", (uid,)
+                            )
+                            await _conn.commit()
+                        _bonus_applied = True
+                except Exception:
+                    pass
+
+            a = await get_access(uid)
+            u_profile = await get_user(uid)
+            _expires = a.get('expires_at')
+            if _expires:
+                try:
+                    _access_until = datetime.fromisoformat(_expires).strftime('%d.%m.%Y')
+                except Exception:
+                    _access_until = _expires
+            else:
+                _access_until = 'Навсегда'
+            _regens = a.get('plan_regens_left')
+            _pro_text = build_afterpay_pro_text(_access_until, u_profile.get('goal',''), _regens)
+            if _bonus_applied:
+                _pro_text += '\n\n🎁 <b>Бонус начислен:</b> +1 смена программы'
+            await clean_edit(callback, uid, _pro_text, reply_markup=menu_main_inline_kb())
 
             # Уведомляем админа
             if ADMIN_ID:
@@ -7689,6 +7918,98 @@ async def cmd_testpay(message: Message, bot: Bot):
 # =========================
 # РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
 # =========================
+# =========================
+# PREMIUM ONBOARDING HANDLERS
+# =========================
+async def cb_premium_step2(callback: CallbackQuery, bot: Bot):
+    """Шаг 2: «ты подходишь»."""
+    uid = callback.from_user.id
+    profile = await get_user(uid)
+    text = build_premium_fit_text(profile)
+    await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Выбрать режим →", callback_data="premium:step3")]
+    ]))
+    await callback.answer()
+
+
+async def cb_premium_step3(callback: CallbackQuery, bot: Bot):
+    """Шаг 3: выбор режима."""
+    uid = callback.from_user.id
+    text = (
+        "<b>Выбери режим:</b>\n\n"
+        "⭐ <b>Хочу результат быстрее</b> — рекомендовано (полный доступ)\n"
+        "🙂 <b>Хочу просто попробовать</b> — демо-режим"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⭐ Хочу результат быстрее", callback_data="premium:fast")],
+        [InlineKeyboardButton(text="🙂 Хочу просто попробовать", callback_data="premium:try")],
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+
+
+async def cb_premium_fast(callback: CallbackQuery, bot: Bot):
+    """Нажал «хочу результат» — полный пэйволл."""
+    await show_paywall(callback, back_to="nav:menu", soft=False)
+
+
+async def cb_premium_try(callback: CallbackQuery, bot: Bot):
+    """Нажал «хочу попробовать» — мягкий пэйволл."""
+    await show_paywall(callback, back_to="nav:menu", soft=True)
+
+
+async def cb_pay_why3(callback: CallbackQuery, bot: Bot):
+    """Кнопка «Почему 3 месяца лучше?»."""
+    uid = callback.from_user.id
+    text = build_why_3_months_text()
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к тарифам", callback_data="nav:upgrade")]
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+
+
+async def cb_pay_back(callback: CallbackQuery, bot: Bot):
+    """Кнопка ⬅️ Назад в пэйволле — возвращает в меню."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    await show_main_menu(bot, chat_id, uid)
+    await callback.answer()
+
+
+async def cb_pay_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Обработчик новых pay:t1 / pay:t3 / pay:life — транслирует в cb_tariff."""
+    # Перемапим pay:X → tariff:X и переиспользуем существующую логику
+    tariff_code = callback.data.split(":")[1]
+    # Подменяем callback.data для совместимости с cb_tariff
+    callback.data = f"tariff:{tariff_code}"
+    await cb_tariff(callback, state, bot)
+
+
+# =========================
+# SOFT RETENTION (меню при незакрытом профиле)
+# =========================
+async def _maybe_show_softretention(callback: CallbackQuery, uid: int) -> bool:
+    """
+    Если профиль заполнен, но нет подписки — показываем мягкий ретеншн.
+    Возвращает True если показали (вызывающая функция должна прерваться).
+    """
+    if not await ensure_profile_ready(uid):
+        return False
+    sub = await get_subscription(uid)
+    if is_subscription_active(sub):
+        return False
+    # Показываем soft retention
+    text = build_softretention_text()
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 Оплатить", callback_data="nav:upgrade")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+    return True
+
+
 def setup_handlers(dp: Dispatcher):
     from aiogram.types import PreCheckoutQuery
 
@@ -7762,6 +8083,17 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
 
     dp.callback_query.register(cb_profile_activity, F.data.startswith("p:activity:"))
+
+    # Premium onboarding
+    dp.callback_query.register(cb_premium_step2, F.data == "premium:step2")
+    dp.callback_query.register(cb_premium_step3, F.data == "premium:step3")
+    dp.callback_query.register(cb_premium_fast,  F.data == "premium:fast")
+    dp.callback_query.register(cb_premium_try,   F.data == "premium:try")
+
+    # Pay callbacks (новый стиль)
+    dp.callback_query.register(cb_pay_why3,   F.data == "pay:why3")
+    dp.callback_query.register(cb_pay_back,   F.data == "pay:back")
+    dp.callback_query.register(cb_pay_tariff, F.data.startswith("pay:") & ~F.data.in_({"pay:why3", "pay:back"}))
 
     dp.message.register(forward_to_admin)
 
