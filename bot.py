@@ -2079,7 +2079,7 @@ def pay_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text="📋 Ознакомиться с другими тарифами", callback_data="nav:upgrade")],
+        [InlineKeyboardButton(text=f"📅 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
 
@@ -2157,18 +2157,16 @@ def profile_edit_field_kb(u: dict, regens_str: str = "") -> InlineKeyboardMarkup
         [
             InlineKeyboardButton(text=f"⛔️ Ограничения", callback_data="pf:limits"),
         ],
-        [InlineKeyboardButton(text=plan_btn_text, callback_data="p:rebuild_plan")],
+        [InlineKeyboardButton(text=plan_btn_text, callback_data="p:do_rebuild")],
         [InlineKeyboardButton(text="🏠 Назад", callback_data="nav:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def build_program_tariff_kb():
-    """Тарифная кнопка после заполнения профиля."""
+    """Тарифная кнопка после заполнения профиля — ознакомление с тарифами."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
-        [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"📅 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text="📋 Ознакомиться с тарифами", callback_data="nav:upgrade_after_profile")],
     ])
 
 
@@ -2791,6 +2789,7 @@ async def init_db():
                 await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
             except Exception:
                 pass
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3468,6 +3467,7 @@ EXERCISE_TECH_MAP = [
     ("горизонтальные подтягивания", "pullup"),
     ("обратные отжимания от стула", "triceps"),
     ("обратные отжимания", "triceps"),
+    ("отжимания узкие", "narrow_pushup"),         # ← точное имя из пула (без "(трицепс)")
     ("отжима", "row"),
 
     # Подтягивания — варианты хвата
@@ -3554,6 +3554,7 @@ EXERCISE_TECH_MAP = [
 
     # Трицепс — специфичные перед "разгибани"
     ("разгибание гантели из-за головы", "triceps_oh"),
+    ("французский жим с гантелями", "triceps_oh"),       # ← название из пула → triceps_oh
     ("французский жим лёжа", "french_press"),            # ← уникальная
     ("французский жим", "french_press"),               # ← уникальная
     ("трицепс", "triceps"),
@@ -5242,7 +5243,7 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
             text = f"У тебя полный доступ.\n{access_status_str(a)}"
             await clean_send(bot, message.chat.id, uid, text)
         else:
-            # Тариф t1 — показываем линейку тарифов
+            # Базовый тариф (t1) — показываем линейку тарифов
             await open_upgrade(uid, message.chat.id, bot)
     else:
         # Нет доступа — сразу показываем линейку тарифов
@@ -5326,11 +5327,10 @@ async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
-    """Генерирует новый план тренировок на основе текущего профиля с учётом лимита."""
+async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
+    """Внутренняя функция: пересобирает план тренировок. Вызывается после редактирования профиля."""
     uid = callback.from_user.id
 
-    # Проверяем, есть ли активный доступ
     if not await is_access_active(uid):
         await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
         return
@@ -5340,7 +5340,6 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
-    # Проверяем лимит обновлений
     regens_left, is_unlimited = await get_plan_regens(uid)
     if not is_unlimited and regens_left is not None and int(regens_left) <= 0:
         a = await get_access(uid)
@@ -5349,7 +5348,7 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
             f"⚠️ Лимит обновлений плана исчерпан.\n\nТариф: {tariff_name}\nЧтобы обновлять план чаще — перейди в «Оплата».",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="💳 Оплата", callback_data="nav:upgrade")],
-                [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")],
             ])
         )
         await callback.answer()
@@ -5369,16 +5368,13 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
     )
     await save_workout_plan(uid, intro, dumps_plan(plan_struct))
 
-    # Уменьшаем счётчик (только если не безлимит)
     if not is_unlimited:
         await decrement_plan_regens(uid)
 
-    # Сбрасываем прогресс дней
     async with db() as conn:
         await conn.execute("DELETE FROM workout_day_progress WHERE user_id=?", (uid,))
         await conn.commit()
 
-    # Получаем обновлённый счётчик для отображения
     regens_after, is_unlim_after = await get_plan_regens(uid)
     if is_unlim_after:
         regens_str = "Безлимит"
@@ -5391,9 +5387,27 @@ async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
     kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access, plan_struct=plan_struct)
     suffix = f"\n\n{regens_str}" if regens_str else ""
     await clean_edit(callback, uid,
-        intro + "\n\n✅ Программа обновлена под твой профиль!" + suffix,
+        intro + "\n\n✅ Профиль обновлён ✅ Программа пересобрана!" + suffix,
         reply_markup=kb
     )
+
+
+async def cb_rebuild_plan(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Кнопка «Сменить программу» — ведёт в редактирование профиля.
+    Пересборка плана произойдёт после нажатия «Составить новый план» в профиле."""
+    uid = callback.from_user.id
+
+    if not await is_access_active(uid):
+        await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
+        return
+
+    # Перенаправляем прямо в редактирование профиля
+    await cb_profile_edit(callback, state)
+
+
+async def cb_do_rebuild(callback: CallbackQuery, bot: Bot):
+    """Кнопка «Составить новый план» в профиле — пересборка плана с текущими данными."""
+    await _do_rebuild_plan(callback, bot)
 
 
 async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
@@ -5434,10 +5448,10 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 # ПРОФИЛЬ-МАСТЕР
 # =========================
 async def _show_profile_done_screen(callback: CallbackQuery, uid: int) -> None:
-    """Единый рендер экрана 'Профиль готов!' — выбор тарифа."""
+    """Единый рендер экрана 'Профиль готов!' с выбором тарифа."""
     text = (
         "🚀 Профиль готов!\n\n"
-        "Выбери тариф и начни тренироваться 👇"
+        "Теперь выбери подходящий тариф и начни тренировки 👇"
     )
     await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
 
@@ -6832,6 +6846,7 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
 
     item = TECH.get(tech_key)
     if not item:
+        logging.warning(f"[cb_workout_ex_tech] missing tech_key={tech_key!r} — техника не найдена в TECH")
         await clean_edit(
             callback,
             callback.from_user.id,
@@ -7646,6 +7661,7 @@ def setup_handlers(dp: Dispatcher):
 
     dp.callback_query.register(cb_profile_edit, F.data == "p:edit")
     dp.callback_query.register(cb_rebuild_plan, F.data == "p:rebuild_plan")
+    dp.callback_query.register(cb_do_rebuild, F.data == "p:do_rebuild")
     dp.callback_query.register(cb_profile_start_wizard, F.data == "p:start_wizard")
     dp.callback_query.register(cb_build_program, F.data == "p:build_program")
     dp.callback_query.register(cb_profile_field_edit, F.data.startswith("pf:"))
