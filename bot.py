@@ -2045,6 +2045,7 @@ def menu_main_inline_kb():
             InlineKeyboardButton(text="👤 Профиль", callback_data="p:edit"),
             InlineKeyboardButton(text="❓ FAQ", callback_data="nav:faq"),
         ],
+        [InlineKeyboardButton(text="🔄 Сменить программу", callback_data="p:rebuild_plan")],
         [InlineKeyboardButton(text="⚙️ Тарифы / доступ", callback_data="nav:upgrade")],
     ])
 
@@ -2068,7 +2069,6 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
-    rows.append([InlineKeyboardButton(text="🔄 Сменить план тренировок", callback_data="p:edit")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -3430,6 +3430,11 @@ EXERCISE_TECH_MAP = [
     ("good-morning", "good_morning"),
 
     # Ноги — тренажёры
+    ("разгибания ног в тренажёре", "leg_extension"),     # ← уникальная
+    ("разгибание ног в тренажёре", "leg_extension"),     # ← уникальная
+    ("сведения ног в тренажёре", "leg_adduction"),       # ← уникальная
+    ("отведения ног назад в кроссовере", "cable_kickback"), # ← уникальная
+    ("кроссовер отведени", "cable_kickback"),             # ← уникальная
     ("жим ногами в тренажёре", "legpress"),
     ("жим ногами", "legpress"),
     ("жим ног", "legpress"),
@@ -3462,6 +3467,9 @@ EXERCISE_TECH_MAP = [
     # Жим вверх — ohp_barbell строго перед ohp
     ("армейский жим", "ohp_barbell"),
     ("жим штанги стоя", "ohp_barbell"),
+    ("арнольд-жим", "arnold_press"),              # ← уникальная
+    ("арнольд жим", "arnold_press"),              # ← уникальная
+    ("жим арнольда", "arnold_press"),             # ← уникальная
     ("жим гантелей стоя", "ohp_dumbbell"),         # ← уникальная
     ("жим гантелей сидя", "ohp_dumbbell"),          # ← уникальная
     ("жим резинки вверх", "band_ohp"),
@@ -3472,6 +3480,8 @@ EXERCISE_TECH_MAP = [
     ("отжимания узкие (трицепс)", "narrow_pushup"),
     ("отжима узк", "narrow_pushup"),
     ("узкие отжима", "narrow_pushup"),
+    ("отжимания с ногами на возвышении", "pushup_elevated"),  # ← уникальная
+    ("отжимания с ногами на возвышен", "pushup_elevated"),    # ← уникальная
     ("отжимания с весом", "row"),
     ("отжимания с паузой", "row"),
     ("отжимания от возвышения", "row"),
@@ -3500,7 +3510,10 @@ EXERCISE_TECH_MAP = [
 
     # Горизонтальные тяги — barbell_row/dumbbell_row перед rowtrain
     ("тяга штанги в наклоне", "barbell_row"),
-    ("тяга т-гриф", "barbell_row"),
+    ("тяга т-гриф", "tbar_row"),                  # ← уникальная
+    ("тяга т-грифа", "tbar_row"),                  # ← уникальная
+    ("тяга к груди узким", "latpulldown_close"),   # ← уникальная
+    ("тяга к груди нейтральн", "latpulldown_close"), # ← уникальная
     ("тяга гантели одной рукой", "dumbbell_row"),
     ("тяга гантел", "dumbbell_row"),
     ("тяга нижнего блока", "rowtrain"),
@@ -3524,6 +3537,8 @@ EXERCISE_TECH_MAP = [
     ("задняя дельта", "rear_delt"),
     ("разведения гантелей в наклоне", "rear_delt"),
     ("разведения гантелей в стороны", "lateralraise"),
+    ("подъёмы перед собой", "front_raise"),              # ← уникальная
+    ("подъём перед собой", "front_raise"),               # ← уникальная
     ("разведени", "lateralraise"),
 
     # Пресс — варианты по упражнению (специфичные перед общим "планка")
@@ -3548,7 +3563,7 @@ EXERCISE_TECH_MAP = [
 
     # Бицепс — варианты по инвентарю
     ("сгибания на скамье скотта", "biceps"),
-    ("концентрированные сгибания", "biceps"),
+    ("концентрированные сгибания", "concentration_curl"),  # ← уникальная
     ("сгибания на резинке", "biceps"),
     ("сгибания на блоке", "biceps"),                   # ← добавлено (блок нижний)
     ("сгибания штанги стоя", "biceps_barbell"),         # ← уникальная
@@ -3561,7 +3576,8 @@ EXERCISE_TECH_MAP = [
 
     # Трицепс — специфичные перед "разгибани"
     ("разгибание гантели из-за головы", "triceps_oh"),
-    ("французский жим", "triceps_oh"),
+    ("французский жим лёжа", "french_press"),            # ← уникальная
+    ("французский жим", "french_press"),               # ← уникальная
     ("трицепс", "triceps"),
     ("разгибани", "triceps"),
 ]
@@ -5149,26 +5165,40 @@ async def cmd_start(message: Message, bot: Bot):
 
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
     text = (
-        "💳 Тарифы\n\n"
-        f"🟩 1 месяц — {TARIFFS['t1']['price']}₽\n"
-        "• Тренировки + дневник + замеры\n"
-        "• Поддержка\n"
-        "• Обновление плана: 3 раза\n\n"
-        f"🟦 3 месяца — {TARIFFS['t3']['price']}₽\n"
-        "• Всё, что в 1 месяце + питание\n"
-        "• Смена программы\n"
-        "• Обновление плана: 10 раз\n"
-        "• Выгоднее по цене\n\n"
-        f"🟨 Навсегда — {TARIFFS['life']['price']}₽\n"
-        "• Полный доступ: тренировки + питание + дневник\n"
-        "• Смена программы\n"
-        "• Обновление плана: безлимит\n\n"
-        "После оплаты программа активируется автоматически."
+        "💳 <b>Тарифы — выбери свой уровень</b>\n\n"
+        "Программа тренировок, техника выполнения, план питания и дневник — всё в одном боте. "
+        "Бот подстраивается под твой уровень, цель и место тренировок.\n\n"
+
+        f"🟩 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n"
+        "Попробуй и почувствуй разницу:\n"
+        "• Персональный план тренировок (зал или дома)\n"
+        "• Техника каждого упражнения — видео/картинка прямо в тренировке\n"
+        "• Дневник тренировок: веса, повторы, история по дням\n"
+        "• Замеры тела и отслеживание прогресса\n"
+        "• Обновление программы: 3 раза\n"
+        "• Поддержка и FAQ\n\n"
+
+        f"🟦 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n"
+        "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n"
+        "• Всё из тарифа «1 месяц»\n"
+        "• <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
+        "• Обновление программы: 10 раз\n"
+        "• Выгоднее, чем 3 раза по «1 месяцу»\n\n"
+
+        f"🟨 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n"
+        "Один раз — пользуйся сколько угодно:\n"
+        "• Полный доступ ко всем функциям без ограничений\n"
+        "• Тренировки + питание + дневник + замеры + техники\n"
+        "• Обновление программы: безлимит\n"
+        "• Никаких повторных списаний\n\n"
+
+        "⚠️ <i>Питание (расчёт КБЖУ и готовый рацион) доступно только на тарифах «3 месяца» и «Навсегда».</i>\n\n"
+        "👇 Выбери тариф и начни прямо сейчас:"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
         [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
