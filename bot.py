@@ -190,7 +190,7 @@ TECH_GIFS = {
     "band_ohp":          "media/tech/band_ohp.mp4",
     "lateralraise":      "media/tech/lateralraise.mp4",
     # ── Бицепс / трицепс ────────────────────────────────────────────────────
-    "biceps_dumbbell":            "media/tech/biceps_dumbbell.mp4",
+    "biceps":            "media/tech/biceps.mp4",
     "biceps_barbell":    "media/tech/biceps_barbell.mp4",
     "hammer":            "media/tech/hammer.mp4",
     "triceps":           "media/tech/triceps.mp4",
@@ -323,10 +323,9 @@ EXERCISE_NAMES = {
 
 # ТАРИФЫ
 TARIFFS = {
-    "trial": {"title": "Пробный доступ (3 дня)", "days": 3,    "price": 1,    "plan_regens": 1},
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 3,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1499, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1990, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -2080,7 +2079,6 @@ def pay_tariff_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽ (3 дня)", callback_data="tariff:trial")],
         [InlineKeyboardButton(text="📋 Ознакомиться с другими тарифами", callback_data="nav:upgrade")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -2159,20 +2157,18 @@ def profile_edit_field_kb(u: dict, regens_str: str = "") -> InlineKeyboardMarkup
         [
             InlineKeyboardButton(text=f"⛔️ Ограничения", callback_data="pf:limits"),
         ],
-        [InlineKeyboardButton(text=plan_btn_text, callback_data="p:do_rebuild")],
+        [InlineKeyboardButton(text=plan_btn_text, callback_data="p:rebuild_plan")],
         [InlineKeyboardButton(text="🏠 Назад", callback_data="nav:menu")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def build_program_tariff_kb():
-    """Тарифная кнопка после заполнения профиля — только пробный + другие тарифы."""
+    """Тарифная кнопка после заполнения профиля."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽ (3 дня)",
-            callback_data="tariff:trial:from_profile"
-        )],
-        [InlineKeyboardButton(text="📋 Ознакомиться с другими тарифами", callback_data="nav:upgrade_after_profile")],
+        [InlineKeyboardButton(text=f"🏆 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🔥 3 месяца — {TARIFFS['t3']['price']}₽", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"📅 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
     ])
 
 
@@ -2795,14 +2791,6 @@ async def init_db():
                 await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
             except Exception:
                 pass
-        # Миграция: пробный тариф теперь имеет 1 смену плана (было 0)
-        # Исправляем существующих пользователей с trial + plan_regens_left=0
-        try:
-            await conn.execute(
-                "UPDATE access SET plan_regens_left=1 WHERE tariff='trial' AND (plan_regens_left IS NULL OR plan_regens_left=0) AND paid=1"
-            )
-        except Exception:
-            pass
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3110,16 +3098,6 @@ def format_tariff_line(sub: dict) -> str:
         return "💳 Тариф: нет (доступ ограничен)"
     if tariff == "life":
         return "💳 Тариф: Навсегда ✅"
-    # Пробный — всегда отображаем как "Пробный"
-    if tariff == "trial":
-        expires_at = sub.get("expires_at")
-        if expires_at:
-            try:
-                dt = datetime.fromisoformat(expires_at)
-                return f"💳 Тариф: Пробный (до {dt.strftime('%d.%m.%Y')})"
-            except Exception:
-                pass
-        return "💳 Тариф: Пробный"
     tariff_name = sub.get("tariff_name") or ""
     expires_at = sub.get("expires_at")
     if expires_at:
@@ -3490,7 +3468,6 @@ EXERCISE_TECH_MAP = [
     ("горизонтальные подтягивания", "pullup"),
     ("обратные отжимания от стула", "triceps"),
     ("обратные отжимания", "triceps"),
-    ("отжимания узкие", "narrow_pushup"),         # ← точное имя из пула (без "(трицепс)")
     ("отжима", "row"),
 
     # Подтягивания — варианты хвата
@@ -3577,7 +3554,6 @@ EXERCISE_TECH_MAP = [
 
     # Трицепс — специфичные перед "разгибани"
     ("разгибание гантели из-за головы", "triceps_oh"),
-    ("французский жим с гантелями", "triceps_oh"),       # ← название из пула → triceps_oh
     ("французский жим лёжа", "french_press"),            # ← уникальная
     ("французский жим", "french_press"),               # ← уникальная
     ("трицепс", "triceps"),
@@ -5171,8 +5147,8 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "Программа тренировок, техника выполнения, план питания и дневник — всё в одном боте. "
         "Бот подстраивается под твой уровень, цель и место тренировок.\n\n"
 
-        f"🔵 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n\n"
-        "Попробуй и почувствуй, что такое настоящий прогресс:\n\n"
+        f"🟩 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n"
+        "Попробуй и почувствуй разницу:\n"
         "• Персональный план тренировок (зал или дома)\n"
         "• Техника каждого упражнения — видео/картинка прямо в тренировке\n"
         "• Дневник тренировок: веса, повторы, история по дням\n"
@@ -5180,15 +5156,15 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "• Обновление программы: 3 раза\n"
         "• Поддержка и FAQ\n\n"
 
-        f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n\n"
-        "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n\n"
+        f"🟦 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n"
+        "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n"
         "• Всё из тарифа «1 месяц»\n"
         "• <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
         "• Обновление программы: 10 раз\n"
         "• Выгоднее, чем 3 раза по «1 месяцу»\n\n"
 
-        f"🟢 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n\n"
-        "Один раз оплатил — пользуйся сколько угодно:\n\n"
+        f"🟨 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n"
+        "Один раз — пользуйся сколько угодно:\n"
         "• Полный доступ ко всем функциям без ограничений\n"
         "• Тренировки + питание + дневник + замеры + техники\n"
         "• Обновление программы: безлимит\n"
@@ -5199,9 +5175,9 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🔵 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟡 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟢 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
             callback_data="nav:back_to_program_tariff" if source == "after_profile" else "nav:menu"
@@ -5266,7 +5242,7 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
             text = f"У тебя полный доступ.\n{access_status_str(a)}"
             await clean_send(bot, message.chat.id, uid, text)
         else:
-            # Базовый тариф (trial или t1) — показываем линейку тарифов
+            # Тариф t1 — показываем линейку тарифов
             await open_upgrade(uid, message.chat.id, bot)
     else:
         # Нет доступа — сразу показываем линейку тарифов
@@ -5350,10 +5326,11 @@ async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
-    """Внутренняя функция: пересобирает план тренировок. Вызывается после редактирования профиля."""
+async def cb_rebuild_plan(callback: CallbackQuery, bot: Bot):
+    """Генерирует новый план тренировок на основе текущего профиля с учётом лимита."""
     uid = callback.from_user.id
 
+    # Проверяем, есть ли активный доступ
     if not await is_access_active(uid):
         await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
         return
@@ -5363,6 +5340,7 @@ async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
+    # Проверяем лимит обновлений
     regens_left, is_unlimited = await get_plan_regens(uid)
     if not is_unlimited and regens_left is not None and int(regens_left) <= 0:
         a = await get_access(uid)
@@ -5371,7 +5349,7 @@ async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
             f"⚠️ Лимит обновлений плана исчерпан.\n\nТариф: {tariff_name}\nЧтобы обновлять план чаще — перейди в «Оплата».",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="💳 Оплата", callback_data="nav:upgrade")],
-                [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:menu")],
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
             ])
         )
         await callback.answer()
@@ -5391,13 +5369,16 @@ async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
     )
     await save_workout_plan(uid, intro, dumps_plan(plan_struct))
 
+    # Уменьшаем счётчик (только если не безлимит)
     if not is_unlimited:
         await decrement_plan_regens(uid)
 
+    # Сбрасываем прогресс дней
     async with db() as conn:
         await conn.execute("DELETE FROM workout_day_progress WHERE user_id=?", (uid,))
         await conn.commit()
 
+    # Получаем обновлённый счётчик для отображения
     regens_after, is_unlim_after = await get_plan_regens(uid)
     if is_unlim_after:
         regens_str = "Безлимит"
@@ -5410,27 +5391,9 @@ async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
     kb = workout_days_kb(int(u.get("freq") or plan_struct.get("freq") or 3), has_full_access=full_access, plan_struct=plan_struct)
     suffix = f"\n\n{regens_str}" if regens_str else ""
     await clean_edit(callback, uid,
-        intro + "\n\n✅ Профиль обновлён ✅ Программа пересобрана!" + suffix,
+        intro + "\n\n✅ Программа обновлена под твой профиль!" + suffix,
         reply_markup=kb
     )
-
-
-async def cb_rebuild_plan(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    """Кнопка «Сменить программу» — ведёт в редактирование профиля.
-    Пересборка плана произойдёт после нажатия «Составить новый план» в профиле."""
-    uid = callback.from_user.id
-
-    if not await is_access_active(uid):
-        await callback.answer("🔒 Нужен активный тариф.", show_alert=True)
-        return
-
-    # Перенаправляем прямо в редактирование профиля
-    await cb_profile_edit(callback, state)
-
-
-async def cb_do_rebuild(callback: CallbackQuery, bot: Bot):
-    """Кнопка «Составить новый план» в профиле — пересборка плана с текущими данными."""
-    await _do_rebuild_plan(callback, bot)
 
 
 async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
@@ -5471,15 +5434,10 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 # ПРОФИЛЬ-МАСТЕР
 # =========================
 async def _show_profile_done_screen(callback: CallbackQuery, uid: int) -> None:
-    """Единый рендер экрана 'Профиль готов!' с выбором тарифа."""
+    """Единый рендер экрана 'Профиль готов!' — выбор тарифа."""
     text = (
         "🚀 Профиль готов!\n\n"
-        "Выбери формат доступа:\n\n"
-        f"🟢 Пробный доступ — {TARIFFS['trial']['price']}₽\n"
-        "• 3 дня\n"
-        "• Тренировки + ответы на вопросы\n"
-        "• Без питания и дневника\n\n"
-        "Или посмотри полную линейку тарифов 👇"
+        "Выбери тариф и начни тренироваться 👇"
     )
     await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
 
@@ -6874,7 +6832,6 @@ async def cb_workout_ex_tech(callback: CallbackQuery, bot: Bot):
 
     item = TECH.get(tech_key)
     if not item:
-        logging.warning(f"[cb_workout_ex_tech] missing tech_key={tech_key!r} — техника не найдена в TECH")
         await clean_edit(
             callback,
             callback.from_user.id,
@@ -6907,10 +6864,11 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
 
     if not await is_full_access_active(user_id):
         text = (
-            "🍽 Питание\n\n"
+            "Питание\n\n"
             "Раздел «Питание» доступен на тарифах 3 месяца и Навсегда.\n\n"
-            "Почему именно эти тарифы?\n\n"
-            "90 дней — минимальный срок, чтобы увидеть реальный результат от питания. Месяц — слишком мало для стабильного изменения состава тела.\n\n"
+            "Почему именно эти тарифы?\n"
+            "90 дней — минимальный срок, чтобы увидеть реальный результат от питания.\n"
+            "Месяц — слишком мало для стабильного изменения состава тела.\n\n"
             "Выбери тариф:"
         )
         upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -7656,7 +7614,7 @@ async def cmd_testpay(message: Message, bot: Bot):
     lines.append("⏳ Пробую создать тестовый платёж (1₽)...")
     await message.answer("\n".join(lines))
 
-    yk_data, yk_err = await yukassa_create_payment("trial", message.from_user.id)
+    yk_data, yk_err = await yukassa_create_payment("t1", message.from_user.id)
 
     if yk_data:
         pay_id = yk_data.get("id", "?")
@@ -7688,7 +7646,6 @@ def setup_handlers(dp: Dispatcher):
 
     dp.callback_query.register(cb_profile_edit, F.data == "p:edit")
     dp.callback_query.register(cb_rebuild_plan, F.data == "p:rebuild_plan")
-    dp.callback_query.register(cb_do_rebuild, F.data == "p:do_rebuild")
     dp.callback_query.register(cb_profile_start_wizard, F.data == "p:start_wizard")
     dp.callback_query.register(cb_build_program, F.data == "p:build_program")
     dp.callback_query.register(cb_profile_field_edit, F.data.startswith("pf:"))
@@ -7916,7 +7873,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
-
-
