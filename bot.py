@@ -4389,14 +4389,14 @@ def _add_grams(day_meals: List[List[Tuple[str, float]]], key: str, delta: float)
 
 def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str, float]) -> Dict[str, float]:
     """
-    Подгоняет граммовки к целевым КБЖУ. Приоритет: БЖУ важнее калорий.
-    Используется комбинированная ошибка:
-      score = 3*|dP| + 4*|dF| + 2*|dC| + 0.5*|dK|
-    Сохраняем best_solution по score. Ограничения на граммовки продуктов.
+    Подгоняет граммовки к целевым КБЖУ.
+    Ключевое отличие от старой версии: scale_all_by_key() масштабирует
+    ВСЕ вхождения продукта во всех приёмах пропорционально — это важно,
+    потому что белок (курица, яйца и т.д.) встречается в обеде, ужине и перекусе
+    одновременно, и двигать только одно вхождение недостаточно.
     """
     import copy
 
-    # Определяем, какие ключи присутствуют
     present_keys: set = set()
     for meal in day_meals:
         for k, _ in meal:
@@ -4406,20 +4406,19 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
     carb_keys    = ["rice", "buckwheat", "oats", "pasta", "bread_rye", "potato", "banana", "apple"]
     fat_keys     = ["oil_sunfl", "oil_olive"]
 
-    main_protein = next((k for k in protein_keys if k in present_keys), None)
-    main_carb    = next((k for k in carb_keys if k in present_keys), None)
-    main_fat     = next((k for k in fat_keys if k in present_keys), None)
+    # Лимиты зависят от цели: при высоких углеводах крупы должны быть больше
+    target_carbs = target.get("c", 200)
+    carb_scale = max(1.0, target_carbs / 200)   # при У=475 → scale=2.375
 
-    # Разумные ограничения на граммовки (мин, макс)
-    # Верхние лимиты увеличены, чтобы алгоритм мог добрать калории при высоких целях (2500–3500+ ккал)
     LIMITS: Dict[str, Tuple[float, float]] = {
-        "rice": (40, 300), "buckwheat": (40, 300), "oats": (40, 250),
-        "pasta": (40, 300), "bread_rye": (20, 200), "potato": (80, 500),
-        "banana": (60, 300), "apple": (60, 300),
-        "chicken": (80, 400), "chicken_thigh": (80, 400), "turkey": (80, 400),
-        "fish": (100, 500), "tuna_can": (80, 400), "eggs": (60, 480),
-        "curd_2": (100, 500), "kefir": (100, 600), "milk": (100, 600),
-        "oil_sunfl": (5, 35), "oil_olive": (5, 35),
+        "rice":          (30, int(150 * carb_scale)), "buckwheat":    (30, int(150 * carb_scale)),
+        "oats":          (30, int(120 * carb_scale)), "pasta":        (30, int(150 * carb_scale)),
+        "bread_rye":     (20, int(80  * carb_scale)), "potato":       (60, int(300 * carb_scale)),
+        "banana":        (60, int(150 * carb_scale)), "apple":        (60, int(150 * carb_scale)),
+        "chicken":       (40, 280), "chicken_thigh": (40, 280), "turkey":      (40, 280),
+        "fish":          (50, 320), "tuna_can":      (40, 240), "eggs":        (55, 330),
+        "curd_2":        (80, 350), "kefir":         (80, 400), "milk":        (80, 400),
+        "oil_sunfl":     (5, 35),  "oil_olive":     (5, 35),
     }
 
     def clamp_meals():
@@ -4427,10 +4426,7 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
             for ii in range(len(day_meals[mi])):
                 k, g = day_meals[mi][ii]
                 lo, hi = LIMITS.get(k, (0, 9999))
-                if g < lo:
-                    day_meals[mi][ii] = (k, lo)
-                elif g > hi:
-                    day_meals[mi][ii] = (k, hi)
+                day_meals[mi][ii] = (k, max(lo, min(hi, g)))
 
     clamp_meals()
 
@@ -4442,65 +4438,129 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
         dK = t["kcal"] - target["kcal"]
         return 3.0 * abs(dP) + 4.0 * abs(dF) + 2.0 * abs(dC) + 0.5 * abs(dK)
 
-    best_meals = copy.deepcopy(day_meals)
-    best_score = score_fn(day_meals)
-
-    def add_clamped(key: str, delta: float):
+    def scale_all_by_key(key: str, factor: float):
+        """Умножает граммовку продукта во ВСЕХ приёмах на factor (с учётом лимитов)."""
+        lo, hi = LIMITS.get(key, (0, 9999))
         for mi in range(len(day_meals)):
             for ii in range(len(day_meals[mi])):
                 k, g = day_meals[mi][ii]
                 if k == key:
-                    lo, hi = LIMITS.get(key, (0, 9999))
-                    day_meals[mi][ii] = (k, max(lo, min(hi, g + delta)))
-                    return
-        # Если ключа нет — добавить нельзя (только уже имеющиеся продукты)
+                    new_g = max(lo, min(hi, round(g * factor / 5) * 5))
+                    day_meals[mi][ii] = (k, new_g)
 
-    for iteration in range(100):
+    def add_all_by_key(key: str, delta: float):
+        """Добавляет delta граммов к продукту во ВСЕХ приёмах (с учётом лимитов)."""
+        lo, hi = LIMITS.get(key, (0, 9999))
+        for mi in range(len(day_meals)):
+            for ii in range(len(day_meals[mi])):
+                k, g = day_meals[mi][ii]
+                if k == key:
+                    day_meals[mi][ii] = (k, max(lo, min(hi, g + delta)))
+
+    active_proteins = [k for k in protein_keys if k in present_keys]
+    active_carbs    = [k for k in carb_keys if k in present_keys]
+    active_fats     = [k for k in fat_keys if k in present_keys]
+
+    best_meals = copy.deepcopy(day_meals)
+    best_score = score_fn(day_meals)
+
+    # --- Фаза 1: подгоняем белок (3 прохода масштабирования) ---
+    for _ in range(30):
+        t = _totals_of_day(day_meals)
+        dP = t["p"] - target["p"]
+        if abs(dP) <= 3:
+            break
+        cur_p = t["p"]
+        if cur_p > 1:
+            factor = max(0.2, min(4.0, target["p"] / cur_p))
+            for pk in active_proteins:
+                scale_all_by_key(pk, factor)
+
+    # --- Фаза 2: подгоняем жир ---
+    for _ in range(10):
+        t = _totals_of_day(day_meals)
+        dF = t["f"] - target["f"]
+        if abs(dF) <= 3:
+            break
+        if active_fats:
+            delta = max(5, min(15, int(abs(dF) / 90 * 100 / 5) * 5))
+            for fk in active_fats:
+                add_all_by_key(fk, -delta if dF > 0 else delta)
+
+    # --- Фаза 3: подгоняем углеводы ---
+    for _ in range(30):
+        t = _totals_of_day(day_meals)
+        dC = t["c"] - target["c"]
+        if abs(dC) <= 5:
+            break
+        cur_c = t["c"]
+        if cur_c > 1:
+            factor = max(0.2, min(4.0, target["c"] / cur_c))
+            for ck in active_carbs:
+                scale_all_by_key(ck, factor)
+
+    # --- Фаза 4: повторная коррекция белка (углеводы могли добавить белок через молочку) ---
+    for _ in range(20):
+        t = _totals_of_day(day_meals)
+        dP = t["p"] - target["p"]
+        if abs(dP) <= 5:
+            break
+        cur_p = t["p"]
+        if cur_p > 1:
+            factor = max(0.2, min(4.0, target["p"] / cur_p))
+            for pk in active_proteins:
+                scale_all_by_key(pk, factor)
+
+    sc = score_fn(day_meals)
+    if sc < best_score:
+        best_meals = copy.deepcopy(day_meals)
+        best_score = sc
+
+    # --- Фаза 5: финальные итерации доводки ---
+    for _ in range(40):
         t = _totals_of_day(day_meals)
         dP = t["p"] - target["p"]
         dF = t["f"] - target["f"]
         dC = t["c"] - target["c"]
         dK = t["kcal"] - target["kcal"]
 
-        # Если все отклонения укладываются в допуски — стоп
-        if abs(dP) <= 5 and abs(dF) <= 4 and abs(dC) <= 8 and abs(dK) <= 30:
+        if abs(dP) <= 5 and abs(dF) <= 4 and abs(dC) <= 10 and abs(dK) <= 40:
             break
 
-        # Выбираем наихудшее отклонение (с весами)
-        penalties = [
-            (3.0 * abs(dP), "p", dP),
-            (4.0 * abs(dF), "f", dF),
-            (2.0 * abs(dC), "c", dC),
-        ]
-        penalties.sort(key=lambda x: -x[0])
-        _, worst_macro, worst_delta = penalties[0]
+        penalties = sorted([
+            (abs(dP) / max(target["p"], 1), "p", dP),
+            (abs(dF) / max(target["f"], 1), "f", dF),
+            (abs(dC) / max(target["c"], 1), "c", dC),
+        ], key=lambda x: -x[0])
 
+        _, worst_macro, worst_delta = penalties[0]
         adjusted = False
-        if worst_macro == "p" and main_protein:
-            # Подбираем шаг: у белков ~12–31 г на 100г продукта
-            prot_per_100 = FOOD_DB[main_protein]["p"]
-            if prot_per_100 > 0:
-                step_g = max(10, min(30, int(abs(worst_delta) / prot_per_100 * 100 / 10) * 10))
-            else:
-                step_g = 10
-            add_clamped(main_protein, -step_g if worst_delta > 0 else step_g)
+
+        if worst_macro == "p" and active_proteins:
+            cur_p = t["p"]
+            if cur_p > 1:
+                factor = max(0.2, min(4.0, target["p"] / cur_p))
+                for pk in active_proteins:
+                    scale_all_by_key(pk, factor)
+                adjusted = True
+
+        elif worst_macro == "f" and active_fats:
+            delta = max(5, min(15, int(abs(worst_delta) / 90 * 100 / 5) * 5))
+            for fk in active_fats:
+                add_all_by_key(fk, -delta if worst_delta > 0 else delta)
             adjusted = True
-        elif worst_macro == "f" and main_fat:
-            step_g = max(5, min(10, int(abs(worst_delta) / 1.0 * 10 / 10) * 10))  # масло: 100% жира
-            add_clamped(main_fat, -step_g if worst_delta > 0 else step_g)
-            adjusted = True
-        elif worst_macro == "c" and main_carb:
-            carb_per_100 = FOOD_DB[main_carb]["c"]
-            if carb_per_100 > 0:
-                step_g = max(10, min(40, int(abs(worst_delta) / carb_per_100 * 100 / 10) * 10))
-            else:
-                step_g = 10
-            add_clamped(main_carb, -step_g if worst_delta > 0 else step_g)
-            adjusted = True
+
+        elif worst_macro == "c" and active_carbs:
+            cur_c = t["c"]
+            if cur_c > 1:
+                factor = max(0.2, min(4.0, target["c"] / cur_c))
+                for ck in active_carbs:
+                    scale_all_by_key(ck, factor)
+                adjusted = True
+
         else:
-            # Калории без явного лишнего макро — подправляем крупой
-            if main_carb and abs(dK) > 50:
-                add_clamped(main_carb, -10 if dK > 0 else 10)
+            if active_carbs and abs(dK) > 40:
+                add_all_by_key(active_carbs[0], -5 if dK > 0 else 5)
                 adjusted = True
 
         if not adjusted:
@@ -4514,12 +4574,8 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
     day_meals[:] = best_meals
     clamp_meals()
 
-    # --- Финальная докрутка калорий ---
-    # После схождения макросов добиваем оставшийся калорийный дефицит.
-    # Поочерёдно добавляем по 5г к крупе и белку, пока не войдём в ±30 ккал от цели.
-    carb_cycle = [k for k in carb_keys if k in present_keys]
-    prot_cycle = [k for k in protein_keys if k in present_keys]
-    cycle_keys = carb_cycle + prot_cycle  # чередуем продукты чтобы не упереться в один лимит
+    # --- Финальная докрутка калорий по 5г ---
+    cycle_keys = active_carbs + active_proteins
     idx = 0
     for _ in range(120):
         t = _totals_of_day(day_meals)
@@ -4528,8 +4584,7 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
             break
         if not cycle_keys:
             break
-        key = cycle_keys[idx % len(cycle_keys)]
-        add_clamped(key, -5 if dK > 0 else 5)
+        add_all_by_key(cycle_keys[idx % len(cycle_keys)], -5 if dK > 0 else 5)
         idx += 1
     clamp_meals()
 
@@ -4612,6 +4667,21 @@ def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]
 def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
     target = {"kcal": float(calories), "p": float(protein_g), "f": float(fat_g), "c": float(carbs_g)}
     day_meals = _build_day_variant(day_i, meals)
+
+    # --- Предварительное масштабирование шаблона ---
+    # Масштабируем шаблон так чтобы суммарный белок уже был близок к цели.
+    # Это даёт алгоритму _adjust_to_target гораздо лучшую стартовую позицию.
+    pre_t = _totals_of_day(day_meals)
+    if pre_t["p"] > 1 and protein_g > 0:
+        pre_factor = max(0.3, min(3.0, float(protein_g) / pre_t["p"]))
+        # Масштабируем все граммовки кроме масла и овощей
+        NON_SCALE = {"veg", "oil_sunfl", "oil_olive"}
+        for mi in range(len(day_meals)):
+            for ii in range(len(day_meals[mi])):
+                k, g = day_meals[mi][ii]
+                if k not in NON_SCALE:
+                    day_meals[mi][ii] = (k, max(10.0, round(g * pre_factor / 5) * 5))
+
     tot = _adjust_to_target(day_meals, target)
 
     final_k = int(round(tot["kcal"]))
