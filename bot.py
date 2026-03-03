@@ -4411,14 +4411,15 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
     main_fat     = next((k for k in fat_keys if k in present_keys), None)
 
     # Разумные ограничения на граммовки (мин, макс)
+    # Верхние лимиты увеличены, чтобы алгоритм мог добрать калории при высоких целях (2500–3500+ ккал)
     LIMITS: Dict[str, Tuple[float, float]] = {
-        "rice": (40, 160), "buckwheat": (40, 160), "oats": (40, 120),
-        "pasta": (40, 150), "bread_rye": (20, 120), "potato": (80, 300),
-        "banana": (60, 200), "apple": (60, 200),
-        "chicken": (80, 230), "chicken_thigh": (80, 250), "turkey": (80, 230),
-        "fish": (100, 280), "tuna_can": (80, 200), "eggs": (60, 360),
-        "curd_2": (100, 300), "kefir": (100, 400), "milk": (100, 400),
-        "oil_sunfl": (5, 20), "oil_olive": (5, 20),
+        "rice": (40, 300), "buckwheat": (40, 300), "oats": (40, 250),
+        "pasta": (40, 300), "bread_rye": (20, 200), "potato": (80, 500),
+        "banana": (60, 300), "apple": (60, 300),
+        "chicken": (80, 400), "chicken_thigh": (80, 400), "turkey": (80, 400),
+        "fish": (100, 500), "tuna_can": (80, 400), "eggs": (60, 480),
+        "curd_2": (100, 500), "kefir": (100, 600), "milk": (100, 600),
+        "oil_sunfl": (5, 35), "oil_olive": (5, 35),
     }
 
     def clamp_meals():
@@ -4462,7 +4463,7 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
         dK = t["kcal"] - target["kcal"]
 
         # Если все отклонения укладываются в допуски — стоп
-        if abs(dP) <= 7 and abs(dF) <= 6 and abs(dC) <= 12 and abs(dK) <= 80:
+        if abs(dP) <= 5 and abs(dF) <= 4 and abs(dC) <= 8 and abs(dK) <= 30:
             break
 
         # Выбираем наихудшее отклонение (с весами)
@@ -4512,6 +4513,26 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
 
     day_meals[:] = best_meals
     clamp_meals()
+
+    # --- Финальная докрутка калорий ---
+    # После схождения макросов добиваем оставшийся калорийный дефицит.
+    # Поочерёдно добавляем по 5г к крупе и белку, пока не войдём в ±30 ккал от цели.
+    carb_cycle = [k for k in carb_keys if k in present_keys]
+    prot_cycle = [k for k in protein_keys if k in present_keys]
+    cycle_keys = carb_cycle + prot_cycle  # чередуем продукты чтобы не упереться в один лимит
+    idx = 0
+    for _ in range(120):
+        t = _totals_of_day(day_meals)
+        dK = t["kcal"] - target["kcal"]
+        if abs(dK) <= 30:
+            break
+        if not cycle_keys:
+            break
+        key = cycle_keys[idx % len(cycle_keys)]
+        add_clamped(key, -5 if dK > 0 else 5)
+        idx += 1
+    clamp_meals()
+
     return _totals_of_day(day_meals)
 
 
@@ -4570,9 +4591,9 @@ def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]
             [("buckwheat", 80.0), ("fish", 160.0), ("veg", 150.0)],
         ]
         if meals >= 4:
-            day.append([("curd_2", 200.0), ("apple", 120.0)])
+            day.append([("curd_2", 200.0), ("apple", 120.0), ("bread_rye", 40.0)])
         if meals >= 5:
-            day.append([("kefir", 250.0)])
+            day.append([("kefir", 250.0), ("bread_rye", 40.0)])
         return day
 
     # Вариант 5: яйца + курица + хлеб (максимально просто)
