@@ -6907,11 +6907,10 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
 
     if not await is_full_access_active(user_id):
         text = (
-            "Питание\n\n"
+            "🍽 Питание\n\n"
             "Раздел «Питание» доступен на тарифах 3 месяца и Навсегда.\n\n"
             "Почему именно эти тарифы?\n"
-            "90 дней — минимальный срок, чтобы увидеть реальный результат от питания.\n"
-            "Месяц — слишком мало для стабильного изменения состава тела.\n\n"
+            "90 дней — минимальный срок, чтобы увидеть реальный результат от питания. Месяц — слишком мало для стабильного изменения состава тела.\n\n"
             "Выбери тариф:"
         )
         upgrade_kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -7917,4 +7916,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
