@@ -2076,7 +2076,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
 # ЮКасса: кнопки
 # =========================
 def pay_tariff_kb():
-    """Обёртка для обратной совместимости."""
+    """Обёртка для обратной совместимости — делегирует в build_tariffs_kb()."""
     return build_tariffs_kb()
 
 
@@ -2780,9 +2780,16 @@ async def init_db():
             ("plan_regens_left", "INTEGER DEFAULT NULL"),
             ("tariff_name",      "TEXT NOT NULL DEFAULT 'Нет'"),
             ("remind_stage",     "INTEGER NOT NULL DEFAULT -1"),
+            ("bonus_granted",    "INTEGER NOT NULL DEFAULT 0"),
         ]:
             try:
                 await conn.execute(f"ALTER TABLE access ADD COLUMN {_col} {_typ}")
+            except Exception:
+                pass
+        # profile_completed_at — время завершения анкеты (бонус 24ч)
+        for _col, _typ in [("profile_completed_at", "TEXT")]:
+            try:
+                await conn.execute(f"ALTER TABLE users ADD COLUMN {_col} {_typ}")
             except Exception:
                 pass
 
@@ -5138,92 +5145,130 @@ async def cmd_start(message: Message, bot: Bot):
     )
 
 
-async def _get_total_users() -> int:
-    """Считает число пользователей для социального доказательства."""
+# =========================
+# PAYWALL BUILDERS
+# =========================
+
+async def _count_users() -> int:
+    """Реальное число пользователей из БД."""
     try:
         async with db() as conn:
             async with conn.execute("SELECT COUNT(*) FROM users") as cur:
                 row = await cur.fetchone()
-        return row[0] if row and row[0] else 142
+        return row[0] if row and row[0] else 100
     except Exception:
-        return 142
+        return 100
 
 
-def build_tariffs_kb(source: str = "") -> InlineKeyboardMarkup:
-    """Единая клавиатура тарифов (pay: callbacks)."""
-    back_cb = "nav:back_to_program_tariff" if source == "after_profile" else "pay:back"
+def build_tariffs_kb(back_cb: str = "pay:back") -> InlineKeyboardMarkup:
+    """Единая клавиатура тарифов. Порядок: 1 мес → 3 мес → Навсегда."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text=f"\u2b50 3 \u043c\u0435\u0441\u044f\u0446\u0430 \u2014 {TARIFFS['t3']['price']}\u20bd",
+            text=f"1 месяц — {TARIFFS['t1']['price']}\u20bd",
+            callback_data="pay:t1",
+        )],
+        [InlineKeyboardButton(
+            text=f"3 месяца — {TARIFFS['t3']['price']}\u20bd",
             callback_data="pay:t3",
         )],
         [InlineKeyboardButton(
-            text=f"\U0001f525 \u041d\u0430\u0432\u0441\u0435\u0433\u0434\u0430 \u2014 {TARIFFS['life']['price']}\u20bd",
+            text=f"Навсегда — {TARIFFS['life']['price']}\u20bd",
             callback_data="pay:life",
         )],
-        [InlineKeyboardButton(
-            text=f"1 \u043c\u0435\u0441\u044f\u0446 \u2014 {TARIFFS['t1']['price']}\u20bd",
-            callback_data="pay:t1",
-        )],
-        [InlineKeyboardButton(text="\u2139\ufe0f \u041f\u043e\u0447\u0435\u043c\u0443 3 \u043c\u0435\u0441\u044f\u0446\u0430?", callback_data="pay:why3")],
-        [InlineKeyboardButton(text="\u2b05\ufe0f \u041d\u0430\u0437\u0430\u0434", callback_data=back_cb)],
+        [InlineKeyboardButton(text="\u2139\ufe0f Почему 3 месяца?", callback_data="pay:why3")],
+        [InlineKeyboardButton(text="\u2b05\ufe0f Назад", callback_data=back_cb)],
     ])
 
 
-async def build_paywall_text(user_id: int) -> str:
-    """Формирует текст пэйволла: вводный блок + уровни доступа + таймлайн."""
-    total_users = await _get_total_users()
-    NL = "\n"
-    text = (
-        "<b>\U0001f512 \u0414\u043e\u0441\u0442\u0443\u043f \u043a \u0441\u0438\u0441\u0442\u0435\u043c\u0435 \u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043e\u043a</b>" + NL + NL
-        + "\u0411\u0435\u0437 \u0430\u043a\u0442\u0438\u0432\u0430\u0446\u0438\u0438 \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u0442\u043e\u043b\u044c\u043a\u043e \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u043d\u044b\u0439 \u0440\u0435\u0436\u0438\u043c." + NL + NL
-        + "<b>\u0412 \u043b\u044e\u0431\u043e\u043c \u0442\u0430\u0440\u0438\u0444\u0435:</b>" + NL
-        + "\u2022 \u0433\u043e\u0442\u043e\u0432\u044b\u0435 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b" + NL
-        + "\u2022 \u0442\u0435\u0445\u043d\u0438\u043a\u0430 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u044f" + NL
-        + "\u2022 \u0434\u043d\u0435\u0432\u043d\u0438\u043a \u0438 \u0437\u0430\u043c\u0435\u0440\u044b" + NL + NL
-        + "<b>\u0412 \u043f\u043e\u043b\u043d\u043e\u043c \u0434\u043e\u0441\u0442\u0443\u043f\u0435:</b>" + NL
-        + "\u2022 \u0440\u0430\u0441\u0447\u0451\u0442 \u043f\u0438\u0442\u0430\u043d\u0438\u044f (\u041a\u0411\u0416\u0423)" + NL
-        + "\u2022 \u0441\u043c\u0435\u043d\u0430 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u043f\u043e\u0434 \u0446\u0435\u043b\u044c" + NL
-        + "\u2022 \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043d\u043d\u044b\u0435 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0441\u0442\u0438" + NL + NL
-        + f"<b>\U0001f465 \u0423\u0436\u0435 {total_users} \u0447\u0435\u043b\u043e\u0432\u0435\u043a \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u044e\u0442 \u0441\u0438\u0441\u0442\u0435\u043c\u0443.</b>" + NL + NL
-        + "<b>\u0412\u044b\u0431\u0435\u0440\u0438 \u0441\u0432\u043e\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c:</b>" + NL + NL
-        + "\U0001f7e2 <b>\u0411\u0430\u0437\u043e\u0432\u044b\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c</b>" + NL
-        + "\u041f\u043e\u0434\u043e\u0439\u0434\u0451\u0442, \u0435\u0441\u043b\u0438 \u0445\u043e\u0447\u0435\u0448\u044c \u043f\u0440\u043e\u0441\u0442\u043e \u043d\u0430\u0447\u0430\u0442\u044c:" + NL + NL
-        + "\u2022 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043e\u043a" + NL
-        + "\u2022 \u0442\u0435\u0445\u043d\u0438\u043a\u0430 \u0443\u043f\u0440\u0430\u0436\u043d\u0435\u043d\u0438\u0439" + NL
-        + "\u2022 \u0434\u043d\u0435\u0432\u043d\u0438\u043a \u0438 \u0437\u0430\u043c\u0435\u0440\u044b" + NL
-        + "\u2022 3 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043f\u043b\u0430\u043d\u0430" + NL + NL
-        + "\U0001f535 <b>\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c</b>" + NL
-        + "\u041f\u043e\u0434\u0445\u043e\u0434\u0438\u0442, \u0435\u0441\u043b\u0438 \u0445\u043e\u0447\u0435\u0448\u044c \u0440\u0435\u0430\u043b\u044c\u043d\u043e \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441\u0438\u0440\u043e\u0432\u0430\u0442\u044c:" + NL + NL
-        + "\u2022 \u0432\u0441\u0451 \u0438\u0437 \u0431\u0430\u0437\u043e\u0432\u043e\u0433\u043e" + NL
-        + "\u2022 \u043f\u0438\u0442\u0430\u043d\u0438\u0435 (\u041a\u0411\u0416\u0423)" + NL
-        + "\u2022 \u0441\u043c\u0435\u043d\u0430 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b" + NL
-        + "\u2022 10 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043f\u043b\u0430\u043d\u0430" + NL
-        + "\u2022 \u0434\u043e\u0441\u0442\u0443\u043f \u043d\u0430 3 \u043c\u0435\u0441\u044f\u0446\u0430" + NL + NL
-        + "\U0001f7e3 <b>\u041c\u0430\u043a\u0441\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0443\u0440\u043e\u0432\u0435\u043d\u044c</b>" + NL
-        + "\u0415\u0441\u043b\u0438 \u0445\u043e\u0447\u0435\u0448\u044c \u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0431\u0435\u0437 \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u0438\u0439:" + NL + NL
-        + "\u2022 \u0432\u0441\u0451 \u0438\u0437 \u043f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u043e\u0433\u043e" + NL
-        + "\u2022 \u0431\u0435\u0437 \u043b\u0438\u043c\u0438\u0442\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439" + NL
-        + "\u2022 \u0434\u043e\u0441\u0442\u0443\u043f \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430" + NL + NL
-        + "<b>\u0427\u0442\u043e \u043e\u0431\u044b\u0447\u043d\u043e \u043f\u0440\u043e\u0438\u0441\u0445\u043e\u0434\u0438\u0442:</b>" + NL + NL
-        + "\U0001f4c5 <b>\u0427\u0435\u0440\u0435\u0437 1 \u043c\u0435\u0441\u044f\u0446</b>" + NL
-        + "\u2022 \u0442\u044b \u043f\u0440\u0438\u0432\u044b\u043a\u043d\u0435\u0448\u044c \u043a \u0440\u0435\u0436\u0438\u043c\u0443" + NL
-        + "\u2022 \u0440\u0430\u0437\u0431\u0435\u0440\u0451\u0448\u044c\u0441\u044f \u0441 \u0442\u0435\u0445\u043d\u0438\u043a\u043e\u0439" + NL
-        + "\u2022 \u0443\u0432\u0438\u0434\u0438\u0448\u044c \u043f\u0435\u0440\u0432\u044b\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f" + NL + NL
-        + "\U0001f4c5 <b>\u0427\u0435\u0440\u0435\u0437 3 \u043c\u0435\u0441\u044f\u0446\u0430</b>" + NL
-        + "\u2022 \u0444\u043e\u0440\u043c\u0430 \u0441\u0442\u0430\u043d\u0435\u0442 \u0437\u0430\u043c\u0435\u0442\u043d\u043e \u043b\u0443\u0447\u0448\u0435" + NL
-        + "\u2022 \u0432\u044b\u0440\u0430\u0441\u0442\u0443\u0442 \u0441\u0438\u043b\u043e\u0432\u044b\u0435 \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u0435\u043b\u0438" + NL
-        + "\u2022 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0441\u0442\u0430\u0431\u0438\u043b\u044c\u043d\u0430\u044f \u0434\u0438\u0441\u0446\u0438\u043f\u043b\u0438\u043d\u0430" + NL + NL
-        + "\u267e <b>\u041d\u0430\u0432\u0441\u0435\u0433\u0434\u0430</b>" + NL
-        + "\u2022 \u0441\u0438\u0441\u0442\u0435\u043c\u0430 \u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u0441\u044f \u0447\u0430\u0441\u0442\u044c\u044e \u0442\u0432\u043e\u0435\u0433\u043e \u0440\u0435\u0436\u0438\u043c\u0430" + NL
-        + "\u2022 \u0442\u044b \u043d\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u0448\u044c \u043e\u0442 \u0441\u0440\u043e\u043a\u043e\u0432"
+def build_paywall_text(
+    total_users: int,
+    soft_mode: bool = False,
+    has_bonus: bool = False,
+) -> str:
+    """
+    Текст paywall: вступление + уровни доступа + таймлайн + бонус 24ч.
+    Все переносы — через \n (не тройные кавычки, чтобы не было сюрпризов).
+    """
+    soft_line = (
+        "Ок, начнём с базового. "
+        "Полный доступ открывает питание и смену программы.\n\n"
+    ) if soft_mode else ""
+
+    bonus_line = (
+        "\n\n<b>\U0001f381 Бонус при активации сегодня:</b>\n"
+        "+1 дополнительное обновление программы"
+    ) if has_bonus else ""
+
+    return (
+        soft_line
+        + "<b>\U0001f512 Доступ к системе тренировок</b>\n\n"
+        + "Без активации доступен только ограниченный режим.\n\n"
+        + f"<b>\U0001f465 Уже {total_users} человек используют систему.</b>\n\n"
+        + "<b>Выбери свой уровень:</b>\n\n"
+        + "\U0001f7e2 <b>Базовый уровень</b>\n"
+        + "Подойдёт, если хочешь просто начать:\n\n"
+        + "\u2022 программы тренировок\n"
+        + "\u2022 техника упражнений\n"
+        + "\u2022 дневник и замеры\n"
+        + "\u2022 3 обновления плана\n\n"
+        + "\U0001f535 <b>Продвинутый уровень</b>\n"
+        + "Подходит, если хочешь реально прогрессировать:\n\n"
+        + "\u2022 всё из базового\n"
+        + "\u2022 питание (КБЖУ)\n"
+        + "\u2022 смена программы\n"
+        + "\u2022 10 обновлений плана\n"
+        + "\u2022 доступ на 3 месяца\n\n"
+        + "\U0001f7e3 <b>Максимальный уровень</b>\n"
+        + "Если хочешь тренироваться без ограничений:\n\n"
+        + "\u2022 всё из продвинутого\n"
+        + "\u2022 без лимита обновлений\n"
+        + "\u2022 доступ навсегда\n\n"
+        + "<b>Что обычно происходит:</b>\n\n"
+        + "\U0001f4c5 <b>Через 1 месяц</b>\n"
+        + "\u2022 ты привыкнешь к режиму\n"
+        + "\u2022 разберёшься с техникой\n"
+        + "\u2022 увидишь первые изменения\n\n"
+        + "\U0001f4c5 <b>Через 3 месяца</b>\n"
+        + "\u2022 форма станет заметно лучше\n"
+        + "\u2022 вырастут силовые показатели\n"
+        + "\u2022 появится стабильная дисциплина\n\n"
+        + "\u267e\ufe0f <b>Навсегда</b>\n"
+        + "\u2022 система становится частью твоего режима\n"
+        + "\u2022 ты не зависишь от сроков"
+        + bonus_line
     )
-    return text
 
 
-async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
-    text = await build_paywall_text(user_id)
-    kb   = build_tariffs_kb(source=source)
+async def open_upgrade(
+    user_id: int,
+    chat_id: int,
+    bot: Bot,
+    callback: Optional[CallbackQuery] = None,
+    source: str = "",
+    soft_mode: bool = False,
+):
+    """Показывает paywall (с изображением или редактируя сообщение)."""
+    total_users = await _count_users()
+
+    # Проверяем бонус 24ч для пользователя
+    has_bonus = False
+    try:
+        async with db() as conn:
+            async with conn.execute(
+                "SELECT profile_completed_at FROM users WHERE user_id=?", (user_id,)
+            ) as cur:
+                urow = await cur.fetchone()
+        if urow and urow[0]:
+            from datetime import datetime as _dt
+            delta = (_dt.utcnow() - _dt.fromisoformat(urow[0])).total_seconds()
+            has_bonus = delta < 86400
+    except Exception:
+        pass
+
+    back_cb = "nav:back_to_program_tariff" if source == "after_profile" else "pay:back"
+    text = build_paywall_text(total_users, soft_mode=soft_mode, has_bonus=has_bonus)
+    kb = build_tariffs_kb(back_cb=back_cb)
+
     if callback:
         await clean_edit(callback, user_id, text, reply_markup=kb)
     else:
@@ -5237,11 +5282,10 @@ PAYWALL_SECTIONS = {"workouts", "nutrition", "diary", "measures"}
 
 
 async def show_paywall(callback, back_to: str = "nav:menu") -> None:
-    """Показывает полный пэйволл вместо заблокированного раздела."""
+    """Показывает полный paywall вместо заблокированного раздела."""
     uid = callback.from_user.id
-    text = await build_paywall_text(uid)
-    kb   = build_tariffs_kb()
-    await clean_edit(callback, uid, text, reply_markup=kb)
+    chat_id = callback.message.chat.id
+    await open_upgrade(uid, chat_id, bot=None, callback=callback)
     await callback.answer()
 
 
@@ -5518,12 +5562,28 @@ async def open_menu_from_reply(message: Message, state: FSMContext, bot: Bot):
 # ПРОФИЛЬ-МАСТЕР
 # =========================
 async def _show_profile_done_screen(callback: CallbackQuery, uid: int) -> None:
-    """Единый рендер экрана 'Профиль готов!' с выбором тарифа."""
-    text = (
-        "🚀 Профиль готов!\n\n"
-        "Теперь выбери подходящий тариф и начни тренировки 👇"
-    )
-    await clean_edit(callback, uid, text, reply_markup=build_program_tariff_kb())
+    """
+    Запускает premium onboarding: сохраняет profile_completed_at
+    и показывает шаг 1 — стартовый разбор профиля.
+    """
+    from datetime import datetime as _dt
+    now_iso = _dt.utcnow().isoformat()
+    try:
+        async with db() as conn:
+            await conn.execute(
+                "UPDATE users SET profile_completed_at=? WHERE user_id=?",
+                (now_iso, uid),
+            )
+            await conn.commit()
+    except Exception:
+        pass
+
+    profile = await get_user(uid)
+    text = _build_analysis_text(profile)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Продолжить \u2192", callback_data="ob:step2")]
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
 
 
 async def cb_build_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -6257,13 +6317,61 @@ async def cb_check_payment(callback: CallbackQuery, bot: Bot):
             t = TARIFFS[tariff_code]
             a = await get_access(uid)
 
-            await clean_edit(callback, uid,
-                f"✅ Оплата подтверждена!\n"
-                f"Тариф: {t['title']}\n"
-                f"{access_status_str(a)}\n\n"
-                "Теперь иди тренироваться 💪",
-                reply_markup=menu_main_inline_kb()
+            # Бонус 24ч: +1 реген при оплате t3/life в течение суток после анкеты
+            bonus_applied = False
+            if tariff_code in FULL_ACCESS_TARIFFS:
+                try:
+                    async with db() as _conn:
+                        async with _conn.execute(
+                            "SELECT u.profile_completed_at, ac.bonus_granted "
+                            "FROM users u JOIN access ac ON u.user_id=ac.user_id "
+                            "WHERE u.user_id=?", (uid,)
+                        ) as _cur:
+                            _brow = await _cur.fetchone()
+                    if _brow and _brow[0] and not _brow[1]:
+                        from datetime import datetime as _dt
+                        _delta = (_dt.utcnow() - _dt.fromisoformat(_brow[0])).total_seconds()
+                        if _delta < 86400:
+                            async with db() as _conn:
+                                await _conn.execute(
+                                    "UPDATE access "
+                                    "SET plan_regens_left = COALESCE(plan_regens_left,0)+1,"
+                                    "    bonus_granted = 1 "
+                                    "WHERE user_id=?", (uid,)
+                                )
+                                await _conn.commit()
+                            bonus_applied = True
+                            a = await get_access(uid)  # обновляем после начисления
+                except Exception:
+                    pass
+
+            # PRO-экран после оплаты
+            _expires = a.get("expires_at")
+            if _expires:
+                try:
+                    from datetime import datetime as _dt
+                    _access_until = _dt.fromisoformat(_expires).strftime("%d.%m.%Y")
+                except Exception:
+                    _access_until = _expires
+            else:
+                _access_until = "Навсегда"
+            _regens = a.get("plan_regens_left")
+            _regens_str = "Без ограничений" if _regens is None else str(_regens)
+            _u_profile = await get_user(uid)
+            _goal = _u_profile.get("goal") or "—"
+            _bonus_line = "\n\n\U0001f381 <b>Бонус начислен:</b> +1 обновление программы" if bonus_applied else ""
+            _pro_text = (
+                "<b>\U0001f3c6 Доступ активирован</b>\n\n"
+                f"Доступ до: <b>{_access_until}</b>\n"
+                f"Цель: <b>{_goal}</b>\n"
+                f"Обновлений программы: <b>{_regens_str}</b>"
+                "\n\nТеперь можно перейти в меню и начать первую тренировку."
+                + _bonus_line
             )
+            _pro_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="Открыть меню", callback_data="nav:menu")]
+            ])
+            await clean_edit(callback, uid, _pro_text, reply_markup=_pro_kb)
 
             # Уведомляем админа
             if ADMIN_ID:
@@ -7723,34 +7831,130 @@ async def cmd_testpay(message: Message, bot: Bot):
 # РЕГИСТРАЦИЯ ХЕНДЛЕРОВ
 # =========================
 # =========================
-# PAY: CALLBACKS
+# PREMIUM ONBOARDING — helpers
 # =========================
+
+def _build_analysis_text(profile: dict) -> str:
+    """Шаг 1 онбординга: стартовый разбор профиля."""
+    age    = profile.get("age") or "—"
+    weight = profile.get("weight") or "—"
+    freq   = profile.get("freq") or "—"
+    goal_r = (profile.get("goal") or "").lower()
+    exp_r  = (profile.get("exp") or "").lower()
+
+    if any(x in goal_r for x in ("масс", "набор")):
+        progress_line = "+0.3–0.5 кг в месяц при нормальном питании"
+        goal_label = "Набор массы"
+    elif any(x in goal_r for x in ("сушк", "похуд", "cut")):
+        progress_line = "-0.3–0.6 кг в неделю без резких ограничений"
+        goal_label = "Снижение веса"
+    else:
+        progress_line = "первые заметные изменения обычно через 6–8 недель"
+        goal_label = profile.get("goal") or "—"
+
+    if any(x in exp_r for x in ("начинающ", "нет", "low", "новичок")):
+        mistake_line = "без системы сложно понять, что реально работает"
+    elif str(freq) in ("1", "2"):
+        mistake_line = "редкие тренировки замедляют рост"
+    else:
+        mistake_line = "если не вести учёт, прогресс часто теряется"
+
+    return (
+        "<b>\U0001f4ca Твой стартовый разбор</b>\n\n"
+        f"Возраст: <b>{age}</b>\n"
+        f"Вес: <b>{weight} кг</b>\n"
+        f"Цель: <b>{goal_label}</b>\n"
+        f"Тренировок в неделю: <b>{freq}</b>\n\n"
+        "<b>\U0001f4c8 Возможный темп прогресса:</b>\n"
+        f"{progress_line}\n\n"
+        "<b>\U0001f4cc На что стоит обратить внимание:</b>\n"
+        f"{mistake_line}\n\n"
+        "<b>Дальше я сделаю всё по шагам:</b>\n"
+        "\u2022 программа под твой уровень\n"
+        "\u2022 понятная прогрессия\n"
+        "\u2022 техника выполнения\n"
+        "\u2022 отслеживание прогресса"
+    )
+
+
+# =========================
+# PREMIUM ONBOARDING — handlers
+# =========================
+
+async def cb_ob_step2(callback: CallbackQuery, bot: Bot):
+    """Шаг 2: «Важно»."""
+    uid = callback.from_user.id
+    text = (
+        "<b>Важно:</b>\n\n"
+        "Это не случайная программа из интернета.\n"
+        "Система подстраивается под твои данные\n"
+        "и помогает двигаться постепенно и безопасно.\n\n"
+        "Чтобы начать — нужно активировать доступ."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Дальше \u2192", callback_data="ob:step3")]
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+
+
+async def cb_ob_step3(callback: CallbackQuery, bot: Bot):
+    """Шаг 3: выбор формата (полный / базовый)."""
+    uid = callback.from_user.id
+    text = (
+        "<b>Выбери формат:</b>\n\n"
+        "\u2b50 <b>Полный доступ</b> — максимум возможностей\n"
+        "\U0001f642 <b>Базовый доступ</b> — только основные функции"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="\u2b50 Полный доступ", callback_data="premium:full")],
+        [InlineKeyboardButton(text="\U0001f642 Базовый доступ", callback_data="premium:basic")],
+    ])
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    await callback.answer()
+
+
+async def cb_premium_full(callback: CallbackQuery, bot: Bot):
+    """Выбрал полный доступ — показываем paywall без soft_mode."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    await open_upgrade(uid, chat_id, bot=bot, callback=callback, soft_mode=False)
+    await callback.answer()
+
+
+async def cb_premium_basic(callback: CallbackQuery, bot: Bot):
+    """Выбрал базовый — показываем paywall с мягкой строкой."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    await open_upgrade(uid, chat_id, bot=bot, callback=callback, soft_mode=True)
+    await callback.answer()
+
+
+# =========================
+# PAY: callbacks
+# =========================
+
 async def cb_pay_tariff(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    """pay:t1 / pay:t3 / pay:life — транслируем в cb_tariff."""
+    """pay:t1 / pay:t3 / pay:life → перекидываем в cb_tariff."""
     tariff_code = callback.data.split(":")[1]
     callback.data = f"tariff:{tariff_code}"
     await cb_tariff(callback, state, bot)
 
 
 async def cb_pay_why3(callback: CallbackQuery, bot: Bot):
-    """pay:why3 — экран «Почему 3 месяца?»."""
+    """pay:why3 — объяснение почему 3 месяца."""
     uid = callback.from_user.id
-    NL = "\n"
     text = (
-        "<b>\u041f\u043e\u0447\u0435\u043c\u0443 3 \u043c\u0435\u0441\u044f\u0446\u0430 \u2014 \u043e\u043f\u0442\u0438\u043c\u0430\u043b\u044c\u043d\u044b\u0439 \u0432\u044b\u0431\u043e\u0440</b>" + NL + NL
-        + "1 \u043c\u0435\u0441\u044f\u0446 \u2014 \u044d\u0442\u043e \u043d\u0430\u0447\u0430\u043b\u043e \u043f\u0443\u0442\u0438:" + NL
-        + "\u2022 \u043f\u0440\u0438\u0432\u044b\u043a\u0430\u043d\u0438\u0435 \u043a \u0440\u0435\u0436\u0438\u043c\u0443" + NL
-        + "\u2022 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u043e \u0441 \u0442\u0435\u0445\u043d\u0438\u043a\u043e\u0439" + NL
-        + "\u2022 \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u0435\u0440\u0432\u044b\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f" + NL + NL
-        + "<b>\u0417\u0430\u043c\u0435\u0442\u043d\u044b\u0439 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u2014 \u044d\u0442\u043e 6\u201310 \u043d\u0435\u0434\u0435\u043b\u044c \u0441\u0442\u0430\u0431\u0438\u043b\u044c\u043d\u043e\u0439 \u0440\u0430\u0431\u043e\u0442\u044b.</b>" + NL + NL
-        + "3 \u043c\u0435\u0441\u044f\u0446\u0430 \u0434\u0430\u044e\u0442:" + NL
-        + "\u2022 \u043f\u043e\u043b\u043d\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f \u043a \u043f\u0438\u0442\u0430\u043d\u0438\u044e \u0438 \u0441\u043c\u0435\u043d\u0435 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b" + NL
-        + "\u2022 \u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u0432\u0440\u0435\u043c\u0435\u043d\u0438, \u0447\u0442\u043e\u0431\u044b \u0443\u0432\u0438\u0434\u0435\u0442\u044c \u0440\u0435\u0430\u043b\u044c\u043d\u044b\u0439 \u0441\u0434\u0432\u0438\u0433" + NL
-        + "\u2022 10 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043f\u043b\u0430\u043d\u0430 \u0432\u043c\u0435\u0441\u0442\u043e 3"
+        "<b>Почему 3 месяца — хороший выбор</b>\n\n"
+        "Первый месяц — это адаптация:\n"
+        "\u2022 организм привыкает к нагрузке\n"
+        "\u2022 формируется режим\n\n"
+        "Заметные изменения обычно появляются\n"
+        "через 6–10 недель регулярных тренировок.\n\n"
+        "Поэтому 3 месяца помогают увидеть результат\n"
+        "и не останавливаться на старте."
     )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="\u2b05\ufe0f \u041d\u0430\u0437\u0430\u0434 \u043a \u0442\u0430\u0440\u0438\u0444\u0430\u043c", callback_data="nav:upgrade")]
-    ])
+    kb = build_tariffs_kb()
     await clean_edit(callback, uid, text, reply_markup=kb)
     await callback.answer()
 
@@ -7761,6 +7965,7 @@ async def cb_pay_back(callback: CallbackQuery, bot: Bot):
     chat_id = callback.message.chat.id
     await show_main_menu(bot, chat_id, uid)
     await callback.answer()
+
 
 def setup_handlers(dp: Dispatcher):
     from aiogram.types import PreCheckoutQuery
@@ -7794,14 +7999,23 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(profile_field_weight, ProfileFieldEdit.weight)
     dp.message.register(profile_field_limits, ProfileFieldEdit.limits)
 
-    # ЮКасса REST API
-    dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
-    dp.callback_query.register(cb_check_payment, F.data.startswith("check_pay:"))
+    # Premium onboarding
+    dp.callback_query.register(cb_ob_step2,      F.data == "ob:step2")
+    dp.callback_query.register(cb_ob_step3,      F.data == "ob:step3")
+    dp.callback_query.register(cb_premium_full,  F.data == "premium:full")
+    dp.callback_query.register(cb_premium_basic, F.data == "premium:basic")
 
     # Pay: новый стиль кнопок
     dp.callback_query.register(cb_pay_why3,   F.data == "pay:why3")
     dp.callback_query.register(cb_pay_back,   F.data == "pay:back")
-    dp.callback_query.register(cb_pay_tariff, F.data.startswith("pay:") & ~F.data.in_({"pay:why3", "pay:back"}))
+    dp.callback_query.register(
+        cb_pay_tariff,
+        F.data.startswith("pay:") & ~F.data.in_({"pay:why3", "pay:back"}),
+    )
+
+    # ЮКасса REST API
+    dp.callback_query.register(cb_tariff, F.data.startswith("tariff:"))
+    dp.callback_query.register(cb_check_payment, F.data.startswith("check_pay:"))
 
     # Ручное одобрение (запасной вариант)
     dp.callback_query.register(admin_actions, F.data.startswith("admin_approve:") | F.data.startswith("admin_reject:"))
