@@ -76,7 +76,7 @@ TECH_IMAGES: Dict[str, str] = {
     # "pike_pushup":       "media/tech/pike_pushup.jpg",
     # "wall_pushup":       "media/tech/wall_pushup.jpg",
     # "pullup_wide":       "media/tech/pullup_wide.jpg",
-    # "pullup_chinup":       "media/tech/pullup_chinup.jpg",
+    # "pullup_chin":       "media/tech/pullup_chin.jpg",
     # "pullup_narrow":     "media/tech/pullup_narrow.jpg",
     # "squat_bw":          "media/tech/squat_bw.jpg",
     # "bulgarian_bw":      "media/tech/bulgarian_bw.jpg",
@@ -88,10 +88,17 @@ TECH_IMAGES: Dict[str, str] = {
 }
 
 # Словарь MP4-видео для техник упражнений.
-# Приоритет: TECH_VIDEOS (mp4) > TECH_IMAGES (jpg) > TECH_GIFS (gif) > текст.
-# Как добавить видео:
-#   1. Положи файл: media/tech/squat.mp4  (mp4, до ~50 МБ, 480p, до 30 сек)
-#   2. Пропиши путь ниже — хендлеры менять не нужно, заработает автоматически.
+# Приоритет: TECH_VIDEOS (mp4) > TECH[key]["mp4"] > TECH_IMAGES (jpg) > TECH_GIFS > текст.
+#
+# Способы подключить видео к упражнению:
+#   А) (рекомендуется) Добавь в TECH_VIDEOS ниже:
+#        "squat": "media/tech/squat.mp4"
+#   Б) Добавь поле "mp4" прямо в TECH[key]:
+#        "squat": { "title": "...", "mp4": "media/tech/squat.mp4", "text": "..." }
+#   В) TECH_GIFS тоже поддерживает .mp4-пути (send_video автоматически).
+#
+# Требования к файлу: mp4, до ~50 МБ, рекомендуется 480p, до 30 сек.
+# Хендлеры менять не нужно — заработает автоматически.
 TECH_VIDEOS: Dict[str, str] = {
     # ── Ноги / нижний блок ──────────────────────────────────────────────────
     # "squat":               "media/tech/squat.mp4",
@@ -3246,16 +3253,20 @@ async def send_tech(
     """Универсальная отправка техники упражнения.
 
     Приоритет медиа:
-      1. TECH_VIDEOS  (mp4)    — send_video, текст в caption
-      2. TECH_IMAGES  (jpg/png) — send_photo, текст в caption
-      3. TECH_GIFS    (gif)    — send_animation, текст в caption
-      4. только текст          — send_message (graceful fallback)
+      1. TECH_VIDEOS[key]  или  TECH[key]["mp4"]  — send_video (mp4)
+      2. TECH_IMAGES[key]  или  TECH[key]["img"]  — send_photo (jpg/png)
+      3. TECH_GIFS[key]
+           • путь .mp4  → send_video
+           • путь .gif  → send_animation
+      4. только текст — send_message (graceful fallback)
 
     Текст всегда в одном сообщении с медиа — caption обрезается умно по \n.
 
-    Как добавить mp4-видео:
-      1. Положи файл: media/tech/<ключ>.mp4  (до ~50 МБ, 480p, до 30 сек)
-      2. Пропиши в TECH_VIDEOS: "ключ": "media/tech/<ключ>.mp4"
+    Как добавить видео к упражнению (3 способа):
+      А) Положи файл media/tech/<key>.mp4, пропиши в TECH_VIDEOS[key] — приоритет 1.
+      Б) Пропиши путь прямо в TECH[key]["mp4"] = "media/tech/..." — приоритет 1.
+      В) Пропиши в TECH_GIFS[key] = "media/tech/<key>.mp4" — приоритет 3
+         (если нет TECH_VIDEOS и нет TECH_IMAGES для данного ключа).
       Хендлеры менять не нужно — заработает автоматически.
 
     Удаляет предыдущее главное сообщение (чистый чат)."""
@@ -3285,21 +3296,30 @@ async def send_tech(
 
     caption = make_caption(text)
 
-    # ── Вариант 1: MP4 из TECH_VIDEOS ────────────────────────────────────────
-    video_path = TECH_VIDEOS.get(tech_key, "")
-    if video_path and os.path.exists(video_path):
+    # ── Вспомогательная: отправить видео (mp4) ───────────────────────────────
+    async def _try_send_video(path: str) -> bool:
         try:
             m = await bot.send_video(
                 chat_id=chat_id,
-                video=FSInputFile(video_path),
+                video=FSInputFile(path),
                 caption=caption,
                 reply_markup=reply_markup,
             )
             await set_last_bot_msg_id(user_id, m.message_id)
-            return
+            return True
         except Exception as _e:
-            logging.warning(f"[send_tech] send_video failed key={tech_key!r} path={video_path!r}: {_e}")
-            # fallback → gif
+            logging.warning(f"[send_tech] send_video failed key={tech_key!r} path={path!r}: {_e}")
+            return False
+
+    # ── Вариант 1: MP4 из TECH_VIDEOS (внешний словарь — высший приоритет) ───
+    video_path = TECH_VIDEOS.get(tech_key, "")
+    if not video_path:
+        # Проверяем поле "mp4" прямо в словаре TECH (устаревший формат хранения)
+        video_path = tech_item.get("mp4", "")
+    if video_path and os.path.exists(video_path):
+        if await _try_send_video(video_path):
+            return
+        # fallback → картинка
 
     # ── Вариант 2: JPG/PNG из TECH_IMAGES ────────────────────────────────────
     img_path = TECH_IMAGES.get(tech_key, "")
@@ -3318,21 +3338,28 @@ async def send_tech(
         except Exception:
             pass  # fallback → gif → text
 
-    # ── Вариант 3: GIF из TECH_GIFS ──────────────────────────────────────────
+    # ── Вариант 3: GIF/MP4 из TECH_GIFS ──────────────────────────────────────
+    # Если путь оканчивается на .mp4 — отправляем как видео (send_video),
+    # иначе (gif) — send_animation.
     gif_path = TECH_GIFS.get(tech_key, "")
     if gif_path and os.path.exists(gif_path):
-        try:
-            m = await bot.send_animation(
-                chat_id=chat_id,
-                animation=FSInputFile(gif_path),
-                caption=caption,
-                reply_markup=reply_markup,
-            )
-            await set_last_bot_msg_id(user_id, m.message_id)
-            return
-        except Exception as _e:
-            logging.warning(f"[send_tech] send_animation failed key={tech_key!r}: {_e}")
-            # fallback → text
+        if gif_path.lower().endswith(".mp4"):
+            # mp4 в TECH_GIFS → отправляем как видео
+            if await _try_send_video(gif_path):
+                return
+        else:
+            try:
+                m = await bot.send_animation(
+                    chat_id=chat_id,
+                    animation=FSInputFile(gif_path),
+                    caption=caption,
+                    reply_markup=reply_markup,
+                )
+                await set_last_bot_msg_id(user_id, m.message_id)
+                return
+            except Exception as _e:
+                logging.warning(f"[send_tech] send_animation failed key={tech_key!r}: {_e}")
+                # fallback → text
 
     # ── Вариант 4: только текст ───────────────────────────────────────────────
     m = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
@@ -8557,4 +8584,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
