@@ -76,7 +76,7 @@ TECH_IMAGES: Dict[str, str] = {
     # "pike_pushup":       "media/tech/pike_pushup.jpg",
     # "wall_pushup":       "media/tech/wall_pushup.jpg",
     # "pullup_wide":       "media/tech/pullup_wide.jpg",
-    # "pullup_chin":       "media/tech/pullup_chin.jpg",
+    # "pullup_chinup":       "media/tech/pullup_chinup.jpg",
     # "pullup_narrow":     "media/tech/pullup_narrow.jpg",
     # "squat_bw":          "media/tech/squat_bw.jpg",
     # "bulgarian_bw":      "media/tech/bulgarian_bw.jpg",
@@ -8557,3 +8557,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
