@@ -164,7 +164,7 @@ TECH_GIFS = {
     # ── Спина / тяга ────────────────────────────────────────────────────────
     "latpulldown":       "media/tech/latpulldown.mp4",
     "latpulldown_wide":  "media/tech/latpulldown_wide.mp4",
-    "latpulldown_narrow": "media/tech/latpulldown_narrow.mp4",
+    "latpulldown_narrow": "media/tech/latpulldown_narrow.gif",
     "pullup":            "media/tech/pullup.mp4",
     "pullup_chinup":     "media/tech/pullup_chinup.mp4",
     "pullup_wide":       "media/tech/pullup_wide.mp4",
@@ -5137,8 +5137,8 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "Программа тренировок, техника выполнения, план питания и дневник — всё в одном боте. "
         "Бот подстраивается под твой уровень, цель и место тренировок.\n\n"
 
-        f"🟩 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n"
-        "Попробуй и почувствуй разницу:\n"
+        f"🔵 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n\n"
+        "Попробуй и почувствуй разницу:\n\n"
         "• Персональный план тренировок (зал или дома)\n"
         "• Техника каждого упражнения — видео/картинка прямо в тренировке\n"
         "• Дневник тренировок: веса, повторы, история по дням\n"
@@ -5146,15 +5146,15 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "• Обновление программы: 3 раза\n"
         "• Поддержка и FAQ\n\n"
 
-        f"🟦 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n"
-        "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n"
+        f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n\n"
+        "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n\n"
         "• Всё из тарифа «1 месяц»\n"
         "• <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
         "• Обновление программы: 10 раз\n"
         "• Выгоднее, чем 3 раза по «1 месяцу»\n\n"
 
-        f"🟨 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n"
-        "Один раз — пользуйся сколько угодно:\n"
+        f"🟢 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n\n"
+        "Один раз — пользуйся сколько угодно:\n\n"
         "• Полный доступ ко всем функциям без ограничений\n"
         "• Тренировки + питание + дневник + замеры + техники\n"
         "• Обновление программы: безлимит\n"
@@ -5165,9 +5165,9 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🟩 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
-        [InlineKeyboardButton(text=f"🟦 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
-        [InlineKeyboardButton(text=f"🟨 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
+        [InlineKeyboardButton(text=f"🔵 1 месяц — {TARIFFS['t1']['price']}₽", callback_data="tariff:t1")],
+        [InlineKeyboardButton(text=f"🟡 3 месяца — {TARIFFS['t3']['price']}₽ ⭐", callback_data="tariff:t3")],
+        [InlineKeyboardButton(text=f"🟢 Навсегда — {TARIFFS['life']['price']}₽", callback_data="tariff:life")],
         [InlineKeyboardButton(
             text="⬅️ Назад" if source == "after_profile" else "🏠 Меню",
             callback_data="nav:back_to_program_tariff" if source == "after_profile" else "nav:menu"
@@ -7872,3 +7872,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
