@@ -375,7 +375,7 @@ class ProfileWizard(StatesGroup):
     weight = State()
     place = State()
     exp = State()
-    activity = State()
+
     freq = State()
     meals = State()
     limits = State()
@@ -2148,9 +2148,6 @@ def profile_edit_field_kb(u: dict, regens_str: str = "") -> InlineKeyboardMarkup
         ],
         [
             InlineKeyboardButton(text=f"📈 Опыт: {val('exp')}", callback_data="pf:exp"),
-            InlineKeyboardButton(text=f"🏃 Активность: {val('activity')}", callback_data="pf:activity"),
-        ],
-        [
             InlineKeyboardButton(text=f"📅 Трен/нед: {val('freq')}", callback_data="pf:freq"),
             InlineKeyboardButton(text=f"🍽 Приёмов еды: {val('meals')}", callback_data="pf:meals"),
         ],
@@ -2216,18 +2213,10 @@ def kb_freq():
         [InlineKeyboardButton(text="3×/нед", callback_data="p:freq:3"),
          InlineKeyboardButton(text="4×/нед", callback_data="p:freq:4")],
         [InlineKeyboardButton(text="5×/нед", callback_data="p:freq:5")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:activity")],
-    ])
-
-
-def kb_activity():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Низкая (сидячая работа)", callback_data="p:activity:1")],
-        [InlineKeyboardButton(text="Средняя (много хожу)", callback_data="p:activity:2")],
-        [InlineKeyboardButton(text="Высокая (работа на ногах)", callback_data="p:activity:3")],
-        [InlineKeyboardButton(text="Спорт + активная работа", callback_data="p:activity:4")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:exp")],
     ])
+
+
 
 
 def kb_meals():
@@ -5281,8 +5270,6 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
 
 
 def _profile_summary_text(u: dict) -> str:
-    activity_labels = {1: "Низкая", 2: "Средняя", 3: "Высокая", 4: "Спорт + активная"}
-    activity_str = activity_labels.get(u.get("activity"), "—")
     return (
         "⚙️ Профиль\n\n"
         f"Цель: {u.get('goal')}\n"
@@ -5292,7 +5279,6 @@ def _profile_summary_text(u: dict) -> str:
         f"Вес: {u.get('weight')}\n"
         f"Где тренируешься: {u.get('place')}\n"
         f"Опыт: {u.get('exp')}\n"
-        f"Активность: {activity_str}\n"
         f"Тренировки: {u.get('freq')}×/нед\n"
         f"Еда: {u.get('meals')}×/день\n"
         f"Ограничения: {(u.get('limits') or 'нет')}"
@@ -5600,18 +5586,6 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
         await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")]
         ]))
-    elif field == "activity":
-        await state.set_state(ProfileWizard.activity)
-        await state.update_data(editing_field="activity")
-        text = "Уровень активности вне тренировок?"
-        await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Низкая (сидячая работа)", callback_data="p:activity:1")],
-            [InlineKeyboardButton(text="Средняя (много хожу)", callback_data="p:activity:2")],
-            [InlineKeyboardButton(text="Высокая (работа на ногах)", callback_data="p:activity:3")],
-            [InlineKeyboardButton(text="Спорт + активная работа", callback_data="p:activity:4")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
-        ]))
-
     await callback.answer()
 
 
@@ -5714,10 +5688,6 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await state.set_state(ProfileWizard.exp)
         text = _profile_header(7) + "📈 Опыт?"
         await clean_edit(callback, uid, text, reply_markup=kb_exp())
-    elif step == "activity":
-        await state.set_state(ProfileWizard.activity)
-        text = _profile_header(8) + "🏃 Уровень активности вне тренировок?"
-        await clean_edit(callback, uid, text, reply_markup=kb_activity())
     elif step == "freq":
         await state.set_state(ProfileWizard.freq)
         text = _profile_header(9) + "📅 Сколько тренировок в неделю?"
@@ -5872,9 +5842,10 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
             await callback.answer()
             return
 
-        await state.set_state(ProfileWizard.activity)
-        text = _profile_header(8) + "🏃 Уровень активности вне тренировок?"
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_activity())
+        # Новичок — freq уже 3, пропускаем выбор частоты, идём на meals
+        await state.set_state(ProfileWizard.meals)
+        text = _profile_header(9) + "🍽 Сколько раз в день удобно есть?"
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_meals())
         await callback.answer()
         return
 
@@ -5888,35 +5859,11 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await callback.answer()
         return
 
-    await state.set_state(ProfileWizard.activity)
-    text = _profile_header(8) + "🏃 Уровень активности вне тренировок?"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_activity())
+    await state.set_state(ProfileWizard.freq)
+    text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_freq())
     await callback.answer()
 
-
-async def cb_profile_activity(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    v = int(callback.data.split(":")[2])
-    await update_user(callback.from_user.id, activity=v)
-
-    data = await state.get_data()
-    if data.get("editing_field") == "activity":
-        await state.clear()
-        await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
-        await callback.answer()
-        return
-
-    u = await get_user(callback.from_user.id)
-    exp_val = u.get("exp", "")
-    if exp_val == "0":
-        # Новичок — freq уже 3, переходим к meals
-        await state.set_state(ProfileWizard.meals)
-        text = _profile_header(10) + "🍽 Сколько раз в день удобно есть?"
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_meals())
-    else:
-        await state.set_state(ProfileWizard.freq)
-        text = _profile_header(9) + "📅 Сколько тренировок в неделю?"
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_freq())
-    await callback.answer()
 
 
 async def cb_profile_freq(callback: CallbackQuery, state: FSMContext, bot: Bot):
@@ -7761,7 +7708,6 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_support_from_reply, F.text == "🆘 Поддержка")
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
 
-    dp.callback_query.register(cb_profile_activity, F.data.startswith("p:activity:"))
 
     dp.message.register(forward_to_admin)
 
