@@ -3876,7 +3876,7 @@ EXERCISE_TECH_MAP = [
 
     # Трицепс — специфичные перед "разгибани"
     ("разгибание гантели из-за головы", "triceps_oh"),
-    ("французский жим с гантелями", "triceps_oh"),       # ← название из пула → triceps_oh
+    ("Разгибание трицепса из-за головы", "triceps_oh"),       # ← название из пула → triceps_oh
     ("французский жим лёжа", "french_press"),            # ← уникальная
     ("французский жим", "french_press"),               # ← уникальная
     ("трицепс", "triceps"),
@@ -4286,7 +4286,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         ]
         ISO_TRI = [
             "Разгибания на верхнем блоке",    # triceps
-            "Французский жим с гантелями",    # triceps_oh
+            "Разгибание трицепса из-за головы",    # triceps_oh
         ]
         ISO_LEGS = [
             "Сгибания ног в тренажёре",       # legcurl
@@ -8230,3 +8230,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
