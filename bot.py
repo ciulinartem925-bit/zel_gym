@@ -4290,7 +4290,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         ]
         ISO_LEGS = [
             "Сгибания ног в тренажёре",       # legcurl
-            "Подъёмы на носки в тренажёре",   # calves
+            "Подъёмы на носки",   # calves
         ]
         CORE_POOL = [
             "Подъёмы ног в висе",             # hanging_leg_raise
@@ -8230,4 +8230,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
