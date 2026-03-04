@@ -61,7 +61,7 @@ IMAGE_PATHS = {
 # Приоритет над GIF: если здесь есть путь и файл существует — отправляем картинку.
 # Чтобы добавить картинку: создай файл и пропиши путь ниже — хендлеры менять не нужно.
 TECH_IMAGES: Dict[str, str] = {
-    # Формат: "ключ_упражнения": "media/tech/<название>.mp4"
+    # Формат: "ключ_упражнения": "media/tech/<название>.jpg"
     # Примеры (раскомментируй и добавь файл):
     # "squat":          "media/tech/squat.jpg",
     # "bench":          "media/tech/bench.jpg",
@@ -69,6 +69,22 @@ TECH_IMAGES: Dict[str, str] = {
     # "rdl_barbell":    "media/tech/rdl_barbell.jpg",
     # "pullup_wide":    "media/tech/pullup_wide.jpg",
     # "ohp_barbell":    "media/tech/ohp_barbell.jpg",
+    # ── Домашние упражнения (раскомментируй и положи файл) ──────────────────
+    # "pushup_wide":       "media/tech/pushup_wide.jpg",
+    # "pushup_narrow":     "media/tech/pushup_narrow.jpg",
+    # "pushup_elevated":   "media/tech/pushup_elevated.jpg",
+    # "pike_pushup":       "media/tech/pike_pushup.jpg",
+    # "wall_pushup":       "media/tech/wall_pushup.jpg",
+    # "pullup_wide":       "media/tech/pullup_wide.jpg",
+    # "pullup_chin":       "media/tech/pullup_chin.jpg",
+    # "pullup_narrow":     "media/tech/pullup_narrow.jpg",
+    # "squat_bw":          "media/tech/squat_bw.jpg",
+    # "bulgarian_bw":      "media/tech/bulgarian_bw.jpg",
+    # "lunge_bw":          "media/tech/lunge_bw.jpg",
+    # "glute_bridge":      "media/tech/glute_bridge.jpg",
+    # "plank_bw":          "media/tech/plank_bw.jpg",
+    # "leg_raise_lying_bw":"media/tech/leg_raise_lying_bw.jpg",
+    # "crunch_bw":         "media/tech/crunch_bw.jpg",
 }
 
 # Словарь MP4-видео для техник упражнений.
@@ -132,6 +148,22 @@ TECH_VIDEOS: Dict[str, str] = {
     # "core":                "media/tech/core.mp4",
     # "hanging_leg_raise":   "media/tech/hanging_leg_raise.mp4",
     # "ab_rollout":          "media/tech/ab_rollout.mp4",
+    # ── Домашние упражнения (раскомментируй и положи mp4-файл) ──────────────
+    # "pushup_wide":         "media/tech/pushup_wide.mp4",
+    # "pushup_narrow":       "media/tech/pushup_narrow.mp4",
+    # "pushup_elevated":     "media/tech/pushup_elevated.mp4",
+    # "pike_pushup":         "media/tech/pike_pushup.mp4",
+    # "wall_pushup":         "media/tech/wall_pushup.mp4",
+    # "pullup_wide":         "media/tech/pullup_wide.mp4",
+    # "pullup_chin":         "media/tech/pullup_chin.mp4",
+    # "pullup_narrow":       "media/tech/pullup_narrow.mp4",
+    # "squat_bw":            "media/tech/squat_bw.mp4",
+    # "bulgarian_bw":        "media/tech/bulgarian_bw.mp4",
+    # "lunge_bw":            "media/tech/lunge_bw.mp4",
+    # "glute_bridge":        "media/tech/glute_bridge.mp4",
+    # "plank_bw":            "media/tech/plank_bw.mp4",
+    # "leg_raise_lying_bw":  "media/tech/leg_raise_lying_bw.mp4",
+    # "crunch_bw":           "media/tech/crunch_bw.mp4",
 }
 
 TECH_GIFS = {
@@ -223,6 +255,21 @@ TECH_GIFS = {
     # Кор
     "bicycle_crunch":    "media/tech/bicycle_crunch.mp4",
     "russian_twist":     "media/tech/russian_twist.mp4",
+    # ── Домашние упражнения (раскомментируй и положи файл) ──────────────────
+    # "pushup_wide":         "media/tech/pushup_wide.mp4",
+    # "pushup_narrow":       "media/tech/pushup_narrow.mp4",
+    # "pushup_elevated":     "media/tech/pushup_elevated.mp4",
+    # "pike_pushup":         "media/tech/pike_pushup.mp4",
+    # "wall_pushup":         "media/tech/wall_pushup.mp4",
+    # "pullup_chin":         "media/tech/pullup_chin.mp4",
+    # "pullup_narrow":       "media/tech/pullup_narrow.mp4",
+    # "squat_bw":            "media/tech/squat_bw.mp4",
+    # "bulgarian_bw":        "media/tech/bulgarian_bw.mp4",
+    # "lunge_bw":            "media/tech/lunge_bw.mp4",
+    # "glute_bridge":        "media/tech/glute_bridge.mp4",
+    # "plank_bw":            "media/tech/plank_bw.mp4",
+    # "leg_raise_lying_bw":  "media/tech/leg_raise_lying_bw.mp4",
+    # "crunch_bw":           "media/tech/crunch_bw.mp4",
 }
 
 # =========================
