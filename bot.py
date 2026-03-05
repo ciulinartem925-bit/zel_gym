@@ -431,7 +431,7 @@ TECH = {
     # ✅ Новые техники для упражнений без покрытия
     "hanging_leg_raise": {
         "title": "Подъёмы ног в висе",
-        "img": "media/tech/hanging_leg_raise.jpg",
+        "mp4": "media/tech/hanging_leg_raise.mp4",
         "text": (
             "📚 Подъёмы ног в висе (нижний пресс)\n\n"
             "✅ Настройка\n"
@@ -451,7 +451,7 @@ TECH = {
     },
     "leg_raise_lying": {
         "title": "Подъёмы ног лёжа",
-        "img": "media/tech/leg_raise_lying.jpg",
+        "mp4": "media/tech/leg_raise_lying.mp4",
         "text": (
             "📚 Подъёмы ног лёжа (нижний пресс)\n\n"
             "✅ Настройка\n"
@@ -470,7 +470,7 @@ TECH = {
     },
     "ab_crunch": {
         "title": "Скручивания (пресс)",
-        "img": "media/tech/ab_crunch.jpg",
+        "mp4": "media/tech/ab_crunch.mp4",
         "text": (
             "📚 Скручивания (верхний пресс)\n\n"
             "✅ Настройка\n"
@@ -489,7 +489,7 @@ TECH = {
     },
     "ab_rollout": {
         "title": "Ролик для пресса",
-        "img": "media/tech/ab_rollout.jpg",
+        "mp4": "media/tech/ab_rollout.mp4",
         "text": (
             "📚 Ролик для пресса (ab wheel)\n\n"
             "✅ Как делать\n"
@@ -506,7 +506,7 @@ TECH = {
     },
     "side_plank": {
         "title": "Боковая планка",
-        "img": "media/tech/side_plank.jpg",
+        "mp4": "media/tech/side_plank.mp4",
         "text": (
             "📚 Боковая планка (косые мышцы + стабилизация)\n\n"
             "✅ Настройка\n"
@@ -525,7 +525,7 @@ TECH = {
     },
     "elbow_leg_raise": {
         "title": "Подъёмы ног в упоре на локтях",
-        "img": "media/tech/elbow_leg_raise.jpg",
+        "mp4": "media/tech/elbow_leg_raise.mp4",
         "text": (
             "📚 Подъёмы ног в упоре на локтях (нижний пресс)\n\n"
             "✅ Настройка\n"
@@ -563,7 +563,7 @@ TECH = {
     },
     "hyperext": {
         "title": "Гиперэкстензия",
-        "img": "media/tech/hyperext.jpg",
+        "mp4": "media/tech/hyperext.mp4",
         "text": (
             "📚 Гиперэкстензия (поясница + ягодицы)\n\n"
             "✅ Как делать\n"
@@ -579,7 +579,7 @@ TECH = {
     },
     "legcurl": {
         "title": "Сгибания ног",
-        "img": "media/tech/legcurl.jpg",
+        "mp4": "media/tech/legcurl.mp4",
         "text": (
             "📚 Сгибания ног (бицепс бедра)\n\n"
             "✅ Как делать\n"
@@ -595,7 +595,7 @@ TECH = {
     },
     "rowtrain": {
         "title": "Тяга горизонтального блока",
-        "img": "media/tech/latpulldown.jpg",
+        "mp4": "media/tech/latpulldown.mp4",
         "text": (
             "📚 Тяга горизонтального блока (середина спины)\n\n"
             "✅ Настройка\n"
@@ -613,7 +613,7 @@ TECH = {
     },
     "dumbbell_row": {
         "title": "Тяга гантели",
-        "img": "media/tech/latpulldown.jpg",
+        "mp4": "media/tech/latpulldown.mp4",
         "text": (
             "📚 Тяга гантели одной рукой (спина)\n\n"
             "✅ Настройка\n"
@@ -631,7 +631,7 @@ TECH = {
     },
     "good_morning": {
         "title": "Good Morning",
-        "img": "media/tech/good_morning.jpg",
+        "mp4": "media/tech/good_morning.mp4",
         "text": (
             "📚 Good Morning (поясница + задняя поверхность бедра)\n\n"
             "✅ Как делать\n"
@@ -648,7 +648,7 @@ TECH = {
     },
     "face_pull": {
         "title": "Face Pull",
-        "img": "media/tech/face_pull.jpg",
+        "mp4": "media/tech/face_pull.mp4",
         "text": (
             "📚 Face Pull / Тяга к лицу (задняя дельта + ротаторы)\n\n"
             "✅ Как делать\n"
@@ -665,7 +665,7 @@ TECH = {
     },
     "rear_delt": {
         "title": "Задняя дельта",
-        "img": "media/tech/rear_delt.jpg",
+        "mp4": "media/tech/rear_delt.mp4",
         "text": (
             "📚 Задняя дельта (гантели или тренажёр)\n\n"
             "✅ Как делать (гантели в наклоне)\n"
@@ -682,7 +682,7 @@ TECH = {
     },
     "hammer": {
         "title": "Молотки",
-        "img": "media/tech/hammer.jpg",
+        "mp4": "media/tech/hammer.mp4",
         "text": (
             "📚 Молотки (бицепс + брахиалис)\n\n"
             "✅ Как делать\n"
@@ -698,7 +698,7 @@ TECH = {
     },
     "triceps_oh": {
         "title": "Разгибание трицепса из-за головы",
-        "img": "media/tech/triceps_oh.jpg",
+        "mp4": "media/tech/triceps_oh.mp4",
         "text": (
             "📚 Разгибание трицепса из-за головы (длинная головка)\n\n"
             "✅ Как делать\n"
@@ -714,7 +714,7 @@ TECH = {
     },
     "narrow_pushup": {
         "title": "Отжимания узкие (трицепс)",
-        "img": "media/tech/narrow_pushup.jpg",
+        "mp4": "media/tech/narrow_pushup.mp4",
         "text": (
             "📚 Узкие отжимания\n"
             "Зачем: акцент на трицепс (все три головки) + грудь.\n\n"
@@ -742,7 +742,7 @@ TECH = {
     },
     "hack_squat": {
         "title": "Хакк-присед",
-        "img": "media/tech/hack_squat.jpg",
+        "mp4": "media/tech/hack_squat.mp4",
         "text": (
             "📚 Хакк-присед (квадрицепс)\n\n"
             "✅ Как делать\n"
@@ -758,7 +758,7 @@ TECH = {
     },
     "bulgarian": {
         "title": "Болгарские выпады",
-        "img": "media/tech/bulgarian.jpg",
+        "mp4": "media/tech/bulgarian.mp4",
         "text": (
             "📚 Болгарские выпады (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -776,7 +776,7 @@ TECH = {
     },
     "deadlift": {
         "title": "Становая тяга",
-        "img": "media/tech/deadlift.jpg",
+        "mp4": "media/tech/deadlift.mp4",
         "text": (
             "📚 Становая тяга\n"
             "Зачем: заднее бедро, ягодицы, весь разгибатель спины, трапеции.\n"
@@ -806,7 +806,7 @@ TECH = {
     },
     "barbell_row": {
         "title": "Тяга штанги в наклоне",
-        "img": "media/tech/barbell_row.jpg",
+        "mp4": "media/tech/barbell_row.mp4",
         "text": (
             "📚 Тяга штанги в наклоне (середина спины)\n\n"
             "✅ Настройка\n"
@@ -826,7 +826,7 @@ TECH = {
     },
     "ohp_barbell": {
         "title": "Жим штанги стоя (OHP)",
-        "img": "media/tech/ohp_barbell.jpg",
+        "mp4": "media/tech/ohp_barbell.mp4",
         "text": (
             "📚 Жим штанги стоя — Overhead Press\n\n"
             "✅ Настройка\n"
@@ -846,7 +846,7 @@ TECH = {
 
     "squat_barbell": {
         "title": "Присед со штангой",
-        "img": "media/tech/squat_barbell.jpg",
+        "mp4": "media/tech/squat_barbell.mp4",
         "text": (
             "📚 Присед со штангой (квадрицепс + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -869,7 +869,7 @@ TECH = {
     },
     "squat_sumo": {
         "title": "Присед сумо",
-        "img": "media/tech/squat_sumo.jpg",
+        "mp4": "media/tech/squat_sumo.mp4",
         "text": (
             "📚 Присед сумо (приводящие + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -890,7 +890,7 @@ TECH = {
     },
     "bench_dumbbell": {
         "title": "Жим гантелей лёжа",
-        "img": "media/tech/bench_dumbbell.jpg",
+        "mp4": "media/tech/bench_dumbbell.mp4",
         "text": (
             "📚 Жим гантелей лёжа (грудь + трицепс)\n\n"
             "✅ Настройка\n"
@@ -911,7 +911,7 @@ TECH = {
     },
     "bench_machine": {
         "title": "Жим в тренажёре (грудь)",
-        "img": "media/tech/bench_machine.jpg",
+        "mp4": "media/tech/bench_machine.mp4",
         "text": (
             "📚 Жим в тренажёре — грудь\n\n"
             "✅ Настройка\n"
@@ -931,7 +931,7 @@ TECH = {
     },
     "ohp_dumbbell": {
         "title": "Жим гантелей стоя/сидя",
-        "img": "media/tech/ohp_dumbbell.jpg",
+        "mp4": "media/tech/ohp_dumbbell.mp4",
         "text": (
             "📚 Жим гантелей над головой (плечи)\n\n"
             "✅ Настройка\n"
@@ -951,7 +951,7 @@ TECH = {
     },
     "ohp_machine": {
         "title": "Жим в тренажёре вверх",
-        "img": "media/tech/ohp_machine.jpg",
+        "mp4": "media/tech/ohp_machine.mp4",
         "text": (
             "📚 Жим в тренажёре над головой (плечи)\n\n"
             "✅ Настройка\n"
@@ -970,7 +970,7 @@ TECH = {
     },
     "rdl_barbell": {
         "title": "Румынская тяга со штангой",
-        "img": "media/tech/rdl_barbell.jpg",
+        "mp4": "media/tech/rdl_barbell.mp4",
         "text": (
             "📚 Румынская тяга со штангой (задняя поверхность бедра)\n\n"
             "✅ Настройка\n"
@@ -992,7 +992,7 @@ TECH = {
     },
     "rdl_dumbbell": {
         "title": "Румынская тяга с гантелями",
-        "img": "media/tech/rdl_dumbbell.jpg",
+        "mp4": "media/tech/rdl_dumbbell.mp4",
         "text": (
             "📚 Румынская тяга с гантелями (бёдра + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1012,7 +1012,7 @@ TECH = {
     },
     "lunge_barbell": {
         "title": "Выпады со штангой",
-        "img": "media/tech/lunge_barbell.jpg",
+        "mp4": "media/tech/lunge_barbell.mp4",
         "text": (
             "📚 Выпады со штангой (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1032,7 +1032,7 @@ TECH = {
     },
     "lunge_dumbbell": {
         "title": "Выпады с гантелями",
-        "img": "media/tech/lunge_dumbbell.jpg",
+        "mp4": "media/tech/lunge_dumbbell.mp4",
         "text": (
             "📚 Выпады с гантелями (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1052,7 +1052,7 @@ TECH = {
     },
     "lunge_walking": {
         "title": "Выпады ходьбой",
-        "img": "media/tech/lunge_walking.jpg",
+        "mp4": "media/tech/lunge_walking.mp4",
         "text": (
             "📚 Выпады ходьбой (динамика + координация)\n\n"
             "✅ Как делать\n"
@@ -1069,6 +1069,7 @@ TECH = {
     },
     "lunge_bw": {
         "title": "Выпады (свой вес)",
+        "mp4": "media/tech/lunge_bw.mp4",
         "text": (
             "📚 Выпады (ноги + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1087,7 +1088,7 @@ TECH = {
     },
     "pullup_chinup": {
         "title": "Подтягивания обратным хватом",
-        "img": "media/tech/pullup_chinup.jpg",
+        "mp4": "media/tech/pullup_chinup.mp4",
         "text": (
             "📚 Подтягивания обратным хватом (бицепс + спина)\n\n"
             "✅ Как делать\n"
@@ -1104,7 +1105,7 @@ TECH = {
     },
     "pullup_wide": {
         "title": "Подтягивания широким хватом",
-        "img": "media/tech/pullup_wide.jpg",
+        "mp4": "media/tech/pullup_wide.mp4",
         "text": (
             "📚 Подтягивания широким хватом (широчайшие мышцы)\n\n"
             "✅ Как делать\n"
@@ -1121,7 +1122,7 @@ TECH = {
     },
     "latpulldown_wide": {
         "title": "Тяга верхнего блока широким хватом",
-        "img": "media/tech/latpulldown_wide.jpg",
+        "mp4": "media/tech/latpulldown_wide.mp4",
         "text": (
             "📚 Тяга верхнего блока широким хватом\n\n"
             "✅ Настройка\n"
@@ -1140,7 +1141,7 @@ TECH = {
     },
     "latpulldown_narrow": {
         "title": "Тяга верхнего блока узким хватом",
-        "img": "media/tech/latpulldown_narrow.jpg",
+        "mp4": "media/tech/latpulldown_narrow.mp4",
         "text": (
             "📚 Тяга верхнего блока узким/нейтральным хватом\n\n"
             "✅ Настройка\n"
@@ -1159,7 +1160,7 @@ TECH = {
     },
     "incline_press_barbell": {
         "title": "Жим под углом (штанга)",
-        "img": "media/tech/incline_press_barbell.jpg",
+        "mp4": "media/tech/incline_press_barbell.mp4",
         "text": (
             "📚 Жим штанги под углом (верх груди)\n\n"
             "✅ Настройка\n"
@@ -1178,7 +1179,7 @@ TECH = {
     },
     "incline_press_dumbbell": {
         "title": "Жим под углом (гантели)",
-        "img": "media/tech/incline_press_dumbbell.jpg",
+        "mp4": "media/tech/incline_press_dumbbell.mp4",
         "text": (
             "📚 Жим гантелей под углом (верх груди)\n\n"
             "✅ Настройка\n"
@@ -1197,7 +1198,7 @@ TECH = {
     },
     "biceps_barbell": {
         "title": "Сгибания со штангой (бицепс)",
-        "img": "media/tech/biceps_barbell.jpg",
+        "mp4": "media/tech/biceps_barbell.mp4",
         "text": (
             "📚 Сгибания со штангой — бицепс\n\n"
             "✅ Как делать\n"
@@ -1215,7 +1216,7 @@ TECH = {
     },
     "biceps_dumbbell": {
         "title": "Сгибания с гантелями (бицепс)",
-        "img": "media/tech/biceps_dumbbell.jpg",
+        "mp4": "media/tech/biceps_dumbbell.mp4",
         "text": (
             "📚 Сгибания с гантелями — бицепс\n\n"
             "✅ Как делать\n"
@@ -1232,7 +1233,7 @@ TECH = {
     },
     "deadlift_sumo": {
         "title": "Становая тяга сумо",
-        "img": "media/tech/deadlift_sumo.jpg",
+        "mp4": "media/tech/deadlift_sumo.mp4",
         "text": (
             "📚 Становая тяга сумо\n\n"
             "✅ Настройка\n"
@@ -1253,7 +1254,7 @@ TECH = {
     },
     "chest_fly": {
         "title": "Разведения на грудь",
-        "img": "media/tech/chest_fly.jpg",
+        "mp4": "media/tech/chest_fly.mp4",
         "text": (
             "📚 Разведения гантелей лёжа (грудь)\n\n"
             "✅ Настройка\n"
@@ -1581,6 +1582,7 @@ TECH = {
     # ─── ДОМАШНИЕ УПРАЖНЕНИЯ (свой вес) ──────────────────────────────────────
     "pushup_wide": {
         "title": "Отжимания широким хватом",
+        "mp4": "media/tech/pushup_wide.mp4",
         "text": (
             "📚 Отжимания широким хватом\n\n"
             "✅ Настройка\n"
@@ -1599,6 +1601,7 @@ TECH = {
     },
     "pushup_elevated": {
         "title": "Отжимания с ногами на возвышенности",
+        "mp4": "media/tech/pushup_elevated.mp4",
         "text": (
             "📚 Отжимания с ногами на возвышенности\n\n"
             "✅ Настройка\n"
@@ -1617,6 +1620,7 @@ TECH = {
     },
     "pike_pushup": {
         "title": "Пайк отжимания",
+        "mp4": "media/tech/pike_pushup.mp4",
         "text": (
             "📚 Пайк отжимания (плечи)\n\n"
             "✅ Настройка\n"
@@ -1635,6 +1639,7 @@ TECH = {
     },
     "wall_pushup": {
         "title": "Отжимания у стены (плечи)",
+        "mp4": "media/tech/wall_pushup.mp4",
         "text": (
             "📚 Отжимания в стойке у стены\n\n"
             "✅ Настройка\n"
@@ -1653,6 +1658,7 @@ TECH = {
     },
     "pullup_wide": {
         "title": "Подтягивания широким хватом",
+        "mp4": "media/tech/pullup_wide.mp4",
         "text": (
             "📚 Подтягивания широким хватом\n\n"
             "✅ Настройка\n"
@@ -1671,6 +1677,7 @@ TECH = {
     },
     "pullup_narrow": {
         "title": "Подтягивания узким хватом",
+        "mp4": "media/tech/pullup_narrow.mp4",
         "text": (
             "📚 Подтягивания узким хватом\n\n"
             "✅ Настройка\n"
@@ -1689,6 +1696,7 @@ TECH = {
     },
     "squat_bw": {
         "title": "Приседания (свой вес)",
+        "mp4": "media/tech/squat_bw.mp4",
         "text": (
             "📚 Приседания (собственный вес)\n\n"
             "✅ Настройка\n"
@@ -1708,6 +1716,7 @@ TECH = {
     },
     "glute_bridge": {
         "title": "Ягодичный мост",
+        "mp4": "media/tech/glute_bridge.mp4",
         "text": (
             "📚 Ягодичный мост (ягодицы + задняя поверхность бедра)\n\n"
             "✅ Настройка\n"
@@ -1729,6 +1738,7 @@ TECH = {
 
     "calves_machine": {
         "title": "Подъёмы на носки в тренажёре",
+        "mp4": "media/tech/calves_machine.mp4",
         "text": (
             "📚 Подъёмы на носки в тренажёре (икроножные)\n\n"
             "✅ Настройка\n"
@@ -1751,6 +1761,7 @@ TECH = {
     },
     "calves_standing": {
         "title": "Подъёмы на носки стоя",
+        "mp4": "media/tech/calves_standing.mp4",
         "text": (
             "📚 Подъёмы на носки стоя (икроножные — свой вес)\n\n"
             "✅ Настройка\n"
@@ -1770,6 +1781,7 @@ TECH = {
     },
     "bulgarian_dumbbell": {
         "title": "Болгарские выпады с гантелями",
+        "mp4": "media/tech/bulgarian_dumbbell.mp4",
         "text": (
             "📚 Болгарские выпады с гантелями (квадрицепс + ягодицы)\n\n"
             "✅ Настройка\n"
@@ -1790,6 +1802,7 @@ TECH = {
     },
     "glute_bridge_single": {
         "title": "Ягодичный мост на одной ноге",
+        "mp4": "media/tech/glute_bridge_single.mp4",
         "text": (
             "📚 Ягодичный мост на одной ноге (ягодицы — продвинутый)\n\n"
             "✅ Настройка\n"
@@ -1811,6 +1824,7 @@ TECH = {
     },
     "lateralraise_dumbbell": {
         "title": "Разведения гантелей в стороны",
+        "mp4": "media/tech/lateralraise_dumbbell.mp4",
         "text": (
             "📚 Разведения гантелей в стороны (средняя дельта)\n\n"
             "✅ Настройка\n"
@@ -1831,6 +1845,7 @@ TECH = {
     },
     "ohp_dumbbell_sitting": {
         "title": "Жим гантелей сидя",
+        "mp4": "media/tech/ohp_dumbbell_sitting.mp4",
         "text": (
             "📚 Жим гантелей сидя (плечи — изолированно)\n\n"
             "✅ Настройка\n"
@@ -1852,6 +1867,7 @@ TECH = {
     },
     "planks_static": {
         "title": "Планка (статика)",
+        "mp4": "media/tech/planks_static.mp4",
         "text": (
             "📚 Планка статическая (кор — зал)\n\n"
             "✅ Настройка\n"
@@ -1873,6 +1889,7 @@ TECH = {
     },
     "rear_delt_machine": {
         "title": "Задняя дельта в тренажёре",
+        "mp4": "media/tech/rear_delt_machine.mp4",
         "text": (
             "📚 Задняя дельта в тренажёре (peck deck reverse)\n\n"
             "✅ Настройка\n"
@@ -1894,6 +1911,7 @@ TECH = {
     },
     "crossover_chest": {
         "title": "Кроссовер",
+        "mp4": "media/tech/crossover_chest.mp4",
         "text": (
             "📚 Кроссовер (изоляция груди — кабельный тренажёр)\n\n"
             "✅ Настройка\n"
@@ -1916,6 +1934,7 @@ TECH = {
 
     "cable_crunch": {
         "title": "Молитва",
+        "mp4": "media/tech/cable_crunch.mp4",
         "text": (
             "📚 Молитва / Кранч на блоке (верхний пресс)\n\n"
             "✅ Настройка\n"
@@ -1937,6 +1956,7 @@ TECH = {
     },
     "diamond_pushup": {
         "title": "Алмазные отжимания",
+        "mp4": "media/tech/diamond_pushup.mp4",
         "text": (
             "📚 Алмазные отжимания (трицепс + грудь)\n\n"
             "✅ Настройка\n"
@@ -7866,3 +7886,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
