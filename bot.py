@@ -1436,36 +1436,6 @@ TECH = {
             "Контролируй опускание — это половина работы."
         )
     },
-    # ── Отжимания с ногами на возвышении (грудь) ────────────────────────────
-    "incline_pushup": {
-        "title": "Отжимания с ногами на возвышении (грудь)",
-        "mp4": "media/tech/pushup_elevated.mp4",
-        "text": (
-            "📚 Отжимания с ногами на возвышении (акцент на верх груди)\n"
-            "Зачем: нагружает верхний пучок груди и передние дельты, как жим под углом вверх.\n\n"
-            "✅ Настройка\n"
-            "• Ноги на скамье, стуле или другом возвышении (30–60 см)\n"
-            "• Ладони на полу чуть шире плеч — руки строго под плечами\n"
-            "• Тело — прямая наклонная линия от головы до пяток\n"
-            "• Пресс и ягодицы напряжены на протяжении всего подхода\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — медленно (2–3 сек) опускай грудь к полу\n"
-            "2. Локти идут под углом ~45° к корпусу, не в стороны\n"
-            "3. Грудь почти касается пола — без отбива\n"
-            "4. Пауза 1 сек внизу — верх груди под нагрузкой\n"
-            "5. Выдох — выжимай пол руками, сохраняй тело прямым\n"
-            "6. Наверху не разгибай локти «в замок»\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Таз торчит вверх — напряги кор, опусти бёдра\n"
-            "• Поясница провисает — включи пресс сильнее\n"
-            "• Голова смотрит вниз — взгляд чуть вперёд, шея нейтральна\n"
-            "• Локти 90° в стороны — снижай угол, это нагружает плечевой сустав\n\n"
-            "💡 Подсказки\n"
-            "Чем выше ноги — тем сильнее акцент на верх груди и передние дельты.\n"
-            "Для новичков: начни с возвышения 20–30 см и постепенно повышай.\n"
-            "Паузы внизу и медленное опускание — в разы увеличивают нагрузку."
-        )
-    },
     # ── Разгибания ног в тренажёре ───────────────────────────────────────────
     "leg_extension": {
         "title": "Разгибания ног в тренажёре",
@@ -2303,7 +2273,6 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
-    rows.append([InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="workout:progress_guide")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -4196,59 +4165,59 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         ]
 
     else:
-        # ══ ДОМА: только упражнения с собственным весом ══════════════════════
-        # Без гантелей, штанги и тренажёров
+        # ══ ДОМА: WHITELIST упражнений для генерации ═════════════════════════
 
         BASE_SQUAT = [
-            "Приседания (собственный вес)",            # squat_bw ★
-            "Выпады",                                  # lunge_bw
-            "Болгарские приседания",                   # bulgarian_bw
+            "Приседания (собственный вес)",   # squat_bw ★
+            "Болгарские приседания",          # bulgarian_bw
+            "Выпады",                         # lunge_bw
         ]
         BASE_HINGE = [
-            "Ягодичный мост (свой вес)",               # glute_bridge_bw ★
-            "Ягодичный мост на одной ноге",            # glute_bridge_single
-            "Гиперэкстензия на полу",                  # hyperext_floor
+            "Ягодичный мост",                 # glute_bridge ★
+            "Румынская тяга с гантелями",      # rdl_dumbbell
+            "Гиперэкстензия на полу",         # hyperext
         ]
         BASE_HPUSH = [
-            "Отжимания",                               # pushup ★
-            "Отжимания широким хватом",                # pushup_wide
-            "Отжимания с ногами на возвышенности",     # pushup_elevated
-            "Алмазные отжимания",                      # diamond_pushup
+            "Отжимания",                      # pushup ★
+            "Отжимания широким хватом",       # pushup_wide
+            "Отжимания с ногами на возвышенности",  # pushup_elevated
         ]
         BASE_HPULL = [
-            "Горизонтальные подтягивания",             # horizontal_pullup ★
+            "Горизонтальные подтягивания",    # pullup ★
+            "Тяга гантели одной рукой",       # dumbbell_row
         ]
         BASE_VPULL = [
-            "Подтягивания широким хватом",             # pullup_wide ★
-            "Подтягивания обратным хватом",            # pullup_chinup
-            "Подтягивания узким хватом",               # pullup_narrow
+            "Подтягивания широким хватом",    # pullup_wide ★
+            "Подтягивания обратным хватом",   # pullup_chin
+            "Подтягивания узким хватом",      # pullup_narrow
         ]
         BASE_VPUSH = [
-            "Пайк отжимания",                          # pike_pushup (плечи, свой вес)
+            "Жим гантелей сидя",              # ohp_dumbbell ★
         ]
         ISO_CHEST = [
-            "Отжимания узким хватом",                  # narrow_pushup
-            "Алмазные отжимания",                      # diamond_pushup
+            "Отжимания узким хватом",         # pushup_narrow
+            "Алмазные отжимания",             # diamond_pushup
         ]
         ISO_SHOULD = [
-            "Пайк отжимания",                          # pike_pushup
+            "Разведения гантелей в стороны",  # lateralraise
+            "Тяга резинки к лицу",            # face_pull
         ]
         ISO_BI = [
-            "Подтягивания обратным хватом",            # pullup_chinup (бицепс-акцент)
+            "Сгибания гантелей стоя",         # biceps
+            "Молотки с гантелями",            # hammer
         ]
         ISO_TRI = [
-            "Отжимания узкие",                         # narrow_pushup
-            "Алмазные отжимания",                      # diamond_pushup
+            "Отжимания узкие",                # narrow_pushup
+            "Разгибание гантели из-за головы",# triceps_oh
         ]
         ISO_LEGS = [
-            "Ягодичный мост на одной ноге",            # glute_bridge_single
-            "Подъёмы на носки стоя",                   # calves_standing
+            "Ягодичный мост на одной ноге",   # hinge
+            "Подъёмы на носки стоя",          # calves
         ]
         CORE_POOL = [
-            "Планка",                                  # planks_static
-            "Боковая планка",                          # side_plank
-            "Скручивания",                             # ab_crunch
-            "Подъём ног лёжа",                         # leg_raise_lying
+            "Планка",                         # plank_bw
+            "Подъём ног лёжа",                # leg_raise_lying_bw
+            "Скручивания",                    # crunch_bw
         ]
 
     # Фильтры ограничений
@@ -4495,12 +4464,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         5: "Суббота",
     }
 
-    # Кешируем тело тренировки для каждого типа дня — чтобы одинаковые
-    # типы (например, два UPPER в Верх/Низ) имели одинаковые упражнения.
-    kind_body_cache: Dict[str, str] = {}
-    for kind in set(template):
-        kind_body_cache[kind] = "\n".join(day_block(kind))
-
     days: Dict[str, str] = {}
     for d in range(1, f + 1):
         kind = template[d - 1]
@@ -4529,7 +4492,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 f"⏱ ~45–60 мин\n\n"
             )
 
-        body = kind_body_cache[kind]  # используем кеш — одинаковые дни = одинаковые упражнения
+        body = "\n".join(day_block(kind))
         days[str(d)] = header + body
 
     plan_struct = {
@@ -6978,40 +6941,6 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
         await callback.answer(f"{'✅' if ex_idx in done else '↩️'} {done_count}/{total}")
 
 
-async def cb_workout_progress_guide(callback: CallbackQuery, bot: Bot):
-    """Объяснение прогрессии нагрузки."""
-    text = (
-        "📈 Как прогрессировать\n\n"
-        "Правило простое: когда упражнение становится лёгким — усложняй.\n\n"
-
-        "1️⃣ Дошёл до верхней границы повторений?\n"
-        "   Например, делаешь 10 из 6–10 повторений — это сигнал.\n"
-        "   → Добавь 1–2 повторения в следующей тренировке\n\n"
-
-        "2️⃣ Уже делаешь все подходы с запасом?\n"
-        "   → Добавь ещё один подход (например, с 3 до 4)\n\n"
-
-        "3️⃣ Подходы и повторения легко выходят?\n"
-        "   → Переходи на более сложный вариант упражнения:\n"
-        "   • Отжимания → с ногами на возвышенности\n"
-        "   • Приседания → болгарские выпады → пистолетик\n"
-        "   • Подтягивания → с паузой вверху → медленный негатив\n"
-        "   • Ягодичный мост → на одной ноге\n"
-        "   • Планка → боковая планка → с подъёмом ноги\n\n"
-
-        "4️⃣ В зале — увеличивай вес:\n"
-        "   → Добавляй 2.5–5 кг когда выполняешь все повторения чисто\n\n"
-
-        "⚠️ Не гонись за весом — гонись за техникой.\n"
-        "Прогресс = регулярность + постепенное усложнение. 💪"
-    )
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")]
-    ])
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb)
-    await callback.answer()
-
-
 async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
     """Статистика тренировок: дни по порядку + закрытие недели."""
     uid = callback.from_user.id
@@ -7992,7 +7921,6 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_workout_ex_done, F.data.startswith("wex:done:"))
     dp.callback_query.register(cb_workout_ex_tech, F.data.startswith("wex:tech:"))
     dp.callback_query.register(cb_workout_rebuild, F.data == "workout:rebuild")
-    dp.callback_query.register(cb_workout_progress_guide, F.data == "workout:progress_guide")
 
     dp.message.register(cmd_testpay, Command("testpay"))
     dp.message.register(cmd_posts, Command("posts"))
@@ -8168,4 +8096,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
