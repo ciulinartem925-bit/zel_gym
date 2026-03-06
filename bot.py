@@ -188,7 +188,6 @@ TECH_GIFS = {
     "legcurl":           "media/tech/legcurl.mp4",
     "hyperext":          "media/tech/hyperext.mp4",
     # ── Грудь / жим ─────────────────────────────────────────────────────────
-    "bench_barbell":     "media/tech/bench_barbell.mp4",
     "bench_dumbbell":    "media/tech/bench_dumbbell.mp4",
     "bench_machine":     "media/tech/bench_machine.mp4",
     "incline_press_barbell":  "media/tech/incline_press_barbell.mp4",
@@ -200,7 +199,6 @@ TECH_GIFS = {
     "pullup_chinup":     "media/tech/pullup_chinup.mp4",
     "pullup_wide":       "media/tech/pullup_wide.mp4",
     "rowtrain":          "media/tech/rowtrain.mp4",
-    "horizontal_pullup": "media/tech/horizontal_pullup.mp4",
     "dumbbell_row":      "media/tech/dumbbell_row.mp4",
     "barbell_row":       "media/tech/barbell_row.mp4",
     "face_pull":         "media/tech/face_pull.mp4",
@@ -218,18 +216,15 @@ TECH_GIFS = {
     # ── Бицепс / трицепс ────────────────────────────────────────────────────
     "biceps_barbell":    "media/tech/biceps_barbell.mp4",
     "hammer":            "media/tech/hammer.mp4",
-    "triceps_oh_single": "media/tech/triceps_oh_single.mp4",
     "triceps_oh":        "media/tech/triceps_oh.mp4",
-    "dips":             "media/tech/dips.mp4",
     "narrow_pushup":     "media/tech/narrow_pushup.mp4",
     # ── Кор / пресс ─────────────────────────────────────────────────────────
-    "glute_bridge_bw":   "media/tech/glute_bridge_bw.mp4",
-    "hyperext_floor":    "media/tech/hyperext_floor.mp4",
     "side_plank":        "media/tech/side_plank.mp4",
     "hanging_leg_raise": "media/tech/hanging_leg_raise.mp4",
     "leg_raise_lying":   "media/tech/leg_raise_lying.mp4",
     "elbow_leg_raise":   "media/tech/elbow_leg_raise.mp4",
     "ab_crunch":         "media/tech/ab_crunch.mp4",
+    "ab_rollout":        "media/tech/ab_rollout.mp4",
     # ── Разное ──────────────────────────────────────────────────────────────
     "pushup":            "media/tech/pushup.mp4",  # "row" = отжимания (так в файле)
     "pushup_elevated":   "media/tech/pushup_elevated.mp4",
@@ -244,9 +239,7 @@ TECH_GIFS = {
     "arnold_press":      "media/tech/arnold_press.mp4",
     "front_raise":       "media/tech/front_raise.mp4",
     # Руки
-    "french_press_barbell":  "media/tech/french_press_barbell.mp4",
-    "french_press_dumbbell": "media/tech/french_press_dumbbell.mp4",
-    "triceps_cable":         "media/tech/triceps_cable.mp4",
+    "french_press":      "media/tech/french_press.mp4",
     "concentration_curl":"media/tech/concentration_curl.mp4",
     # Кор
     "bicycle_crunch":    "media/tech/bicycle_crunch.mp4",
@@ -285,7 +278,6 @@ EXERCISE_NAMES = {
     "legcurl":           "Сгибания ног",
     "hyperext":          "Гиперэкстензия",
     # Грудь / жим
-    "bench_barbell":     "Жим штанги лёжа",
     "bench_dumbbell":    "Жим гантелей лёжа",
     "bench_machine":     "Жим в тренажёре (грудь)",
     "incline_press_barbell":  "Жим под углом (штанга)",
@@ -297,7 +289,6 @@ EXERCISE_NAMES = {
     "pullup_chinup":     "Подтягивания обратным хватом",
     "pullup_wide":       "Подтягивания широким хватом",
     "rowtrain":          "Тяга горизонтального блока",
-    "horizontal_pullup": "Горизонтальные подтягивания",
     "dumbbell_row":      "Тяга гантели",
     "barbell_row":       "Тяга штанги в наклоне",
     "face_pull":         "Face Pull",
@@ -315,18 +306,15 @@ EXERCISE_NAMES = {
     # Бицепс / трицепс
     "biceps_barbell":    "Сгибания со штангой (бицепс)",
     "hammer":            "Молотки",
-    "triceps_oh_single": "Разгибание гантели из-за головы",
     "triceps_oh":        "Разгибание трицепса из-за головы",
-    "dips":             "Отжимания на брусьях",
     "narrow_pushup":     "Отжимания узкие",
     # Кор / пресс
-    "glute_bridge_bw":   "Ягодичный мост (свой вес)",
-    "hyperext_floor":    "Гиперэкстензия на полу",
     "side_plank":        "Боковая планка",
     "hanging_leg_raise": "Подъёмы ног в висе",
     "leg_raise_lying":   "Подъёмы ног лёжа",
     "elbow_leg_raise":   "Подъёмы ног в упоре на локтях",
     "ab_crunch":         "Скручивания (пресс)",
+    "ab_rollout":        "Ролик для пресса",
     # Разное
     "pushup_elevated":   "Отжимания с ногами на возвышении",
     # Ноги — изолирующие
@@ -342,9 +330,7 @@ EXERCISE_NAMES = {
     "arnold_press":      "Арнольд-жим",
     "front_raise":       "Подъёмы перед собой",
     # Руки
-    "french_press_barbell":  "Французский жим лёжа (штанга)",
-    "french_press_dumbbell": "Французский жим лёжа (гантели)",
-    "triceps_cable":         "Разведение в блоке на трицепс",
+    "french_press":      "Французский жим лёжа",
     "concentration_curl":"Концентрированные сгибания",
     # Кор
     "bicycle_crunch":    "Велосипед",
@@ -408,6 +394,7 @@ class ProfileWizard(StatesGroup):
 
     freq = State()
     meals = State()
+    activity_level = State()
     limits = State()
 
 
@@ -501,6 +488,23 @@ TECH = {
             "Скручивание — это короткое движение, не подъём корпуса."
         )
     },
+    "ab_rollout": {
+        "title": "Ролик для пресса",
+        "mp4": "media/tech/ab_rollout.mp4",
+        "text": (
+            "📚 Ролик для пресса (ab wheel)\n\n"
+            "✅ Как делать\n"
+            "1) Стоя на коленях, ролик перед тобой.\n"
+            "2) Медленно катись вперёд — спина прямая, пресс напряжён.\n"
+            "3) Катись до предела с ровной спиной, пауза.\n"
+            "4) Тяни ролик обратно прессом, не поясницей.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Поясница провисает → катись меньше, пока пресс не окрепнет.\n"
+            "• Рывок обратно → медленнее, используй пресс.\n\n"
+            "💡 Прогрессия\n"
+            "Начни с короткой амплитудой. Цель — полное выкатывание с прямым телом."
+        )
+    },
     "side_plank": {
         "title": "Боковая планка",
         "mp4": "media/tech/side_plank.mp4",
@@ -574,32 +578,6 @@ TECH = {
             "Чувствуешь ягодицы больше, чем поясницу? Значит, делаешь правильно."
         )
     },
-    "hyperext_floor": {
-        "title": "Гиперэкстензия на полу",
-        "mp4": "media/tech/hyperext_floor.mp4",
-        "text": (
-            "📚 Гиперэкстензия на полу (поясница + ягодицы)\n"
-            "Зачем: укрепляет разгибатели спины и ягодицы без тренажёра, для дома.\n\n"
-            "✅ Настройка\n"
-            "• Лечь лицом вниз, руки за голову или вытянуты вперёд\n"
-            "• Ноги прямые и плотно прижаты к полу, носки тянутся назад\n"
-            "• Взгляд вниз — шея нейтральна, не запрокидывай голову\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — напряги ягодицы и мышцы спины\n"
-            "2. Выдох — одновременно отрывай грудь и плечи от пола\n"
-            "3. Поднимай до ощущения сокращения в пояснице и ягодицах\n"
-            "4. Пауза 1–2 сек в верхней точке — сожми ягодицы\n"
-            "5. Медленно опускайся, не «роняй» корпус\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Запрокидываешь голову → взгляд вниз, шея на одной линии с позвоночником\n"
-            "• Отрываешь ноги от пола → прижми их плотно или попроси кого-то удержать\n"
-            "• Слишком высокий подъём → не нужно уходить выше горизонтали\n"
-            "• Руки тянут шею → убери напряжение из рук, они просто лежат за головой\n\n"
-            "💡 Подсказки\n"
-            "Руки вытянуты вперёд — сложнее. Руки за головой — немного легче.\n"
-            "Чередуй: один подход — акцент на поясницу, второй — на ягодицы (чуть шире ноги)."
-        )
-    },
     "legcurl": {
         "title": "Сгибания ног",
         "mp4": "media/tech/legcurl.mp4",
@@ -632,34 +610,6 @@ TECH = {
             "• Тянешь руками → думай «свожу лопатки».\n\n"
             "💡 Подсказка\n"
             "Нейтральный хват (ладони друг к другу) — комфортнее для плеч."
-        )
-    },
-    "horizontal_pullup": {
-        "title": "Горизонтальные подтягивания",
-        "mp4": "media/tech/horizontal_pullup.mp4",
-        "text": (
-            "📚 Горизонтальные подтягивания (спина + бицепс)\n"
-            "Зачем: тяга горизонтального типа без тренажёра — для дома и улицы.\n\n"
-            "✅ Настройка\n"
-            "• Ляг под стол/перекладину на уровне пояса или чуть выше\n"
-            "• Хват чуть шире плеч, тело прямое от пяток до макушки\n"
-            "• Пятки упираются в пол, пресс и ягодицы напряжены\n"
-            "• Плечи опущены от ушей до начала движения\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — тело как прямая доска, никакого провисания в пояснице\n"
-            "2. Начни движение лопатками: потяни их вниз и назад\n"
-            "3. Тяни грудь к перекладине, локти идут вдоль тела\n"
-            "4. В верхней точке — грудь касается или почти касается опоры\n"
-            "5. Пауза 1 сек — сожми лопатки\n"
-            "6. Выдох — медленно (2–3 сек) опускайся до полного выпрямления рук\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Таз провисает вниз → напряги пресс и ягодицы\n"
-            "• Тянешь руками а не спиной → думай «свожу лопатки»\n"
-            "• Слишком высокая опора → угол тела почти вертикальный, нагрузка падает\n"
-            "• Рывок → контролируй каждый сантиметр\n\n"
-            "💡 Подсказки\n"
-            "Чем ниже опора (тело горизонтальнее) — тем тяжелее.\n"
-            "Ноги на стул или скамью — дополнительное усложнение."
         )
     },
     "dumbbell_row": {
@@ -747,31 +697,6 @@ TECH = {
             "Молотки лучше прорабатывают брахиалис — делает руку визуально толще."
         )
     },
-    "triceps_oh_single": {
-        "title": "Разгибание гантели из-за головы",
-        "mp4": "media/tech/triceps_oh_single.mp4",
-        "text": (
-            "📚 Разгибание гантели из-за головы одной рукой (трицепс)\n"
-            "Зачем: изолирует длинную головку трицепса, устраняет асимметрию рук.\n\n"
-            "✅ Настройка\n"
-            "• Стоя или сидя, спина прямая, пресс напряжён\n"
-            "• Подними гантель над головой одной рукой — рука прямая\n"
-            "• Свободной рукой придержи рабочий локоть — он смотрит строго вверх\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — медленно (2–3 сек) сгибай локоть, опуская гантель за голову\n"
-            "2. Локоть неподвижен — двигается только предплечье\n"
-            "3. Нижняя точка — максимальное растяжение трицепса, без рывка\n"
-            "4. Выдох — разгибай руку вверх до почти прямой\n"
-            "5. Наверху не «защёлкивай» локоть\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Локоть уходит в сторону → придержи его свободной рукой\n"
-            "• Корпус заваливается → держи спину вертикально, снизь вес\n"
-            "• Рывок снизу → медленно и под контролем\n\n"
-            "💡 Подсказки\n"
-            "Одна рука — лучше чувствуешь каждую сторону отдельно.\n"
-            "Суперсет с отжиманиями узким хватом — отличная пампинг-связка."
-        )
-    },
     "triceps_oh": {
         "title": "Разгибание трицепса из-за головы",
         "mp4": "media/tech/triceps_oh.mp4",
@@ -786,34 +711,6 @@ TECH = {
             "• Шея напрягается → расслабь голову вперёд.\n\n"
             "💡 Подсказка\n"
             "Длинная головка трицепса лучше растягивается — делает руку «объёмнее»."
-        )
-    },
-    "dips": {
-        "title": "Отжимания на брусьях",
-        "mp4": "media/tech/dips.mp4",
-        "text": (
-            "📚 Отжимания на брусьях (грудь + трицепс + передние дельты)\n"
-            "Зачем: одно из лучших базовых упражнений для массы верха тела.\n\n"
-            "✅ Настройка\n"
-            "• Упор на брусьях, руки чуть шире плеч\n"
-            "• Тело слегка наклонено вперёд — больше грудь\n"
-            "• Тело вертикально — больше трицепс\n"
-            "• Плечи опущены от ушей, пресс напряжён\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — медленно (2–3 сек) опускайся, сгибая локти\n"
-            "2. Локти идут назад вдоль тела, не в стороны\n"
-            "3. Опускайся до угла 90° в локтях или чуть ниже\n"
-            "4. Короткая пауза в нижней точке — без расслабления\n"
-            "5. Выдох — мощно выжимай тело вверх до полного разгибания\n"
-            "6. Наверху не «замыкай» локти полностью\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Локти разъезжаются в стороны → прижимай их к корпусу\n"
-            "• Слишком глубокое опускание → риск для плечевого сустава\n"
-            "• Раскачка корпуса → медленнее, контролируй движение\n"
-            "• Плечи «тянутся» к ушам → держи их опущенными\n\n"
-            "💡 Подсказки\n"
-            "Наклон вперёд ~30° = акцент на грудь; вертикальный корпус = акцент на трицепс.\n"
-            "Слишком легко — добавь отягощение на пояс."
         )
     },
     "narrow_pushup": {
@@ -992,34 +889,6 @@ TECH = {
             "Хорошо нагружает приводящие и ягодицы — отличная альтернатива обычному приседу."
         )
     },
-    "bench_barbell": {
-        "title": "Жим штанги лёжа",
-        "mp4": "media/tech/bench_barbell.mp4",
-        "text": (
-            "📚 Жим штанги лёжа (грудь + трицепс + передние дельты)\n"
-            "Зачем: базовое упражнение на массу и силу верхней части тела.\n\n"
-            "✅ Настройка\n"
-            "• Ляг на скамью, лопатки сведи и прижми к ней\n"
-            "• Стопы устойчиво на полу, лёгкий прогиб в пояснице — норма\n"
-            "• Хват: предплечья вертикальны в нижней точке (чуть шире плеч)\n"
-            "• Штанга над нижней частью груди в стартовой позиции\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Сними штангу со стоек, зафиксируй лопатки сведёнными\n"
-            "2. Вдох — медленно (2–3 сек) опускай штангу к нижней части груди\n"
-            "3. Локти под углом ~45° к корпусу, не раскидывай на 90°\n"
-            "4. Короткая пауза на груди — без отбива\n"
-            "5. Выдох — мощно жми вверх и чуть назад к стойкам\n"
-            "6. Наверху не разгибай локти полностью «в замок»\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Плечи «вперёд» → перед подходом снова сведи лопатки\n"
-            "• Отбив штанги от груди → замедли опускание\n"
-            "• Ноги в воздухе → ставь на пол, так стабильнее\n"
-            "• Слишком широкий хват → нагрузка на плечевой сустав растёт\n\n"
-            "💡 Подсказки\n"
-            "Болит плечо — попробуй жим гантелей (больше амплитуда, меньше нагрузка на сустав).\n"
-            "Слабый трицепс — поставь хват чуть уже."
-        )
-    },
     "bench_dumbbell": {
         "title": "Жим гантелей лёжа",
         "mp4": "media/tech/bench_dumbbell.mp4",
@@ -1062,30 +931,23 @@ TECH = {
         )
     },
     "ohp_dumbbell": {
-        "title": "Жим гантелей стоя",
+        "title": "Жим гантелей стоя/сидя",
         "mp4": "media/tech/ohp_dumbbell.mp4",
         "text": (
-            "📚 Жим гантелей стоя (передние и средние дельты)\n"
-            "Зачем: развивает плечи, требует стабилизации всего корпуса.\n\n"
+            "📚 Жим гантелей над головой (плечи)\n\n"
             "✅ Настройка\n"
-            "• Стой устойчиво, ноги на ширине плеч, колени слегка мягкие\n"
-            "• Гантели на уровне плеч, локти под запястьями (90°)\n"
-            "• Пресс напряжён, поясница нейтральна — без прогиба\n"
-            "• Взгляд прямо вперёд\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — зафиксируй корпус, напряги пресс\n"
-            "2. Выдох — жми гантели вертикально вверх, слегка сближая их\n"
-            "3. В верхней точке руки почти прямые, без рывка и раскачки\n"
-            "4. Медленно (2–3 сек) опускай к плечам, локти под 90°\n"
-            "5. Не расслабляй корпус между повторениями\n\n"
+            "• Гантели на уровне плеч, локти под запястьями.\n"
+            "• Пресс напряжён, поясница нейтральна.\n"
+            "• Сидя: спина вертикально, ноги упираются в пол.\n\n"
+            "✅ Как делать\n"
+            "1) Жми гантели вертикально вверх, слегка сближая их.\n"
+            "2) В верхней точке — руки почти прямые, без рывка.\n"
+            "3) Медленно опускай к плечам, локти под 90°.\n\n"
             "⚠️ Частые ошибки\n"
-            "• Прогиб в пояснице → напряги пресс сильнее, снизь вес\n"
-            "• Гантели уходят вперёд → держи их строго над плечами\n"
-            "• Раскачка корпуса → это читинг, снизь вес\n"
-            "• Локти уходят вперёд → держи их под запястьями\n\n"
-            "💡 Подсказки\n"
-            "Стоя сложнее чем сидя — больше работают стабилизаторы корпуса.\n"
-            "Если сложно держать поясницу — начни с жима сидя."
+            "• Прогиб в пояснице → напряги корпус или сядь.\n"
+            "• Гантели уходят вперёд → держи их над плечами.\n\n"
+            "💡 Плюс гантелей\n"
+            "Независимость рук — работает на симметрию, меньше нагрузки на суставы."
         )
     },
     "ohp_machine": {
@@ -1617,79 +1479,29 @@ TECH = {
         )
     },
     # ── Французский жим лёжа ─────────────────────────────────────────────────
-    "french_press_barbell": {
-        "title": "Французский жим лёжа (штанга)",
-        "mp4": "media/tech/french_press_barbell.mp4",
+    "french_press": {
+        "title": "Французский жим лёжа",
+        "mp4": "media/tech/french_press.mp4",
         "text": (
-            "📚 Французский жим лёжа со штангой\n"
+            "📚 Французский жим лёжа\n"
             "Зачем: изолированная нагрузка на трицепс (длинная головка).\n\n"
             "✅ Настройка\n"
-            "• Ляг на скамью, возьми EZ-гриф или прямой гриф\n"
-            "• Руки подняты вверх, локти над грудью, хват чуть уже плеч\n"
+            "• Ляг на скамью, возьми гантели или EZ-гриф\n"
+            "• Руки подняты вверх, локти над грудью (не расставлены широко)\n"
             "• Плечи зафиксированы — двигаются только предплечья\n\n"
             "✅ Выполнение по шагам\n"
-            "1. Вдох — медленно (2–3 сек) опускай гриф к голове или за голову\n"
+            "1. Вдох — медленно (2–3 сек) опускай снаряд к голове/за голову\n"
             "2. Локти не расходятся в стороны — держи их параллельно\n"
             "3. Нижняя точка — лёгкое растяжение трицепса (не рывок)\n"
-            "4. Выдох — разгибай руки, жми гриф вверх\n"
+            "4. Выдох — разгибай руки, жми снаряд вверх\n"
             "5. Наверху не «замыкай» локти полностью\n\n"
             "⚠️ Частые ошибки\n"
-            "• Плечи двигаются → только предплечья, плечи статичны\n"
-            "• Локти широко в стороны → теряешь нагрузку на трицепс\n"
+            "• Плечи двигаются → убери жим, оставь только разгибание\n"
+            "• Локти широко в стороны → потеря нагрузки на трицепс\n"
             "• Слишком тяжёлый вес → травмоопасно для локтей\n\n"
             "💡 Подсказки\n"
             "EZ-гриф удобнее для запястий, чем прямой.\n"
             "Если болят локти — снизь вес и уменьши амплитуду."
-        )
-    },
-    "french_press_dumbbell": {
-        "title": "Французский жим лёжа (гантели)",
-        "mp4": "media/tech/french_press_dumbbell.mp4",
-        "text": (
-            "📚 Французский жим лёжа с гантелями\n"
-            "Зачем: трицепс (длинная головка), каждая рука работает независимо.\n\n"
-            "✅ Настройка\n"
-            "• Ляг на скамью, гантели в вытянутых руках над грудью\n"
-            "• Ладони смотрят друг на друга (нейтральный хват)\n"
-            "• Локти над грудью, плечи неподвижны\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — медленно сгибай локти, опускай гантели к вискам\n"
-            "2. Локти направлены строго вверх, не расходятся\n"
-            "3. Нижняя точка — растяжение трицепса, без рывка\n"
-            "4. Выдох — разгибай руки, поднимай гантели вверх\n"
-            "5. Наверху не «защёлкивай» локти\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Плечи «плывут» вперёд/назад → зафиксируй их\n"
-            "• Локти разъезжаются → представь, что держишь книгу локтями\n"
-            "• Асимметрия → следи за одинаковой амплитудой обеих рук\n\n"
-            "💡 Подсказки\n"
-            "Нейтральный хват снижает нагрузку на запястья.\n"
-            "Начни с лёгкого веса — гантели нестабильны, техника важнее."
-        )
-    },
-    "triceps_cable": {
-        "title": "Разведение в блоке на трицепс",
-        "mp4": "media/tech/triceps_cable.mp4",
-        "text": (
-            "📚 Разведение в блоке на трицепс (кроссовер)\n"
-            "Зачем: изолирует трицепс, особенно боковую и медиальную головки.\n\n"
-            "✅ Настройка\n"
-            "• Встань между блоками или возьми верхний блок с канатной рукоятью\n"
-            "• Слегка наклони корпус вперёд, локти прижаты к бокам\n"
-            "• Стартовая позиция — предплечья параллельны полу\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — зафиксируй локти у корпуса (они не двигаются)\n"
-            "2. Выдох — разгибай руки вниз, разводя концы каната в стороны\n"
-            "3. В нижней точке — максимально разожми трицепс, пауза 1 сек\n"
-            "4. Медленно (2–3 сек) возвращай в старт\n"
-            "5. Не поднимай локти при возврате\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Локти «плывут» вперёд → прижми их к телу жёстко\n"
-            "• Корпус раскачивается → снизь вес, зафиксируй стойку\n"
-            "• Нет пиковой паузы → замедлись, почувствуй сокращение\n\n"
-            "💡 Подсказки\n"
-            "Канатная рукоять даёт большую амплитуду чем прямая.\n"
-            "Суперсет с узкими отжиманиями — отличная пампинг-связка."
         )
     },
     # ── Концентрированные сгибания ────────────────────────────────────────────
@@ -1824,6 +1636,25 @@ TECH = {
             "• Локти в стороны — они должны идти назад.\n\n"
             "💡 Подсказка\n"
             "Чем вертикальнее тело, тем больше нагрузки на плечи."
+        )
+    },
+    "wall_pushup": {
+        "title": "Отжимания у стены (плечи)",
+        "mp4": "media/tech/wall_pushup.mp4",
+        "text": (
+            "📚 Отжимания в стойке у стены\n\n"
+            "✅ Настройка\n"
+            "• Встань в стойку на руках у стены.\n"
+            "• Руки на ширине плеч, пальцы чуть в стороны.\n\n"
+            "✅ Как выполнять\n"
+            "1) Медленно сгибай локти, опуская голову к полу.\n"
+            "2) Останови движение чуть не касаясь пола.\n"
+            "3) Выжимай обратно.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Потеря равновесия — используй угол стены для опоры.\n"
+            "• Слишком быстро — контролируй каждый сантиметр.\n\n"
+            "💡 Подсказка\n"
+            "Если стойка сложно — начни с пайк отжиманий."
         )
     },
     "pullup_wide": {
@@ -2033,34 +1864,6 @@ TECH = {
             "• Неполная амплитуда вниз — опускай до 90° каждый раз.\n\n"
             "💡 Плюс сидя\n"
             "Нет читинга корпусом — больше изоляции плеч, чем стоя."
-        )
-    },
-    "glute_bridge_bw": {
-        "title": "Ягодичный мост (свой вес)",
-        "mp4": "media/tech/glute_bridge_bw.mp4",
-        "text": (
-            "📚 Ягодичный мост со своим весом (ягодицы + задняя поверхность бедра)\n"
-            "Зачем: базовое домашнее упражнение на ягодицы, безопасно для поясницы.\n\n"
-            "✅ Настройка\n"
-            "• Лечь на спину, ноги согнуты, стопы на ширине бёдер\n"
-            "• Стопы плоско на полу, пятки примерно под коленями\n"
-            "• Руки вдоль тела ладонями вниз для устойчивости\n\n"
-            "✅ Выполнение по шагам\n"
-            "1. Вдох — напряги пресс и ягодицы\n"
-            "2. Выдох — толкай пятки в пол, поднимай таз вверх\n"
-            "3. В верхней точке — бёдра, корпус и колени в одну прямую линию\n"
-            "4. Пауза 2 сек вверху — максимально сожми ягодицы\n"
-            "5. Медленно опускай таз вниз, не касаясь пола\n"
-            "6. Сразу следующее повторение без расслабления\n\n"
-            "⚠️ Частые ошибки\n"
-            "• Колени заваливаются внутрь → держи их над носками\n"
-            "• Поясница перегибается наверху → таз чуть подкрути вперёд (posterior tilt)\n"
-            "• Подъём за счёт поясницы → акцент на пятки и ягодицы, не на спину\n"
-            "• Слишком быстро → медленный темп = больше нагрузки на ягодицы\n\n"
-            "💡 Подсказки\n"
-            "Стопы дальше от таза — больше нагрузка на ягодицы.\n"
-            "Стопы ближе — больше бицепс бедра.\n"
-            "Усложнение: резинка над коленями или нога на возвышении."
         )
     },
     "planks_static": {
@@ -2433,6 +2236,17 @@ def kb_meals():
     ])
 
 
+def kb_activity_level():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="1️⃣ Минимальная (сидячая, почти нет движения)", callback_data="p:activity:1.2")],
+        [InlineKeyboardButton(text="2️⃣ Низкая (сидячая + лёгкая активность)", callback_data="p:activity:1.3")],
+        [InlineKeyboardButton(text="3️⃣ Средняя (3 тренировки в неделю)", callback_data="p:activity:1.4")],
+        [InlineKeyboardButton(text="4️⃣ Высокая (4–5 тренировок в неделю)", callback_data="p:activity:1.55")],
+        [InlineKeyboardButton(text="5️⃣ Очень высокая (тяжёлые тренировки / физработа)", callback_data="p:activity:1.7")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:back:meals")],
+    ])
+
+
 def kb_text_step(back_to: str):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"p:back:{back_to}")],
@@ -2493,14 +2307,17 @@ def _activity_factor(freq: int, place: str) -> float:
     return 1.65 if is_gym else 1.55
 
 
-def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "свой вес") -> int:
+def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "свой вес", activity_factor: float = None) -> int:
     sx = (sex or "м").lower()
     if sx == "м":
         bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
     else:
         bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age - 161
 
-    af = _activity_factor(int(freq or 3), place)
+    if activity_factor:
+        af = activity_factor
+    else:
+        af = _activity_factor(int(freq or 3), place)
     tdee = bmr * af
 
     g = (goal or "").lower()
@@ -2976,6 +2793,7 @@ async def init_db():
             ("state", "TEXT"),
             ("meals", "INTEGER"),
             ("activity", "INTEGER"),
+            ("activity_factor", "REAL"),
         ]:
             try:
                 await conn.execute(f"ALTER TABLE users ADD COLUMN {col} {typ}")
@@ -3174,7 +2992,7 @@ async def ensure_user(user_id: int, username: str):
 async def get_user(user_id: int):
     async with db() as conn:
         async with conn.execute("""
-            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq, meals, limits, state, activity
+            SELECT user_id, username, goal, sex, age, height, weight, place, exp, freq, meals, limits, state, activity, activity_factor
             FROM users WHERE user_id=?
         """, (user_id,)) as cur:
             row = await cur.fetchone()
@@ -3185,7 +3003,7 @@ async def get_user(user_id: int):
         "user_id": row[0], "username": row[1], "goal": row[2], "sex": row[3],
         "age": row[4], "height": row[5], "weight": row[6], "place": row[7],
         "exp": row[8], "freq": row[9], "meals": row[10], "limits": row[11],
-        "state": row[12], "activity": row[13]
+        "state": row[12], "activity": row[13], "activity_factor": row[14]
     }
 
 
@@ -3602,12 +3420,10 @@ EXERCISE_TECH_MAP = [
     ("присед с паузой", "squat_barbell"),
     ("приседания (собственный вес)", "squat_bw"),    # ← домашнее
     ("ягодичный мост на одной ноге", "glute_bridge_single"),
-    ("ягодичный мост (свой вес)", "glute_bridge_bw"),
     ("ягодичный мост", "glute_bridge"),              # ← домашнее
     ("молитва", "cable_crunch"),
     ("кранч на блоке", "cable_crunch"),
     ("планка (статика)", "planks_static"),
-    ("планка", "planks_static"),           # домашний пул
 
     # Нижняя тяга / задняя цепь
     ("румынская тяга с гантелями", "rdl_dumbbell"),    # ← уникальная
@@ -3618,7 +3434,7 @@ EXERCISE_TECH_MAP = [
     ("становая тяга", "deadlift"),
     ("ягодичный мост на одной ноге", "glute_bridge_single"),
     ("гиперэкстензия с весом", "hyperext"),
-    ("гиперэкстензия на полу", "hyperext_floor"),
+    ("гиперэкстензия на полу", "hyperext"),
     ("гиперэкстензи", "hyperext"),
     ("good-morning", "good_morning"),
 
@@ -3641,8 +3457,6 @@ EXERCISE_TECH_MAP = [
     # Жим лёжа — варианты по инвентарю
     ("жим штанги под углом", "incline_press_barbell"),     # ← уникальная
     ("жим гантелей под углом", "incline_press_dumbbell"),  # ← уникальная
-    ("жим штанги лёж", "bench_barbell"),                 # ← уникальная
-    ("жим штанги на горизонт", "bench_barbell"),         # ← уникальная
     ("жим гантелей лёж", "bench_dumbbell"),                # ← уникальная
     ("жим в тренажёре (грудь)", "bench_machine"),          # ← уникальная
     ("жим в тренаж", "bench_machine"),
@@ -3661,12 +3475,10 @@ EXERCISE_TECH_MAP = [
 
     # Отжимания
     ("пайк отжимания", "pike_pushup"),                        # ← домашнее (плечи)
+    ("отжимания в стойке у стены", "wall_pushup"),            # ← домашнее (плечи)
     ("отжимания широким хватом", "pushup_wide"),              # ← домашнее (грудь)
     ("отжимания с ногами на возвышенности", "pushup_elevated"), # ← домашнее
     ("алмазные отжимания", "diamond_pushup"),
-    ("отжимания на брусьях", "dips"),                    # ← уникальная
-    ("брусья", "dips"),
-    ("dips", "dips"),
     ("отжимания узкие (трицепс)", "narrow_pushup"),
     ("отжима узк", "narrow_pushup"),
     ("узкие отжима", "narrow_pushup"),
@@ -3675,7 +3487,6 @@ EXERCISE_TECH_MAP = [
     ("отжимания узкие", "narrow_pushup"),         # ← точное имя из пула (без "(трицепс)")
 
     # Подтягивания — варианты хвата
-    ("горизонтальные подтягивания", "horizontal_pullup"),  # ← домашнее
     ("подтягивания широким хватом", "pullup_wide"),        # ← домашнее
     ("подтягивания узким хватом", "pullup_narrow"),        # ← домашнее
     ("подтягивания (широкий", "pullup_wide"),              # ← уникальная
@@ -3711,6 +3522,9 @@ EXERCISE_TECH_MAP = [
     ("подъём перед собой", "front_raise"),               # ← уникальная
 
     # Пресс — варианты по упражнению (специфичные перед общим "планка")
+    ("ролик для пресса (ab wheel)", "ab_rollout"),
+    ("ролик для пресса", "ab_rollout"),             # ← уникальная
+    ("ab wheel", "ab_rollout"),
     ("боковая планка", "side_plank"),               # ← уникальная
     ("велосипед (скручивания", "ab_crunch"),
     ("велосипед", "ab_crunch"),
@@ -3737,16 +3551,8 @@ EXERCISE_TECH_MAP = [
     ("молотки", "hammer"),
 
     # Трицепс — специфичные перед "разгибани"
-    ("французский жим лёжа с гантелями", "french_press_dumbbell"),  # ← уникальная
-    ("французский жим с гантелями", "french_press_dumbbell"),       # ← уникальная
-    ("французский жим лёжа со штангой", "french_press_barbell"),    # ← уникальная
-    ("французский жим со штангой", "french_press_barbell"),         # ← уникальная
-    ("французский жим лёжа", "french_press_barbell"),               # ← общий → штанга
-    ("французский жим", "french_press_barbell"),                    # ← общий → штанга
-    ("разведение в блоке на трицепс", "triceps_cable"),             # ← уникальная
-    ("разведение трицепс блок", "triceps_cable"),
-    ("кроссовер трицепс", "triceps_cable"),
-    ("разгибание гантели из-за головы", "triceps_oh_single"),
+    ("французский жим лёжа", "french_press"),            # ← уникальная
+    ("французский жим", "french_press"),               # ← уникальная
 ]
 
 
@@ -4946,8 +4752,9 @@ def nutrition_back_kb():
 
 
 def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weight: float, exp: str,
-                             freq: int = 3, place: str = "свой вес", meals_pref: Optional[int] = None) -> Tuple[str, int, int, int, int, int]:
-    calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place)
+                             freq: int = 3, place: str = "свой вес", meals_pref: Optional[int] = None,
+                             activity_factor: float = None) -> Tuple[str, int, int, int, int, int]:
+    calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place, activity_factor=activity_factor)
     p, f, c = calc_macros(calories, weight, goal)
     meals = int(meals_pref or 0) if meals_pref else suggest_meals_count(calories)
     meals = max(3, min(meals, 5))
@@ -5920,10 +5727,19 @@ async def cb_profile_back(callback: CallbackQuery, state: FSMContext):
         await state.set_state(ProfileWizard.meals)
         text = _profile_header(10) + "🍽 Сколько раз в день удобно есть?"
         await clean_edit(callback, uid, text, reply_markup=kb_meals())
+    elif step == "activity":
+        await state.set_state(ProfileWizard.activity_level)
+        text = (
+            _profile_header(11)
+            + "🏃 Уровень активности\n\n"
+            "Уровень активности влияет на расчёт калорий.\n"
+            "Выбери вариант, который лучше всего описывает твой образ жизни:"
+        )
+        await clean_edit(callback, uid, text, reply_markup=kb_activity_level())
     elif step == "limits":
         await state.set_state(ProfileWizard.limits)
-        text = _profile_header(11) + "⛔️ Ограничения/травмы? (или «нет»):"
-        await clean_edit(callback, uid, text, reply_markup=kb_text_step("meals"))
+        text = _profile_header(12) + "⛔️ Ограничения/травмы? (или «нет»):"
+        await clean_edit(callback, uid, text, reply_markup=kb_text_step("activity"))
     else:
         await clean_send(callback.bot, callback.message.chat.id, uid, "🏠 Меню", reply_markup=menu_main_inline_kb())
 
@@ -6119,9 +5935,24 @@ async def cb_profile_meals(callback: CallbackQuery, state: FSMContext, bot: Bot)
         await callback.answer()
         return
 
+    await state.set_state(ProfileWizard.activity_level)
+    text = (
+        _profile_header(11)
+        + "🏃 Уровень активности\n\n"
+        "Уровень активности влияет на расчёт калорий.\n"
+        "Выбери вариант, который лучше всего описывает твой образ жизни:"
+    )
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_activity_level())
+    await callback.answer()
+
+
+async def cb_profile_activity_level(callback: CallbackQuery, state: FSMContext):
+    factor = float(callback.data.split(":")[2])
+    await update_user(callback.from_user.id, activity_factor=factor)
+
     await state.set_state(ProfileWizard.limits)
-    text = _profile_header(11) + "⛔️ Ограничения/травмы? (или «нет»):"
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("meals"))
+    text = _profile_header(12) + "⛔️ Ограничения/травмы? (или «нет»):"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("activity"))
     await callback.answer()
 
 
@@ -6504,7 +6335,8 @@ async def build_plans_if_needed(user_id: int, force: bool = False):
 
     summary, cal, p, f, c, meals = generate_nutrition_summary(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
-        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
+        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0),
+        activity_factor=u.get("activity_factor")
     )
 
     nutrition_full = (
@@ -7116,7 +6948,8 @@ async def open_nutrition(user_id: int, chat_id: int, bot: Bot, callback: Optiona
     u = await get_user(user_id)
     summary, calories, _, _, _, _ = generate_nutrition_summary(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
-        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
+        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0),
+        activity_factor=u.get("activity_factor")
     )
 
     full_text = summary
@@ -7472,7 +7305,8 @@ async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     u = await get_user(callback.from_user.id)
     summary, calories, p, f, c, meals = generate_nutrition_summary(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
-        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
+        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0),
+        activity_factor=u.get("activity_factor")
     )
     day_text = build_meal_day_text(day_i, calories, p, f, c, meals)
 
@@ -7558,7 +7392,8 @@ async def cb_nutr_basket(callback: CallbackQuery, bot: Bot):
     u = await get_user(callback.from_user.id)
     _, calories, p, f, c, meals = generate_nutrition_summary(
         u["goal"], u["sex"], int(u["age"]), int(u["height"]), float(u["weight"]), u["exp"],
-        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0)
+        freq=int(u["freq"]), place=u["place"], meals_pref=int(u.get("meals") or 0),
+        activity_factor=u.get("activity_factor")
     )
 
     basket_text = build_shopping_basket(u["goal"], calories, p, f, c, meals)
@@ -7880,6 +7715,7 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_profile_exp, F.data.startswith("p:exp:"))
     dp.callback_query.register(cb_profile_freq, F.data.startswith("p:freq:"))
     dp.callback_query.register(cb_profile_meals, F.data.startswith("p:meals:"))
+    dp.callback_query.register(cb_profile_activity_level, F.data.startswith("p:activity:"))
 
     dp.message.register(profile_age_text, ProfileWizard.age)
     dp.message.register(profile_height_text, ProfileWizard.height)
