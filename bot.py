@@ -187,7 +187,6 @@ TECH_VIDEOS: Dict[str, str] = {
     # "pullup_narrow":         "media/tech/pullup_narrow.mp4",
     # "ohp_dumbbell_sitting":  "media/tech/ohp_dumbbell_sitting.mp4",
     # "biceps_dumbbell":       "media/tech/biceps_dumbbell.mp4",
-    # "triceps_cable":         "media/tech/triceps_cable.mp4",
     # "french_press_barbell":  "media/tech/french_press_barbell.mp4",
     # "french_press_dumbbell": "media/tech/french_press_dumbbell.mp4",
     # "planks_static":         "media/tech/planks_static.mp4",
@@ -355,7 +354,7 @@ EXERCISE_NAMES = {
     "concentration_curl":     "Концентрированные сгибания",
     # ── ТРИЦЕПС ──────────────────────────────────────────────────────────────
     "triceps_oh":             "Разгибание трицепса из-за головы",
-    "triceps_cable":          "Разведение в блоке на трицепс",
+    "triceps":          "Разведение в блоке на трицепс",
     "french_press_barbell":   "Французский жим лёжа (штанга)",
     "french_press_dumbbell":  "Французский жим лёжа (гантели)",
     "narrow_pushup":          "Отжимания узкие (трицепс)",
@@ -8056,4 +8055,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
