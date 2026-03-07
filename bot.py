@@ -4123,7 +4123,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             "Молотки с гантелями",            # hammer
         ]
         ISO_TRI = [
-            "Разгибания на верхнем блоке",    # triceps
+            "Разгибание в блоке на трицепс",    # triceps_cable
             "Французский жим с гантелями",    # triceps_oh
         ]
         ISO_LEGS = [
@@ -8101,3 +8101,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
