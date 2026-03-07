@@ -187,6 +187,7 @@ TECH_VIDEOS: Dict[str, str] = {
     # "pullup_narrow":         "media/tech/pullup_narrow.mp4",
     # "ohp_dumbbell_sitting":  "media/tech/ohp_dumbbell_sitting.mp4",
     # "biceps_dumbbell":       "media/tech/biceps_dumbbell.mp4",
+    # "triceps_cable":         "media/tech/triceps_cable.mp4",
     # "french_press_barbell":  "media/tech/french_press_barbell.mp4",
     # "french_press_dumbbell": "media/tech/french_press_dumbbell.mp4",
     # "planks_static":         "media/tech/planks_static.mp4",
@@ -354,7 +355,7 @@ EXERCISE_NAMES = {
     "concentration_curl":     "Концентрированные сгибания",
     # ── ТРИЦЕПС ──────────────────────────────────────────────────────────────
     "triceps_oh":             "Разгибание трицепса из-за головы",
-    "triceps":          "Разведение в блоке на трицепс",
+    "triceps_cable":          "Разведение в блоке на трицепс",
     "french_press_barbell":   "Французский жим лёжа (штанга)",
     "french_press_dumbbell":  "Французский жим лёжа (гантели)",
     "narrow_pushup":          "Отжимания узкие (трицепс)",
@@ -2037,9 +2038,9 @@ TECH = {
     # ── ПЛЕЧИ ──────────────────────────────────────────────
     # ── БИЦЕПС ─────────────────────────────────────────────
     # ── ТРИЦЕПС ────────────────────────────────────────────
-    "triceps": {
+    "triceps_cable": {
         "title": "Разгибание в блоке на трицепс",
-        "mp4": "media/tech/triceps.mp4",
+        "mp4": "media/tech/triceps_cable.mp4",  # → "media/tech/triceps_cable.mp4"
         "text": (
             "📚 Разгибание в блоке на трицепс (кабельный тренажёр)\n\n"
             "✅ Настройка\n"
@@ -2100,6 +2101,29 @@ TECH = {
         )
     },
     # ── ПРЕСС / КОР ────────────────────────────────────────
+
+    # ── Отжимания (базовые) ─────────────────────────────────
+    "pushup": {
+        "title": "Отжимания",
+        "mp4": "media/tech/pushup.mp4",
+        "text": (
+            "📚 Отжимания (грудь + трицепс + передняя дельта)\n\n"
+            "✅ Настройка\n"
+            "• Ладони на ширине плеч или чуть шире, пальцы смотрят вперёд.\n"
+            "• Тело — прямая линия от головы до пяток, пресс и ягодицы напряжены.\n\n"
+            "✅ Как делать\n"
+            "1) Вдох — медленно (2–3 сек) опускай грудь к полу.\n"
+            "2) Локти под углом ~45° к корпусу (не 90° в стороны).\n"
+            "3) Грудь почти касается пола — полная амплитуда.\n"
+            "4) Выдох — выжимай тело вверх до почти выпрямленных рук.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Таз провисает → напряги пресс и ягодицы.\n"
+            "• Локти в стороны 90° → нагрузка уходит на плечи.\n"
+            "• Неполная амплитуда → опускайся максимально низко.\n\n"
+            "💡 Прогрессия\n"
+            "С колен → классические → с паузой внизу → с хлопком → на одной руке."
+        )
+    },
 }
 
 # =========================
@@ -2115,21 +2139,21 @@ if _tech_missing:
 
 def tech_kb():
     rows = [
-        [InlineKeyboardButton(text=TECH["squat"]["title"], callback_data="tech:squat"),
-         InlineKeyboardButton(text=TECH["bench"]["title"], callback_data="tech:bench")],
-        [InlineKeyboardButton(text=TECH["row"]["title"], callback_data="tech:row"),
-         InlineKeyboardButton(text=TECH["latpulldown"]["title"], callback_data="tech:latpulldown")],
-        [InlineKeyboardButton(text=TECH["pullup"]["title"], callback_data="tech:pullup"),
-         InlineKeyboardButton(text=TECH["ohp"]["title"], callback_data="tech:ohp")],
-        [InlineKeyboardButton(text=TECH["rdl"]["title"], callback_data="tech:rdl"),
-         InlineKeyboardButton(text=TECH["lateralraise"]["title"], callback_data="tech:lateralraise")],
-        [InlineKeyboardButton(text=TECH["biceps"]["title"], callback_data="tech:biceps"),
-         InlineKeyboardButton(text=TECH["triceps"]["title"], callback_data="tech:triceps")],
+        [InlineKeyboardButton(text=TECH["squat_barbell"]["title"], callback_data="tech:squat_barbell"),
+         InlineKeyboardButton(text=TECH["bench_barbell"]["title"], callback_data="tech:bench_barbell")],
+        [InlineKeyboardButton(text=TECH["barbell_row"]["title"], callback_data="tech:barbell_row"),
+         InlineKeyboardButton(text=TECH["latpulldown_wide"]["title"], callback_data="tech:latpulldown_wide")],
+        [InlineKeyboardButton(text=TECH["pullup_wide"]["title"], callback_data="tech:pullup_wide"),
+         InlineKeyboardButton(text=TECH["ohp_barbell"]["title"], callback_data="tech:ohp_barbell")],
+        [InlineKeyboardButton(text=TECH["rdl_barbell"]["title"], callback_data="tech:rdl_barbell"),
+         InlineKeyboardButton(text=TECH["lateralraise_dumbbell"]["title"], callback_data="tech:lateralraise_dumbbell")],
+        [InlineKeyboardButton(text=TECH["biceps_barbell"]["title"], callback_data="tech:biceps_barbell"),
+         InlineKeyboardButton(text=TECH["triceps_cable"]["title"], callback_data="tech:triceps_cable")],
         [InlineKeyboardButton(text=TECH["legpress"]["title"], callback_data="tech:legpress"),
-         InlineKeyboardButton(text=TECH["hinge"]["title"], callback_data="tech:hinge")],
-        [InlineKeyboardButton(text=TECH["core"]["title"], callback_data="tech:core"),
-         InlineKeyboardButton(text=TECH["calves"]["title"], callback_data="tech:calves")],
-        [InlineKeyboardButton(text=TECH["lunge"]["title"], callback_data="tech:lunge"),
+         InlineKeyboardButton(text=TECH["rdl_dumbbell"]["title"], callback_data="tech:rdl_dumbbell")],
+        [InlineKeyboardButton(text=TECH["planks_static"]["title"], callback_data="tech:planks_static"),
+         InlineKeyboardButton(text=TECH["calves_standing"]["title"], callback_data="tech:calves_standing")],
+        [InlineKeyboardButton(text=TECH["lunge_dumbbell"]["title"], callback_data="tech:lunge_dumbbell"),
          InlineKeyboardButton(text=TECH["hyperext"]["title"], callback_data="tech:hyperext")],
         [InlineKeyboardButton(text=TECH["face_pull"]["title"], callback_data="tech:face_pull"),
          InlineKeyboardButton(text=TECH["hammer"]["title"], callback_data="tech:hammer")],
@@ -8055,5 +8079,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
