@@ -3761,7 +3761,6 @@ EXERCISE_TECH_MAP = [
     ("подтягивания (узкий", "pullup_narrow"),
     ("подтягивания обратным хватом", "pullup_chinup"),
     ("подтягивания (обратный хват)", "pullup_chinup"),
-    ("горизонтальные подтягивания", "rowtrain"),
     ("подтягивания", "pullup_wide"),
 
     # ── ТЯГА ВЕРХНЕГО БЛОКА ─────────────────────────────────────────────────
@@ -4272,7 +4271,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             "Отжимания с ногами на возвышенности",   # pushup_elevated
         ]
         BASE_HPULL = [
-            "Горизонтальные подтягивания",    # pullup ★
             "Тяга гантели одной рукой",       # dumbbell_row
         ]
         BASE_VPULL = [
@@ -8220,3 +8218,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
