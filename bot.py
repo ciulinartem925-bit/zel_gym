@@ -2112,7 +2112,7 @@ TECH = {
         )
     },
     "bodyweight_hands_up_pushup": {
-        "title": "Bodyweight Hands Up Push Ups",
+        "title": "Отжимания с поднятием рук",
         "mp4": "media/tech/bodyweight_hands_up_pushup.mp4",
         "text": (
             "📚 Bodyweight Hands Up Push Ups (грудь + трицепс + кор)\n\n"
@@ -8220,3 +8220,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
