@@ -2112,7 +2112,7 @@ TECH = {
         )
     },
     "bodyweight_hands_up_pushup": {
-        "title": "Отжимания с поднятием рук",
+        "title": "Bodyweight Hands Up Push Ups",
         "mp4": "media/tech/bodyweight_hands_up_pushup.mp4",
         "text": (
             "📚 Bodyweight Hands Up Push Ups (грудь + трицепс + кор)\n\n"
@@ -4260,7 +4260,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             "Выпады",                         # lunge_bw
         ]
         BASE_HINGE = [
-            "Ягодичный мост",                 # glute_bridge ★
+            "Ягодичный мост со своим весом",   # glute_bridge_bodyweight ★
             "Румынская тяга с гантелями",      # rdl_dumbbell
             "Гиперэкстензия на полу",         # hyperext
         ]
@@ -8220,4 +8220,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
