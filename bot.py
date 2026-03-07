@@ -100,191 +100,184 @@ TECH_IMAGES: Dict[str, str] = {
 # Требования к файлу: mp4, до ~50 МБ, рекомендуется 480p, до 30 сек.
 # Хендлеры менять не нужно — заработает автоматически.
 TECH_VIDEOS: Dict[str, str] = {
-    # ══════════════════════════════════════════════════════════════════════
-    # Все 77 упражнений из упражнения_3.txt
-    # Чтобы подключить видео: раскомментируй строку и положи mp4-файл.
-    # Требования: mp4, до ~50 МБ, 480p, до 30 сек.
-    # ══════════════════════════════════════════════════════════════════════
-    # ── 🦵 НОГИ / НИЖНИЙ БЛОК ───────────────────────────────────────────
-    # "squat_barbell":           "media/tech/squat_barbell.mp4",
-    # "squat_sumo":              "media/tech/squat_sumo.mp4",
-    # "squat_bw":                "media/tech/squat_bw.mp4",
-    # "goblet":                  "media/tech/goblet.mp4",
-    # "hack_squat":              "media/tech/hack_squat.mp4",
-    # "bulgarian":               "media/tech/bulgarian.mp4",
-    # "bulgarian_dumbbell":      "media/tech/bulgarian_dumbbell.mp4",
-    # "lunge_barbell":           "media/tech/lunge_barbell.mp4",
-    # "lunge_dumbbell":          "media/tech/lunge_dumbbell.mp4",
-    # "lunge_walking":           "media/tech/lunge_walking.mp4",
-    # "lunge_bw":                "media/tech/lunge_bw.mp4",
-    # "legpress":                "media/tech/legpress.mp4",
-    # "legcurl":                 "media/tech/legcurl.mp4",
-    # "leg_extension":           "media/tech/leg_extension.mp4",
-    # "leg_adduction":           "media/tech/leg_adduction.mp4",
-    # "cable_kickback":          "media/tech/cable_kickback.mp4",
-    # "glute_bridge":            "media/tech/glute_bridge.mp4",
-    # "glute_bridge_single":     "media/tech/glute_bridge_single.mp4",
-    # "glute_bridge_bodyweight": "media/tech/glute_bridge_bodyweight.mp4",
-    # "hyperext":                "media/tech/hyperext.mp4",
-    # "good_morning":            "media/tech/good_morning.mp4",
-    # "calves_machine":          "media/tech/calves_machine.mp4",
-    # "calves_standing":         "media/tech/calves_standing.mp4",
-    # ── 🏋️ ГРУДЬ ─────────────────────────────────────────────────────────
-    # "bench_barbell":           "media/tech/bench_barbell.mp4",
-    # "bench_dumbbell":          "media/tech/bench_dumbbell.mp4",
-    # "bench_machine":           "media/tech/bench_machine.mp4",
-    # "incline_press_barbell":   "media/tech/incline_press_barbell.mp4",
-    # "incline_press_dumbbell":  "media/tech/incline_press_dumbbell.mp4",
-    # "chest_fly":               "media/tech/chest_fly.mp4",
-    # "crossover_chest":         "media/tech/crossover_chest.mp4",
-    # "pushup_wide":             "media/tech/pushup_wide.mp4",
-    # "pushup_elevated":         "media/tech/pushup_elevated.mp4",
-    # "diamond_pushup":          "media/tech/diamond_pushup.mp4",
-    # "pike_pushup":             "media/tech/pike_pushup.mp4",
-    # "dips":                    "media/tech/dips.mp4",
-    # ── 🔙 СПИНА ─────────────────────────────────────────────────────────
-    # "latpulldown_wide":        "media/tech/latpulldown_wide.mp4",
-    # "latpulldown_narrow":      "media/tech/latpulldown_narrow.mp4",
-    # "latpulldown_close":       "media/tech/latpulldown_close.mp4",
-    # "pullup_chinup":           "media/tech/pullup_chinup.mp4",
-    # "pullup_wide":             "media/tech/pullup_wide.mp4",
-    # "pullup_narrow":           "media/tech/pullup_narrow.mp4",
-    # "rowtrain":                "media/tech/rowtrain.mp4",
-    # "dumbbell_row":            "media/tech/dumbbell_row.mp4",
-    # "barbell_row":             "media/tech/barbell_row.mp4",
-    # "tbar_row":                "media/tech/tbar_row.mp4",
-    # "face_pull":               "media/tech/face_pull.mp4",
-    # "rear_delt":               "media/tech/rear_delt.mp4",
-    # "rear_delt_machine":       "media/tech/rear_delt_machine.mp4",
-    # ── 🔩 НИЖНЯЯ ТЯГА / ПОЯСНИЦА ────────────────────────────────────────
-    # "rdl_barbell":             "media/tech/rdl_barbell.mp4",
-    # "rdl_dumbbell":            "media/tech/rdl_dumbbell.mp4",
-    # "deadlift":                "media/tech/deadlift.mp4",
-    # "deadlift_sumo":           "media/tech/deadlift_sumo.mp4",
-    # ── 🦾 ПЛЕЧИ ─────────────────────────────────────────────────────────
-    # "ohp_barbell":             "media/tech/ohp_barbell.mp4",
-    # "ohp_dumbbell":            "media/tech/ohp_dumbbell.mp4",
-    # "ohp_dumbbell_sitting":    "media/tech/ohp_dumbbell_sitting.mp4",
-    # "ohp_machine":             "media/tech/ohp_machine.mp4",
-    # "arnold_press":            "media/tech/arnold_press.mp4",
-    # "lateralraise_dumbbell":   "media/tech/lateralraise_dumbbell.mp4",
-    # "front_raise":             "media/tech/front_raise.mp4",
-    # ── 💪 БИЦЕПС ────────────────────────────────────────────────────────
-    # "biceps_barbell":          "media/tech/biceps_barbell.mp4",
-    # "biceps_dumbbell":         "media/tech/biceps_dumbbell.mp4",
-    # "hammer":                  "media/tech/hammer.mp4",
-    # "concentration_curl":      "media/tech/concentration_curl.mp4",
-    # ── 💪 ТРИЦЕПС ───────────────────────────────────────────────────────
-    # "triceps_oh":              "media/tech/triceps_oh.mp4",
-    # "triceps_cable":           "media/tech/triceps_cable.mp4",
-    # "french_press_barbell":    "media/tech/french_press_barbell.mp4",
-    # "french_press_dumbbell":   "media/tech/french_press_dumbbell.mp4",
-    # "narrow_pushup":           "media/tech/narrow_pushup.mp4",
-    # ── 🧱 ПРЕСС / КОР ───────────────────────────────────────────────────
-    # "planks_static":           "media/tech/planks_static.mp4",
-    # "side_plank":              "media/tech/side_plank.mp4",
-    # "ab_crunch":               "media/tech/ab_crunch.mp4",
-    # "bicycle_crunch":          "media/tech/bicycle_crunch.mp4",
-    # "russian_twist":           "media/tech/russian_twist.mp4",
-    # "cable_crunch":            "media/tech/cable_crunch.mp4",
-    # "hanging_leg_raise":       "media/tech/hanging_leg_raise.mp4",
-    # "leg_raise_lying":         "media/tech/leg_raise_lying.mp4",
-    # "elbow_leg_raise":         "media/tech/elbow_leg_raise.mp4",
-}
-
-TECH_GIFS = {
-    # ══════════════════════════════════════════════════════════════════════
-    # GIF / MP4-превью для техник (отображаются до загрузки полного видео).
-    # Приоритет: TECH_VIDEOS > TECH[key]["mp4"] > TECH_GIFS > текст.
-    # Раскомментируй и положи файл — хендлеры менять не нужно.
-    # ══════════════════════════════════════════════════════════════════════
-    # ── 🦵 НОГИ / НИЖНИЙ БЛОК ───────────────────────────────────────────
-    "squat_barbell":           "media/tech/squat_barbell.mp4",
-    "squat_sumo":              "media/tech/squat_sumo.mp4",
+    # ── Ноги / нижний блок ──────────────────────────────────────────────────
+    # "squat":               "media/tech/squat.mp4",
+    # "squat_barbell":       "media/tech/squat_barbell.mp4",
+    # "squat_sumo":          "media/tech/squat_sumo.mp4",
+    # "squat_bodyweight":    "media/tech/squat_bodyweight.mp4",
+    # "goblet":              "media/tech/goblet.mp4",
+    # "hack_squat":          "media/tech/hack_squat.mp4",
+    # "bulgarian":           "media/tech/bulgarian.mp4",
+    # "lunge":               "media/tech/lunge.mp4",
+    # "lunge_barbell":       "media/tech/lunge_barbell.mp4",
+    # "lunge_walking":       "media/tech/lunge_walking.mp4",
+    # "legpress":            "media/tech/legpress.mp4",
+    # "legcurl":             "media/tech/legcurl.mp4",
+    # "hyperext":            "media/tech/hyperext.mp4",
+    # "hinge":               "media/tech/hinge.mp4",
+    # "calves":              "media/tech/calves.mp4",
+    # ── Грудь / жим ─────────────────────────────────────────────────────────
+    # "bench":               "media/tech/bench.mp4",
+    # "bench_dumbbell":      "media/tech/bench_dumbbell.mp4",
+    # "bench_machine":       "media/tech/bench_machine.mp4",
+    # "incline_press_barbell":  "media/tech/incline_press_barbell.mp4",
+    # "incline_press_dumbbell": "media/tech/incline_press_dumbbell.mp4",
+    # "chest_fly":           "media/tech/chest_fly.mp4",
+    # ── Спина / тяга ────────────────────────────────────────────────────────
+    # "latpulldown_wide":    "media/tech/latpulldown_wide.mp4",
+    # "latpulldown_narrow":  "media/tech/latpulldown_narrow.mp4",
+    # "pullup":              "media/tech/pullup.mp4",
+    # "pullup_chinup":       "media/tech/pullup_chinup.mp4",
+    # "pullup_wide":         "media/tech/pullup_wide.mp4",
+    # "rowtrain":            "media/tech/rowtrain.mp4",
+    # "dumbbell_row":        "media/tech/dumbbell_row.mp4",
+    # "barbell_row":         "media/tech/barbell_row.mp4",
+    # "face_pull":           "media/tech/face_pull.mp4",
+    # "rear_delt":           "media/tech/rear_delt.mp4",
+    # ── Тяга / поясница ─────────────────────────────────────────────────────
+    # "rdl_barbell":         "media/tech/rdl_barbell.mp4",
+    # "rdl_dumbbell":        "media/tech/rdl_dumbbell.mp4",
+    # "deadlift":            "media/tech/deadlift.mp4",
+    # "deadlift_sumo":       "media/tech/deadlift_sumo.mp4",
+    # ── Плечи ───────────────────────────────────────────────────────────────
+    # "ohp_barbell":         "media/tech/ohp_barbell.mp4",
+    # "ohp_dumbbell":        "media/tech/ohp_dumbbell.mp4",
+    # "lateralraise":        "media/tech/lateralraise.mp4",
+    # "pike_pushup":         "media/tech/pike_pushup.mp4",
+    # ── Бицепс / трицепс ────────────────────────────────────────────────────
+    # "biceps":              "media/tech/biceps.mp4",
+    # "biceps_barbell":      "media/tech/biceps_barbell.mp4",
+    # "hammer":              "media/tech/hammer.mp4",
+    # "triceps":             "media/tech/triceps.mp4",
+    # "triceps_oh":          "media/tech/triceps_oh.mp4",
+    # "narrow_pushup":       "media/tech/narrow_pushup.mp4",
+    # ── Кор / пресс ─────────────────────────────────────────────────────────
+    # "core":                "media/tech/core.mp4",
+    # "hanging_leg_raise":   "media/tech/hanging_leg_raise.mp4",
+    # "ab_rollout":          "media/tech/ab_rollout.mp4",  # удалено
+    # ── Домашние упражнения (раскомментируй и положи mp4-файл) ──────────────
+    # "pushup_wide":         "media/tech/pushup_wide.mp4",
+    # "pushup_narrow":       "media/tech/pushup_narrow.mp4",
+    # "pushup_elevated":     "media/tech/pushup_elevated.mp4",
+    # "pike_pushup":         "media/tech/pike_pushup.mp4",
+    # "wall_pushup":         "media/tech/wall_pushup.mp4",
+    # "pullup_wide":         "media/tech/pullup_wide.mp4",
+    # "pullup_chin":         "media/tech/pullup_chin.mp4",
+    # "pullup_narrow":       "media/tech/pullup_narrow.mp4",
+    # "squat_bw":            "media/tech/squat_bw.mp4",
+    # "bulgarian_bw":        "media/tech/bulgarian_bw.mp4",
+    # "lunge_bw":            "media/tech/lunge_bw.mp4",
+    # "glute_bridge":        "media/tech/glute_bridge.mp4",
+    # "plank_bw":            "media/tech/plank_bw.mp4",
+    # "leg_raise_lying_bw":  "media/tech/leg_raise_lying_bw.mp4",
+    # "crunch_bw":           "media/tech/crunch_bw.mp4",
+    # ── Новые упражнения — раскомментируй после загрузки mp4 ────────────────
     # "squat_bw":              "media/tech/squat_bw.mp4",
-    "goblet":                  "media/tech/goblet.mp4",
-    "hack_squat":              "media/tech/hack_squat.mp4",
-    "bulgarian":               "media/tech/bulgarian.mp4",
     # "bulgarian_dumbbell":    "media/tech/bulgarian_dumbbell.mp4",
-    "lunge_barbell":           "media/tech/lunge_barbell.mp4",
-    "lunge_dumbbell":          "media/tech/lunge_dumbbell.mp4",
-    "lunge_walking":           "media/tech/lunge_walking.mp4",
-    "lunge_bw":                "media/tech/lunge_bw.mp4",
-    "legpress":                "media/tech/legpress.mp4",
-    "legcurl":                 "media/tech/legcurl.mp4",
-    "leg_extension":           "media/tech/leg_extension.mp4",
-    "leg_adduction":           "media/tech/leg_adduction.mp4",
-    "cable_kickback":          "media/tech/cable_kickback.mp4",
+    # "lunge_bw":              "media/tech/lunge_bw.mp4",
     # "glute_bridge":          "media/tech/glute_bridge.mp4",
     # "glute_bridge_single":   "media/tech/glute_bridge_single.mp4",
     # "glute_bridge_bodyweight": "media/tech/glute_bridge_bodyweight.mp4",
-    "hyperext":                "media/tech/hyperext.mp4",
-    "good_morning":            "media/tech/good_morning.mp4",
     # "calves_machine":        "media/tech/calves_machine.mp4",
     # "calves_standing":       "media/tech/calves_standing.mp4",
-    # ── 🏋️ ГРУДЬ ─────────────────────────────────────────────────────────
     # "bench_barbell":         "media/tech/bench_barbell.mp4",
-    "bench_dumbbell":          "media/tech/bench_dumbbell.mp4",
-    "bench_machine":           "media/tech/bench_machine.mp4",
-    "incline_press_barbell":   "media/tech/incline_press_barbell.mp4",
-    "incline_press_dumbbell":  "media/tech/incline_press_dumbbell.mp4",
-    "chest_fly":               "media/tech/chest_fly.mp4",
-    # "crossover_chest":       "media/tech/crossover_chest.mp4",
     # "pushup_wide":           "media/tech/pushup_wide.mp4",
-    "pushup_elevated":         "media/tech/pushup_elevated.mp4",
-    # "diamond_pushup":        "media/tech/diamond_pushup.mp4",
     # "pike_pushup":           "media/tech/pike_pushup.mp4",
     # "dips":                  "media/tech/dips.mp4",
-    # ── 🔙 СПИНА ─────────────────────────────────────────────────────────
-    "latpulldown_wide":        "media/tech/latpulldown_wide.mp4",
-    "latpulldown_narrow":      "media/tech/latpulldown_narrow.gif",
-    "latpulldown_close":       "media/tech/latpulldown_close.mp4",
-    "pullup_chinup":           "media/tech/pullup_chinup.mp4",
-    "pullup_wide":             "media/tech/pullup_wide.mp4",
     # "pullup_narrow":         "media/tech/pullup_narrow.mp4",
-    "rowtrain":                "media/tech/rowtrain.mp4",
-    "dumbbell_row":            "media/tech/dumbbell_row.mp4",
-    "barbell_row":             "media/tech/barbell_row.mp4",
-    "tbar_row":                "media/tech/tbar_row.mp4",
-    "face_pull":               "media/tech/face_pull.mp4",
-    "rear_delt":               "media/tech/rear_delt.mp4",
-    # "rear_delt_machine":     "media/tech/rear_delt_machine.mp4",
-    # ── 🔩 НИЖНЯЯ ТЯГА / ПОЯСНИЦА ────────────────────────────────────────
-    "rdl_barbell":             "media/tech/rdl_barbell.mp4",
-    "rdl_dumbbell":            "media/tech/rdl_dumbbell.mp4",
-    "deadlift":                "media/tech/deadlift.mp4",
-    "deadlift_sumo":           "media/tech/deadlift_sumo.mp4",
-    # ── 🦾 ПЛЕЧИ ─────────────────────────────────────────────────────────
-    "ohp_barbell":             "media/tech/ohp_barbell.mp4",
-    "ohp_dumbbell":            "media/tech/ohp_dumbbell.mp4",
     # "ohp_dumbbell_sitting":  "media/tech/ohp_dumbbell_sitting.mp4",
-    "ohp_machine":             "media/tech/ohp_machine.mp4",
-    "arnold_press":            "media/tech/arnold_press.mp4",
-    # "lateralraise_dumbbell": "media/tech/lateralraise_dumbbell.mp4",
-    "front_raise":             "media/tech/front_raise.mp4",
-    # ── 💪 БИЦЕПС ────────────────────────────────────────────────────────
-    "biceps_barbell":          "media/tech/biceps_barbell.mp4",
     # "biceps_dumbbell":       "media/tech/biceps_dumbbell.mp4",
-    "hammer":                  "media/tech/hammer.mp4",
-    "concentration_curl":      "media/tech/concentration_curl.mp4",
-    # ── 💪 ТРИЦЕПС ───────────────────────────────────────────────────────
-    "triceps_oh":              "media/tech/triceps_oh.mp4",
     # "triceps_cable":         "media/tech/triceps_cable.mp4",
     # "french_press_barbell":  "media/tech/french_press_barbell.mp4",
     # "french_press_dumbbell": "media/tech/french_press_dumbbell.mp4",
-    "narrow_pushup":           "media/tech/narrow_pushup.mp4",
-    # ── 🧱 ПРЕСС / КОР ───────────────────────────────────────────────────
     # "planks_static":         "media/tech/planks_static.mp4",
-    "side_plank":              "media/tech/side_plank.mp4",
-    "ab_crunch":               "media/tech/ab_crunch.mp4",
-    "bicycle_crunch":          "media/tech/bicycle_crunch.mp4",
-    "russian_twist":           "media/tech/russian_twist.mp4",
-    # "cable_crunch":          "media/tech/cable_crunch.mp4",
-    "hanging_leg_raise":       "media/tech/hanging_leg_raise.mp4",
-    "leg_raise_lying":         "media/tech/leg_raise_lying.mp4",
-    "elbow_leg_raise":         "media/tech/elbow_leg_raise.mp4",
-    # ── Разное / устаревшее ───────────────────────────────────────────────
-    "pushup":                  "media/tech/pushup.mp4",
+}
+
+TECH_GIFS = {
+    # ── Ноги / нижний блок ──────────────────────────────────────────────────
+    "squat_barbell":     "media/tech/squat_barbell.mp4",   # fix: был squat_barbel.gif
+    "squat_sumo":        "media/tech/squat_sumo.mp4",
+    "goblet":            "media/tech/goblet.mp4",
+    "hack_squat":        "media/tech/hack_squat.mp4",
+    "bulgarian":         "media/tech/bulgarian.mp4",
+    "lunge_barbell":     "media/tech/lunge_barbell.mp4",
+    "lunge_dumbbell":    "media/tech/lunge_dumbbell.mp4",
+    "lunge_walking":     "media/tech/lunge_walking.mp4",
+    "lunge_bw":           "media/tech/lunge_bw.mp4",
+    "legpress":          "media/tech/legpress.mp4",
+    "legcurl":           "media/tech/legcurl.mp4",
+    "hyperext":          "media/tech/hyperext.mp4",
+    # ── Грудь / жим ─────────────────────────────────────────────────────────
+    "bench_dumbbell":    "media/tech/bench_dumbbell.mp4",
+    "bench_machine":     "media/tech/bench_machine.mp4",
+    "incline_press_barbell":  "media/tech/incline_press_barbell.mp4",
+    "incline_press_dumbbell": "media/tech/incline_press_dumbbell.mp4",
+    "chest_fly":         "media/tech/chest_fly.mp4",
+    # ── Спина / тяга ────────────────────────────────────────────────────────
+    "latpulldown_wide":  "media/tech/latpulldown_wide.mp4",
+    "latpulldown_narrow": "media/tech/latpulldown_narrow.gif",
+    "pullup_chinup":     "media/tech/pullup_chinup.mp4",
+    "pullup_wide":       "media/tech/pullup_wide.mp4",
+    "rowtrain":          "media/tech/rowtrain.mp4",
+    "dumbbell_row":      "media/tech/dumbbell_row.mp4",
+    "barbell_row":       "media/tech/barbell_row.mp4",
+    "face_pull":         "media/tech/face_pull.mp4",
+    "rear_delt":         "media/tech/rear_delt.mp4",
+    # ── Тяга / поясница ─────────────────────────────────────────────────────
+    "rdl_barbell":       "media/tech/rdl_barbell.mp4",
+    "rdl_dumbbell":      "media/tech/rdl_dumbbell.mp4",
+    "deadlift":          "media/tech/deadlift.mp4",
+    "deadlift_sumo":     "media/tech/deadlift_sumo.mp4",
+    "good_morning":      "media/tech/good_morning.mp4",
+    # ── Плечи ───────────────────────────────────────────────────────────────
+    "ohp_barbell":       "media/tech/ohp_barbell.mp4",
+    "ohp_dumbbell":      "media/tech/ohp_dumbbell.mp4",
+    "ohp_machine":       "media/tech/ohp_machine.mp4",
+    # ── Бицепс / трицепс ────────────────────────────────────────────────────
+    "biceps_barbell":    "media/tech/biceps_barbell.mp4",
+    "hammer":            "media/tech/hammer.mp4",
+    "triceps_oh":        "media/tech/triceps_oh.mp4",
+    "narrow_pushup":     "media/tech/narrow_pushup.mp4",
+    # ── Кор / пресс ─────────────────────────────────────────────────────────
+    "side_plank":        "media/tech/side_plank.mp4",
+    "hanging_leg_raise": "media/tech/hanging_leg_raise.mp4",
+    "leg_raise_lying":   "media/tech/leg_raise_lying.mp4",
+    "elbow_leg_raise":   "media/tech/elbow_leg_raise.mp4",
+    "ab_crunch":         "media/tech/ab_crunch.mp4",
+    # ── Разное ──────────────────────────────────────────────────────────────
+    "pushup":            "media/tech/pushup.mp4",  # "row" = отжимания (так в файле)
+    "pushup_elevated":   "media/tech/pushup_elevated.mp4",
+    # Ноги — изолирующие
+    "leg_extension":     "media/tech/leg_extension.mp4",
+    "leg_adduction":     "media/tech/leg_adduction.mp4",
+    "cable_kickback":    "media/tech/cable_kickback.mp4",
+    # Спина
+    "tbar_row":          "media/tech/tbar_row.mp4",
+    "latpulldown_close": "media/tech/latpulldown_close.mp4",
+    # Плечи
+    "arnold_press":      "media/tech/arnold_press.mp4",
+    "front_raise":       "media/tech/front_raise.mp4",
+    # Руки
+    "french_press":      "media/tech/french_press.mp4",
+    "concentration_curl":"media/tech/concentration_curl.mp4",
+    # Кор
+    "bicycle_crunch":    "media/tech/bicycle_crunch.mp4",
+    "russian_twist":     "media/tech/russian_twist.mp4",
+    # ── Домашние упражнения (раскомментируй и положи файл) ──────────────────
+    # "pushup_wide":         "media/tech/pushup_wide.mp4",
+    # "pushup_narrow":       "media/tech/pushup_narrow.mp4",
+    # "pushup_elevated":     "media/tech/pushup_elevated.mp4",
+    # "pike_pushup":         "media/tech/pike_pushup.mp4",
+    # "wall_pushup":         "media/tech/wall_pushup.mp4",
+    # "pullup_chin":         "media/tech/pullup_chin.mp4",
+    # "pullup_narrow":       "media/tech/pullup_narrow.mp4",
+    # "squat_bw":            "media/tech/squat_bw.mp4",
+    # "bulgarian_bw":        "media/tech/bulgarian_bw.mp4",
+    # "lunge_bw":            "media/tech/lunge_bw.mp4",
+    # "glute_bridge":        "media/tech/glute_bridge.mp4",
+    # "plank_bw":            "media/tech/plank_bw.mp4",
+    # "leg_raise_lying_bw":  "media/tech/leg_raise_lying_bw.mp4",
+    # "crunch_bw":           "media/tech/crunch_bw.mp4",
 }
 
 # =========================
@@ -2122,65 +2115,27 @@ if _tech_missing:
 
 
 def tech_kb():
-    # Все 77 упражнений из упражнения_3.txt, разбитые по группам
-    TECH_GROUPS = [
-        ("🦵 НОГИ / НИЖНИЙ БЛОК", [
-            "squat_barbell", "squat_sumo", "squat_bw", "goblet", "hack_squat",
-            "bulgarian", "bulgarian_dumbbell", "lunge_barbell", "lunge_dumbbell",
-            "lunge_walking", "lunge_bw", "legpress", "legcurl", "leg_extension",
-            "leg_adduction", "cable_kickback", "glute_bridge", "glute_bridge_single",
-            "glute_bridge_bodyweight", "hyperext", "good_morning",
-            "calves_machine", "calves_standing",
-        ]),
-        ("🏋️ ГРУДЬ", [
-            "bench_barbell", "bench_dumbbell", "bench_machine",
-            "incline_press_barbell", "incline_press_dumbbell",
-            "chest_fly", "crossover_chest", "pushup_wide",
-            "pushup_elevated", "diamond_pushup", "pike_pushup", "dips",
-        ]),
-        ("🔙 СПИНА", [
-            "latpulldown_wide", "latpulldown_narrow", "latpulldown_close",
-            "pullup_chinup", "pullup_wide", "pullup_narrow",
-            "rowtrain", "dumbbell_row", "barbell_row", "tbar_row",
-            "face_pull", "rear_delt", "rear_delt_machine",
-        ]),
-        ("🔩 НИЖНЯЯ ТЯГА / ПОЯСНИЦА", [
-            "rdl_barbell", "rdl_dumbbell", "deadlift", "deadlift_sumo",
-        ]),
-        ("🦾 ПЛЕЧИ", [
-            "ohp_barbell", "ohp_dumbbell", "ohp_dumbbell_sitting", "ohp_machine",
-            "arnold_press", "lateralraise_dumbbell", "front_raise",
-        ]),
-        ("💪 БИЦЕПС", [
-            "biceps_barbell", "biceps_dumbbell", "hammer", "concentration_curl",
-        ]),
-        ("💪 ТРИЦЕПС", [
-            "triceps_oh", "triceps_cable",
-            "french_press_barbell", "french_press_dumbbell", "narrow_pushup",
-        ]),
-        ("🧱 ПРЕСС / КОР", [
-            "planks_static", "side_plank", "ab_crunch", "bicycle_crunch",
-            "russian_twist", "cable_crunch",
-            "hanging_leg_raise", "leg_raise_lying", "elbow_leg_raise",
-        ]),
+    rows = [
+        [InlineKeyboardButton(text=TECH["squat"]["title"], callback_data="tech:squat"),
+         InlineKeyboardButton(text=TECH["bench"]["title"], callback_data="tech:bench")],
+        [InlineKeyboardButton(text=TECH["row"]["title"], callback_data="tech:row"),
+         InlineKeyboardButton(text=TECH["latpulldown"]["title"], callback_data="tech:latpulldown")],
+        [InlineKeyboardButton(text=TECH["pullup"]["title"], callback_data="tech:pullup"),
+         InlineKeyboardButton(text=TECH["ohp"]["title"], callback_data="tech:ohp")],
+        [InlineKeyboardButton(text=TECH["rdl"]["title"], callback_data="tech:rdl"),
+         InlineKeyboardButton(text=TECH["lateralraise"]["title"], callback_data="tech:lateralraise")],
+        [InlineKeyboardButton(text=TECH["biceps"]["title"], callback_data="tech:biceps"),
+         InlineKeyboardButton(text=TECH["triceps"]["title"], callback_data="tech:triceps")],
+        [InlineKeyboardButton(text=TECH["legpress"]["title"], callback_data="tech:legpress"),
+         InlineKeyboardButton(text=TECH["hinge"]["title"], callback_data="tech:hinge")],
+        [InlineKeyboardButton(text=TECH["core"]["title"], callback_data="tech:core"),
+         InlineKeyboardButton(text=TECH["calves"]["title"], callback_data="tech:calves")],
+        [InlineKeyboardButton(text=TECH["lunge"]["title"], callback_data="tech:lunge"),
+         InlineKeyboardButton(text=TECH["hyperext"]["title"], callback_data="tech:hyperext")],
+        [InlineKeyboardButton(text=TECH["face_pull"]["title"], callback_data="tech:face_pull"),
+         InlineKeyboardButton(text=TECH["hammer"]["title"], callback_data="tech:hammer")],
+        [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
     ]
-
-    rows = []
-    for group_name, keys in TECH_GROUPS:
-        # Заголовок группы — одна широкая кнопка (не кликабельная)
-        rows.append([InlineKeyboardButton(text=group_name, callback_data="tech:_noop")])
-        # Упражнения группы — по 2 в строке
-        group_btns = [
-            InlineKeyboardButton(
-                text=TECH[k]["title"],
-                callback_data=f"tech:{k}"
-            )
-            for k in keys if k in TECH
-        ]
-        for i in range(0, len(group_btns), 2):
-            rows.append(group_btns[i:i+2])
-
-    rows.append([InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -3727,29 +3682,47 @@ def get_tech_key_for_exercise(name: str) -> Optional[str]:
     for keyword, tech_key in EXERCISE_TECH_MAP:
         if keyword in n:
             return tech_key
-    # Fallback — общая техника по группе мышц
-    if any(x in n for x in ["ног", "ягодиц", "икр", "бедр", "приседа", "приседани", "выпад"]):
-        return "squat"
-    if any(x in n for x in ["грудь", "грудн", "жим"]):
-        return "bench"
-    if any(x in n for x in ["спин", "тяг", "блок", "подтяг"]):
-        return "latpulldown"
-    if any(x in n for x in ["плеч", "дельт", "жим вверх"]):
-        return "ohp"
+    # Fallback — общая техника по группе мышц (только реальные ключи из TECH)
+    if any(x in n for x in ["приседани", "присед"]):
+        return "squat_bw"
+    if any(x in n for x in ["выпад"]):
+        return "lunge_bw"
+    if any(x in n for x in ["ягодиц"]):
+        return "glute_bridge"
+    if any(x in n for x in ["икр", "носк"]):
+        return "calves_standing"
+    if any(x in n for x in ["бедр", "ног"]):
+        return "legpress"
+    if any(x in n for x in ["жим лёж", "жим леж"]):
+        return "bench_barbell"
+    if any(x in n for x in ["грудь", "грудн"]):
+        return "chest_fly"
+    if any(x in n for x in ["подтяг"]):
+        return "pullup_wide"
+    if any(x in n for x in ["блок", "тяг"]):
+        return "latpulldown_wide"
+    if any(x in n for x in ["спин"]):
+        return "dumbbell_row"
+    if any(x in n for x in ["плеч", "дельт"]):
+        return "ohp_dumbbell"
     if any(x in n for x in ["бицепс", "сгибан"]):
-        return "biceps"
+        return "biceps_barbell"
     if any(x in n for x in ["трицепс", "разгибан"]):
-        return "triceps"
-    if any(x in n for x in ["пресс", "планк", "скручив"]):
-        return "core"
+        return "triceps_cable"
+    if any(x in n for x in ["планк"]):
+        return "planks_static"
+    if any(x in n for x in ["пресс", "скручив"]):
+        return "ab_crunch"
     if any(x in n for x in ["подъём ног", "подъёмы ног"]):
         if "вис" in n:
             return "hanging_leg_raise"
         if "упор" in n:
             return "elbow_leg_raise"
         return "leg_raise_lying"
-    if any(x in n for x in ["румынск", "мертвая", "становая", "hinge", "ягодиц"]):
-        return "rdl"
+    if any(x in n for x in ["румынск", "мертвая"]):
+        return "rdl_barbell"
+    if any(x in n for x in ["становая"]):
+        return "deadlift"
     return None  # нет подходящей техники — не показываем кнопку
 
 
@@ -4123,7 +4096,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             "Молотки с гантелями",            # hammer
         ]
         ISO_TRI = [
-            "Разгибание в блоке на трицепс",    # triceps_cable
+            "Разгибания на верхнем блоке",    # triceps
             "Французский жим с гантелями",    # triceps_oh
         ]
         ISO_LEGS = [
@@ -8101,4 +8074,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
