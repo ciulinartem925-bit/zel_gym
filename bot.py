@@ -148,7 +148,7 @@ TECH_VIDEOS: Dict[str, str] = {
     # "biceps":              "media/tech/biceps.mp4",
     # "biceps_barbell":      "media/tech/biceps_barbell.mp4",
     # "hammer":              "media/tech/hammer.mp4",
-    # "triceps":             "media/tech/triceps.mp4",
+    # "triceps_cable":             "media/tech/triceps_cable.mp4",
     # "triceps_oh":          "media/tech/triceps_oh.mp4",
     # "narrow_pushup":       "media/tech/narrow_pushup.mp4",
     # ── Кор / пресс ─────────────────────────────────────────────────────────
@@ -187,7 +187,6 @@ TECH_VIDEOS: Dict[str, str] = {
     # "pullup_narrow":         "media/tech/pullup_narrow.mp4",
     # "ohp_dumbbell_sitting":  "media/tech/ohp_dumbbell_sitting.mp4",
     # "biceps_dumbbell":       "media/tech/biceps_dumbbell.mp4",
-    # "triceps_cable":         "media/tech/triceps_cable.mp4",
     # "french_press_barbell":  "media/tech/french_press_barbell.mp4",
     # "french_press_dumbbell": "media/tech/french_press_dumbbell.mp4",
     # "planks_static":         "media/tech/planks_static.mp4",
@@ -355,7 +354,7 @@ EXERCISE_NAMES = {
     "concentration_curl":     "Концентрированные сгибания",
     # ── ТРИЦЕПС ──────────────────────────────────────────────────────────────
     "triceps_oh":             "Разгибание трицепса из-за головы",
-    "triceps_cable":          "Разведение в блоке на трицепс",
+    "triceps_cable":          "Разгибания на верхнем блоке",
     "french_press_barbell":   "Французский жим лёжа (штанга)",
     "french_press_dumbbell":  "Французский жим лёжа (гантели)",
     "narrow_pushup":          "Отжимания узкие (трицепс)",
@@ -2039,8 +2038,8 @@ TECH = {
     # ── БИЦЕПС ─────────────────────────────────────────────
     # ── ТРИЦЕПС ────────────────────────────────────────────
     "triceps_cable": {
-        "title": "Разгибание в блоке на трицепс",
-        "mp4": "media/tech/triceps_cable.mp4",  # → "media/tech/triceps_cable.mp4"
+        "title": "Разгибания на верхнем блоке",
+        "mp4": "media/tech/triceps_cable.mp4", 
         "text": (
             "📚 Разгибание в блоке на трицепс (кабельный тренажёр)\n\n"
             "✅ Настройка\n"
@@ -4101,7 +4100,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             "Молотки с гантелями",            # hammer
         ]
         ISO_TRI = [
-            "Разгибания на верхнем блоке",    # triceps
+            "Разгибания на верхнем блоке",    # triceps_cable
             "Французский жим с гантелями",    # triceps_oh
         ]
         ISO_LEGS = [
