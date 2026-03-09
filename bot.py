@@ -2385,6 +2385,9 @@ def profile_edit_field_kb(u: dict, regens_str: str = "") -> InlineKeyboardMarkup
             InlineKeyboardButton(text=f"🍽 Приёмов еды: {val('meals')}", callback_data="pf:meals"),
         ],
         [
+            InlineKeyboardButton(text=f"🏃 Активность: {_activity_label(u.get('activity_factor'))}", callback_data="pf:activity"),
+        ],
+        [
             InlineKeyboardButton(text=f"⛔️ Ограничения", callback_data="pf:limits"),
         ],
         [InlineKeyboardButton(text=plan_btn_text, callback_data="p:do_rebuild")],
@@ -2530,6 +2533,18 @@ def _activity_factor(freq: int, place: str) -> float:
     if f == 4:
         return 1.55 if is_gym else 1.50
     return 1.65 if is_gym else 1.55
+
+
+def _activity_label(factor) -> str:
+    """Возвращает текстовую метку уровня активности по числовому коэффициенту."""
+    if not factor:
+        return "не указан"
+    f = float(factor)
+    if f <= 1.25:   return "1️⃣ Минимальная"
+    if f <= 1.35:   return "2️⃣ Низкая"
+    if f <= 1.45:   return "3️⃣ Средняя"
+    if f <= 1.6:    return "4️⃣ Высокая"
+    return "5️⃣ Очень высокая"
 
 
 def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "свой вес", activity_factor: float = None) -> int:
@@ -5600,6 +5615,7 @@ def _profile_summary_text(u: dict) -> str:
         f"Где тренируешься: {u.get('place')}\n"
         f"Опыт: {u.get('exp')}\n"
         f"Тренировки: {u.get('freq')}×/нед\n"
+        f"Активность: {_activity_label(u.get('activity_factor'))}\n"
         f"Еда: {u.get('meals')}×/день\n"
         f"Ограничения: {(u.get('limits') or 'нет')}"
     )
@@ -5776,7 +5792,10 @@ async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot)
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
     text = "Поддержка\n\nНапиши проблему — одним сообщением.\nМожно приложить скриншот."
-    await clean_send(bot, message.chat.id, message.from_user.id, text)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb)
     await try_delete_user_message(bot, message)
 
 
@@ -5897,6 +5916,18 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="3 раза", callback_data="p:meals:3"),
              InlineKeyboardButton(text="4 раза", callback_data="p:meals:4")],
             [InlineKeyboardButton(text="5 раз", callback_data="p:meals:5")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
+        ])
+        await clean_edit(callback, uid, text, reply_markup=kb)
+    elif field == "activity":
+        await state.set_state(ProfileWizard.activity_level)
+        text = (
+            "🏃 Уровень активности\n\n"
+            "Уровень активности влияет на расчёт калорий.\n"
+            "Выбери подходящий:"
+        )
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            *kb_activity_level().inline_keyboard[:-0],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
         ])
         await clean_edit(callback, uid, text, reply_markup=kb)
