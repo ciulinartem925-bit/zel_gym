@@ -5473,24 +5473,27 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "Бот подстраивается под твой уровень, цель и место тренировок.\n\n"
 
         f"🔵 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n\n"
+        "Попробуй и почувствуй разницу:\n\n"
         "• Персональный план тренировок (зал или дома)\n"
-        "• Техника каждого упражнения — видео прямо в тренировке\n"
+        "• Техника каждого упражнения — видео/картинка прямо в тренировке\n"
         "• Дневник тренировок: веса, повторы, история по дням\n"
         "• Замеры тела и отслеживание прогресса\n"
-        "• Обновление программы: до 3 раз\n"
+        "• Обновление программы: 3 раза\n"
         "• Поддержка и FAQ\n\n"
 
         f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n\n"
+        "Именно 3 месяца нужны, чтобы увидеть реальный результат:\n\n"
         "• Всё из тарифа «1 месяц»\n"
         "• <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
-        "• Обновление программы: до 10 раз\n"
+        "• Обновление программы: 10 раз\n"
         "• Выгоднее, чем 3 раза по «1 месяцу»\n\n"
 
         f"🟢 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n\n"
+        "Один раз — пользуйся сколько угодно:\n\n"
         "• Полный доступ ко всем функциям без ограничений\n"
         "• Тренировки + питание + дневник + замеры + техники\n"
         "• Обновление программы: безлимит\n"
-        "• Доступ навсегда\n\n"
+        "• Никаких повторных списаний\n\n"
 
         "⚠️ <i>Питание (расчёт КБЖУ и готовый рацион) доступно только на тарифах «3 месяца» и «Навсегда».</i>\n\n"
         "👇 Выбери тариф и начни прямо сейчас:"
@@ -5788,7 +5791,7 @@ async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
-    text = "💬 Поддержка\n\nПисать пожалуйста только по делу.\n\nМожно:\n• Сообщить об ошибке\n• Предложить идею\n• Задать вопрос\n• Оставить отзыв.\n\nНаписать:@zel_support"
+    text = "Поддержка\n\nНапиши проблему — одним сообщением.\nМожно приложить скриншот."
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -5924,7 +5927,7 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
             "Выбери подходящий:"
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            *kb_activity_level().inline_keyboard[:-0],
+            *kb_activity_level().inline_keyboard[:-1],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
         ])
         await clean_edit(callback, uid, text, reply_markup=kb)
@@ -8252,5 +8255,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
