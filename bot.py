@@ -5791,7 +5791,7 @@ async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
-    text = "💬 Поддержка\n\nПисать пожалуйста только по делу.\n\nМожно:\n• Сообщить об ошибке\n• Предложить идею\n• Задать вопрос\n• Оставить отзыв.\n\nНаписать: @zel_support"
+    text = "Поддержка\n\nНапиши проблему — одним сообщением.\nМожно приложить скриншот."
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -6137,6 +6137,12 @@ async def profile_age_text(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     await update_user(message.from_user.id, age=age)
+    data = await state.get_data()
+    if data.get("editing_field") == "age":
+        await state.clear()
+        await try_delete_user_message(bot, message)
+        await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+        return
 
     await state.set_state(ProfileWizard.height)
     text = _profile_header(4) + "📏 Рост в см:"
@@ -6151,6 +6157,12 @@ async def profile_height_text(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     await update_user(message.from_user.id, height=h)
+    data = await state.get_data()
+    if data.get("editing_field") == "height":
+        await state.clear()
+        await try_delete_user_message(bot, message)
+        await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+        return
 
     await state.set_state(ProfileWizard.weight)
     text = _profile_header(5) + "⚖️ Вес в кг:"
@@ -6165,6 +6177,12 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     await update_user(message.from_user.id, weight=w)
+    data = await state.get_data()
+    if data.get("editing_field") == "weight":
+        await state.clear()
+        await try_delete_user_message(bot, message)
+        await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+        return
 
     await state.set_state(ProfileWizard.place)
     text = _profile_header(6) + "🏠 Где тренируешься?"
@@ -8255,4 +8273,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
