@@ -5473,14 +5473,13 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
         "Бот подстраивается под твой уровень, цель и место тренировок.\n\n"
 
         f"🔵 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n\n"
-        <blockquote>
         "• Персональный план тренировок (зал или дома)\n"
         "• Техника каждого упражнения — видео/картинка прямо в тренировке\n"
         "• Дневник тренировок: веса, повторы, история по дням\n"
         "• Замеры тела и отслеживание прогресса\n"
         "• Обновление программы: 3 раза\n"
         "• Поддержка и FAQ\n\n"
-        <blockquote>
+        
         f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n\n"
         "• Всё из тарифа «1 месяц»\n"
         "• <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
@@ -5789,13 +5788,15 @@ async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
-    text = "💬 Поддержка\n\n"
+     text = ( 
+    "💬 Поддержка\n\n"
     "Писать пожалуйста только по делу и одним сообщением.\n\n"
     "Вы можете:\n\n"
     "• Сообщить об ошибке\n"
     "• Задать вопрос\n"
     "• Предложить идею\n"
     "• Оставить отзыв\n"
+)
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -8259,4 +8260,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
