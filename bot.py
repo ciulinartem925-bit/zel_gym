@@ -5791,7 +5791,7 @@ async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
-    text = "Поддержка\n\nНапиши проблему — одним сообщением.\nМожно приложить скриншот."
+    text = "💬 Поддержка\n\nПисать пожалуйста только по делу.\n\nМожно:\n• Сообщить об ошибке\n• Предложить идею\n• Задать вопрос\n• Оставить отзыв.\n\nНаписать: @zel_support."
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -8273,3 +8273,4 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
