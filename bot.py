@@ -5927,7 +5927,7 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
             "Выбери подходящий:"
         )
         kb = InlineKeyboardMarkup(inline_keyboard=[
-            *kb_activity_level().inline_keyboard[:-0],
+            *kb_activity_level().inline_keyboard[:-1],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
         ])
         await clean_edit(callback, uid, text, reply_markup=kb)
