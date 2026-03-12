@@ -391,6 +391,7 @@ EXERCISE_NAMES = {
 # Значение — (group, [зал_keys], [дома_keys])
 EXERCISE_ALTERNATIVES: Dict[str, Tuple[str, List[str], List[str]]] = {
     # ── КВАДРИЦЕПС / ПРИСЕД ──────────────────────────────────────────────────
+    # Все замены нагружают квадрицепс как основную мышцу
     "squat_barbell":            ("Квадрицепс",    ["hack_squat", "legpress", "goblet", "squat_sumo"],          ["squat_bw", "goblet", "bulgarian", "lunge_bw"]),
     "squat_sumo":               ("Квадрицепс",    ["squat_barbell", "hack_squat", "legpress"],                 ["squat_bw", "goblet", "lunge_bw"]),
     "squat_bw":                 ("Квадрицепс",    ["hack_squat", "goblet", "legpress"],                        ["bulgarian", "lunge_bw", "goblet"]),
@@ -399,67 +400,79 @@ EXERCISE_ALTERNATIVES: Dict[str, Tuple[str, List[str], List[str]]] = {
     "legpress":                 ("Квадрицепс",    ["hack_squat", "squat_barbell", "leg_extension"],            ["squat_bw", "lunge_bw", "bulgarian"]),
     "leg_extension":            ("Квадрицепс",    ["legpress", "hack_squat"],                                  ["squat_bw", "lunge_bw"]),
     # ── ЯГОДИЦЫ / ВЫПАДЫ ─────────────────────────────────────────────────────
-    "bulgarian":                ("Ягодицы",       ["lunge_barbell", "legpress", "squat_barbell"],              ["lunge_bw", "lunge_dumbbell", "squat_bw"]),
-    "bulgarian_dumbbell":       ("Ягодицы",       ["bulgarian", "lunge_dumbbell", "legpress"],                 ["lunge_bw", "lunge_walking", "squat_bw"]),
-    "lunge_barbell":            ("Ягодицы",       ["bulgarian", "legpress", "squat_barbell"],                  ["lunge_bw", "lunge_walking"]),
-    "lunge_dumbbell":           ("Ягодицы",       ["bulgarian_dumbbell", "lunge_barbell"],                     ["lunge_bw", "lunge_walking"]),
-    "lunge_walking":            ("Ягодицы",       ["lunge_dumbbell", "bulgarian_dumbbell"],                    ["lunge_bw", "bulgarian_dumbbell"]),
-    "lunge_bw":                 ("Ягодицы",       ["lunge_dumbbell", "bulgarian", "legpress"],                 ["lunge_walking", "squat_bw", "bulgarian"]),
-    "glute_bridge":             ("Ягодицы",       ["glute_bridge_single", "legcurl", "hyperext"],              ["glute_bridge_bodyweight", "glute_bridge_single", "superman"]),
-    "glute_bridge_single":      ("Ягодицы",       ["glute_bridge", "cable_kickback"],                          ["glute_bridge_bodyweight", "superman"]),
-    "glute_bridge_bodyweight":  ("Ягодицы",       ["glute_bridge", "cable_kickback"],                          ["glute_bridge_single", "superman"]),
-    "cable_kickback":           ("Ягодицы",       ["leg_adduction", "glute_bridge"],                           ["glute_bridge_bodyweight", "glute_bridge_single"]),
-    "leg_adduction":            ("Приводящие",    ["cable_kickback", "legpress"],                               ["glute_bridge_bodyweight", "lunge_bw"]),
+    # Выпады = ягодицы + квадрицепс → замены только из той же категории
+    "bulgarian":                ("Ягодицы/Квадрицепс", ["lunge_barbell", "lunge_dumbbell", "legpress"],        ["lunge_bw", "lunge_walking", "squat_bw"]),
+    "bulgarian_dumbbell":       ("Ягодицы/Квадрицепс", ["bulgarian", "lunge_dumbbell", "legpress"],            ["lunge_bw", "lunge_walking", "squat_bw"]),
+    "lunge_barbell":            ("Ягодицы/Квадрицепс", ["bulgarian", "lunge_dumbbell", "legpress"],            ["lunge_bw", "lunge_walking"]),
+    "lunge_dumbbell":           ("Ягодицы/Квадрицепс", ["bulgarian_dumbbell", "lunge_barbell", "legpress"],    ["lunge_bw", "lunge_walking"]),
+    "lunge_walking":            ("Ягодицы/Квадрицепс", ["lunge_dumbbell", "bulgarian_dumbbell"],               ["lunge_bw", "bulgarian_dumbbell"]),
+    "lunge_bw":                 ("Ягодицы/Квадрицепс", ["lunge_dumbbell", "bulgarian", "legpress"],            ["lunge_walking", "squat_bw", "bulgarian"]),
+    # Ягодичный мост = изоляция ягодиц → замены только на ягодичные упражнения
+    "glute_bridge":             ("Ягодицы",       ["glute_bridge_single", "cable_kickback", "legcurl"],        ["glute_bridge_bodyweight", "glute_bridge_single", "cable_kickback"]),
+    "glute_bridge_single":      ("Ягодицы",       ["glute_bridge", "cable_kickback"],                          ["glute_bridge_bodyweight", "glute_bridge"]),
+    "glute_bridge_bodyweight":  ("Ягодицы",       ["glute_bridge", "cable_kickback"],                          ["glute_bridge_single", "glute_bridge"]),
+    # cable_kickback = отведение ноги назад = ягодицы
+    # leg_adduction = приведение ног = приводящие; замены тоже только приводящие
+    "cable_kickback":           ("Ягодицы",       ["glute_bridge", "glute_bridge_single", "legcurl"],          ["glute_bridge_bodyweight", "glute_bridge_single"]),
+    "leg_adduction":            ("Приводящие",    ["cable_kickback"],                                           ["lunge_bw"]),
     # ── БИЦЕПС БЕДРА / ПОЯСНИЦА ──────────────────────────────────────────────
-    "legcurl":                  ("Бицепс бедра",  ["rdl_barbell", "rdl_dumbbell", "glute_bridge"],             ["superman", "glute_bridge_bodyweight"]),
+    # legcurl = изоляция бицепса бедра → замены: другие упражнения на бицепс бедра
+    "legcurl":                  ("Бицепс бедра",  ["rdl_barbell", "rdl_dumbbell", "deadlift_sumo"],            ["rdl_dumbbell", "good_morning"]),
     "rdl_barbell":              ("Бицепс бедра",  ["deadlift", "rdl_dumbbell", "legcurl"],                     ["rdl_dumbbell", "good_morning", "hyperext"]),
-    "rdl_dumbbell":             ("Бицепс бедра",  ["rdl_barbell", "deadlift", "legcurl"],                      ["good_morning", "hyperext", "superman"]),
-    "deadlift":                 ("Нижняя тяга",   ["deadlift_sumo", "rdl_barbell", "hyperext"],                ["rdl_dumbbell", "good_morning", "superman"]),
+    "rdl_dumbbell":             ("Бицепс бедра",  ["rdl_barbell", "deadlift", "legcurl"],                      ["good_morning", "hyperext", "rdl_barbell"]),
+    "deadlift":                 ("Нижняя тяга",   ["deadlift_sumo", "rdl_barbell", "rdl_dumbbell"],            ["rdl_dumbbell", "good_morning", "hyperext"]),
     "deadlift_sumo":            ("Нижняя тяга",   ["deadlift", "rdl_barbell"],                                 ["rdl_dumbbell", "good_morning"]),
-    "hyperext":                 ("Поясница",      ["rdl_barbell", "good_morning", "deadlift"],                 ["superman", "good_morning", "rdl_dumbbell"]),
-    "superman":                 ("Поясница",      ["hyperext", "good_morning"],                                ["glute_bridge_bodyweight", "hyperext"]),
-    "good_morning":             ("Поясница",      ["rdl_barbell", "hyperext", "deadlift"],                     ["superman", "hyperext"]),
+    # hyperext / superman / good_morning = поясница → замены только на поясницу
+    "hyperext":                 ("Поясница",      ["rdl_barbell", "good_morning", "rdl_dumbbell"],             ["superman", "good_morning"]),
+    "superman":                 ("Поясница",      ["hyperext", "good_morning"],                                ["hyperext", "good_morning"]),
+    "good_morning":             ("Поясница",      ["rdl_barbell", "hyperext", "rdl_dumbbell"],                 ["superman", "hyperext"]),
     # ── ИКРЫ ─────────────────────────────────────────────────────────────────
     "calves_machine":           ("Икры",          ["calves_standing"],                                         ["calves_standing"]),
     "calves_standing":          ("Икры",          ["calves_machine"],                                          ["calves_machine"]),
     # ── ГРУДЬ ────────────────────────────────────────────────────────────────
     "bench_barbell":            ("Грудь",         ["bench_dumbbell", "bench_machine", "incline_press_barbell", "chest_fly"], ["pushup_wide", "pushup_elevated", "dips"]),
     "bench_dumbbell":           ("Грудь",         ["bench_barbell", "bench_machine", "incline_press_dumbbell"],              ["pushup_wide", "pushup_elevated", "dips"]),
-    "bench_machine":            ("Грудь",         ["bench_dumbbell", "bench_barbell"],                         ["pushup_wide", "pushup_elevated"]),
-    "incline_press_barbell":    ("Грудь верх",    ["incline_press_dumbbell", "bench_barbell"],                 ["pushup_elevated", "pike_pushup"]),
-    "incline_press_dumbbell":   ("Грудь верх",    ["incline_press_barbell", "bench_dumbbell"],                 ["pushup_elevated", "pike_pushup"]),
-    "chest_fly":                ("Грудь изол.",   ["crossover_chest", "bench_dumbbell"],                       ["pushup_wide", "diamond_pushup"]),
-    "crossover_chest":          ("Грудь изол.",   ["chest_fly", "bench_machine"],                              ["pushup_wide", "diamond_pushup"]),
-    "pushup_wide":              ("Грудь",         ["bench_dumbbell", "bench_machine", "chest_fly"],            ["pushup_elevated", "diamond_pushup", "explosive_pushup"]),
-    "pushup_elevated":          ("Грудь верх",    ["incline_press_dumbbell", "bench_dumbbell"],                ["pushup_wide", "pike_pushup"]),
-    "diamond_pushup":           ("Грудь/Трицепс", ["bench_dumbbell", "dips"],                                  ["narrow_pushup", "pushup_wide", "chair_dips_pushup"]),
-    "pike_pushup":              ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting"],                    ["pushup_elevated", "pushup_wide"]),
+    "bench_machine":            ("Грудь",         ["bench_dumbbell", "bench_barbell", "chest_fly"],            ["pushup_wide", "pushup_elevated"]),
+    "incline_press_barbell":    ("Грудь верх",    ["incline_press_dumbbell", "bench_barbell"],                 ["pushup_elevated", "pushup_wide"]),
+    "incline_press_dumbbell":   ("Грудь верх",    ["incline_press_barbell", "bench_dumbbell"],                 ["pushup_elevated", "pushup_wide"]),
+    # chest_fly / crossover = изоляция груди → замены только на грудь (без трицепса)
+    "chest_fly":                ("Грудь изол.",   ["crossover_chest", "bench_dumbbell"],                       ["pushup_wide", "pushup_elevated"]),
+    "crossover_chest":          ("Грудь изол.",   ["chest_fly", "bench_machine"],                              ["pushup_wide", "pushup_elevated"]),
+    "pushup_wide":              ("Грудь",         ["bench_dumbbell", "bench_machine", "chest_fly"],            ["pushup_elevated", "explosive_pushup", "single_leg_pushup"]),
+    "pushup_elevated":          ("Грудь верх",    ["incline_press_dumbbell", "bench_dumbbell"],                ["pushup_wide", "incline_press_dumbbell"]),
+    # diamond_pushup = грудь + трицепс → замены на то же сочетание
+    "diamond_pushup":           ("Грудь/Трицепс", ["dips", "bench_dumbbell"],                                  ["narrow_pushup", "chair_dips_pushup"]),
+    # pike_pushup = передняя дельта + трицепс → замены на плечи (не грудь)
+    "pike_pushup":              ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting", "ohp_machine"],     ["ohp_dumbbell", "ohp_dumbbell_sitting"]),
     "dips":                     ("Грудь/Трицепс", ["bench_barbell", "bench_dumbbell"],                         ["chair_dips_pushup", "narrow_pushup", "diamond_pushup"]),
     "explosive_pushup":         ("Грудь",         ["bench_dumbbell", "pushup_wide"],                           ["pushup_wide", "single_leg_pushup"]),
     "single_leg_pushup":        ("Грудь",         ["pushup_wide", "bench_dumbbell"],                           ["explosive_pushup", "pushup_elevated"]),
-    "bodyweight_hands_up_pushup":("Грудь",        ["pushup_wide"],                                             ["diamond_pushup", "pushup_elevated"]),
+    "bodyweight_hands_up_pushup":("Грудь",        ["pushup_wide", "bench_dumbbell"],                           ["pushup_elevated", "explosive_pushup"]),
     "chair_dips_pushup":        ("Трицепс",       ["dips", "triceps_cable"],                                   ["narrow_pushup", "diamond_pushup"]),
-    # ── СПИНА ────────────────────────────────────────────────────────────────
+    # ── СПИНА — ШИРОЧАЙШИЕ ───────────────────────────────────────────────────
     "latpulldown_wide":         ("Широчайшие",    ["pullup_wide", "latpulldown_narrow", "barbell_row"],        ["pullup_wide", "pullup_chinup"]),
     "latpulldown_narrow":       ("Широчайшие",    ["pullup_narrow", "latpulldown_wide", "dumbbell_row"],       ["pullup_narrow", "pullup_chinup"]),
     "pullup_wide":              ("Широчайшие",    ["latpulldown_wide", "tbar_row", "barbell_row"],             ["pullup_chinup", "pullup_narrow"]),
     "pullup_chinup":            ("Широчайшие",    ["latpulldown_narrow", "barbell_row"],                       ["pullup_wide", "pullup_narrow"]),
     "pullup_narrow":            ("Широчайшие",    ["latpulldown_narrow", "dumbbell_row"],                      ["pullup_chinup", "pullup_wide"]),
+    # ── СПИНА — ГОРИЗОНТАЛЬНЫЕ ТЯГИ ──────────────────────────────────────────
     "rowtrain":                 ("Спина середина",["barbell_row", "tbar_row", "dumbbell_row"],                 ["dumbbell_row", "pullup_chinup"]),
     "dumbbell_row":             ("Спина середина",["rowtrain", "barbell_row", "tbar_row"],                     ["pullup_chinup", "pullup_wide"]),
     "barbell_row":              ("Спина середина",["tbar_row", "rowtrain", "dumbbell_row"],                    ["dumbbell_row", "pullup_wide"]),
-    "tbar_row":                 ("Спина середина",["barbell_row", "rowtrain"],                                 ["dumbbell_row", "pullup_wide"]),
-    "face_pull":                ("Задняя дельта", ["rear_delt_machine", "rear_delt"],                          ["rear_delt", "dumbbell_row"]),
-    "rear_delt":                ("Задняя дельта", ["face_pull", "rear_delt_machine"],                          ["dumbbell_row"]),
-    "rear_delt_machine":        ("Задняя дельта", ["face_pull", "rear_delt"],                                  ["rear_delt", "dumbbell_row"]),
+    "tbar_row":                 ("Спина середина",["barbell_row", "rowtrain", "dumbbell_row"],                 ["dumbbell_row", "pullup_wide"]),
+    # face_pull / задняя дельта → замены только на заднюю дельту
+    "face_pull":                ("Задняя дельта", ["rear_delt_machine", "rear_delt"],                          ["rear_delt"]),
+    "rear_delt":                ("Задняя дельта", ["face_pull", "rear_delt_machine"],                          ["face_pull"]),
+    "rear_delt_machine":        ("Задняя дельта", ["face_pull", "rear_delt"],                                  ["rear_delt"]),
     # ── ПЛЕЧИ ────────────────────────────────────────────────────────────────
     "ohp_barbell":              ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting", "ohp_machine", "arnold_press"], ["ohp_dumbbell", "pike_pushup"]),
     "ohp_dumbbell":             ("Плечи",         ["ohp_barbell", "arnold_press", "ohp_machine"],              ["ohp_dumbbell_sitting", "pike_pushup"]),
     "ohp_dumbbell_sitting":     ("Плечи",         ["ohp_dumbbell", "arnold_press", "ohp_machine"],             ["ohp_dumbbell", "pike_pushup"]),
-    "ohp_machine":              ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting"],                    ["ohp_dumbbell", "pike_pushup"]),
-    "arnold_press":             ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting"],                    ["ohp_dumbbell", "pike_pushup"]),
-    "lateralraise_dumbbell":    ("Плечи боков.",  ["front_raise", "ohp_dumbbell"],                             ["front_raise"]),
-    "front_raise":              ("Плечи передн.", ["lateralraise_dumbbell"],                                    ["lateralraise_dumbbell"]),
+    "ohp_machine":              ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting", "arnold_press"],    ["ohp_dumbbell", "pike_pushup"]),
+    "arnold_press":             ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting", "ohp_machine"],     ["ohp_dumbbell", "pike_pushup"]),
+    # боковые подъёмы → только боковые/передние дельты, не жим
+    "lateralraise_dumbbell":    ("Плечи боков.",  ["front_raise", "rear_delt"],                                ["front_raise"]),
+    "front_raise":              ("Плечи передн.", ["lateralraise_dumbbell"],                                   ["lateralraise_dumbbell"]),
     # ── БИЦЕПС ───────────────────────────────────────────────────────────────
     "biceps_barbell":           ("Бицепс",        ["biceps_dumbbell", "hammer", "concentration_curl"],         ["biceps_dumbbell", "hammer"]),
     "biceps_dumbbell":          ("Бицепс",        ["biceps_barbell", "hammer", "concentration_curl"],          ["hammer", "concentration_curl"]),
@@ -468,19 +481,20 @@ EXERCISE_ALTERNATIVES: Dict[str, Tuple[str, List[str], List[str]]] = {
     # ── ТРИЦЕПС ──────────────────────────────────────────────────────────────
     "triceps_oh":               ("Трицепс",       ["french_press_dumbbell", "triceps_cable", "dips"],          ["narrow_pushup", "diamond_pushup", "chair_dips_pushup"]),
     "triceps_cable":            ("Трицепс",       ["french_press_barbell", "french_press_dumbbell", "dips"],   ["narrow_pushup", "diamond_pushup"]),
-    "french_press_barbell":     ("Трицепс",       ["french_press_dumbbell", "triceps_cable"],                  ["narrow_pushup", "chair_dips_pushup"]),
-    "french_press_dumbbell":    ("Трицепс",       ["triceps_oh", "french_press_barbell"],                      ["narrow_pushup", "chair_dips_pushup"]),
+    "french_press_barbell":     ("Трицепс",       ["french_press_dumbbell", "triceps_cable", "triceps_oh"],    ["narrow_pushup", "chair_dips_pushup"]),
+    "french_press_dumbbell":    ("Трицепс",       ["triceps_oh", "french_press_barbell", "triceps_cable"],     ["narrow_pushup", "chair_dips_pushup"]),
     "narrow_pushup":            ("Трицепс",       ["triceps_cable", "dips"],                                   ["diamond_pushup", "chair_dips_pushup"]),
     # ── ПРЕСС / КОР ──────────────────────────────────────────────────────────
-    "planks_static":            ("Кор",           ["cable_crunch", "hanging_leg_raise", "elbow_leg_raise"],    ["side_plank", "ab_crunch", "bicycle_crunch"]),
-    "side_plank":               ("Кор",           ["planks_static", "cable_crunch"],                           ["planks_static", "ab_crunch"]),
-    "ab_crunch":                ("Пресс",         ["cable_crunch", "hanging_leg_raise"],                       ["bicycle_crunch", "russian_twist", "leg_raise_lying"]),
-    "bicycle_crunch":           ("Пресс",         ["cable_crunch", "hanging_leg_raise"],                       ["ab_crunch", "russian_twist"]),
-    "russian_twist":            ("Пресс",         ["cable_crunch", "hanging_leg_raise"],                       ["ab_crunch", "bicycle_crunch"]),
-    "cable_crunch":             ("Пресс",         ["hanging_leg_raise", "elbow_leg_raise"],                    ["ab_crunch", "bicycle_crunch", "russian_twist"]),
-    "hanging_leg_raise":        ("Пресс низ",     ["cable_crunch", "elbow_leg_raise"],                         ["leg_raise_lying", "ab_crunch"]),
-    "leg_raise_lying":          ("Пресс низ",     ["hanging_leg_raise", "elbow_leg_raise"],                    ["ab_crunch", "bicycle_crunch"]),
-    "elbow_leg_raise":          ("Пресс низ",     ["hanging_leg_raise", "cable_crunch"],                       ["leg_raise_lying", "ab_crunch"]),
+    # планка = кор-стабилизация → замены на другие упражнения кора/стабилизации
+    "planks_static":            ("Кор",           ["side_plank", "cable_crunch", "ab_crunch"],                 ["side_plank", "ab_crunch", "bicycle_crunch"]),
+    "side_plank":               ("Кор",           ["planks_static", "elbow_leg_raise"],                        ["planks_static", "ab_crunch"]),
+    "ab_crunch":                ("Пресс",         ["cable_crunch", "bicycle_crunch", "russian_twist"],         ["bicycle_crunch", "russian_twist", "leg_raise_lying"]),
+    "bicycle_crunch":           ("Пресс",         ["cable_crunch", "ab_crunch", "russian_twist"],              ["ab_crunch", "russian_twist"]),
+    "russian_twist":            ("Пресс",         ["bicycle_crunch", "ab_crunch", "cable_crunch"],             ["ab_crunch", "bicycle_crunch"]),
+    "cable_crunch":             ("Пресс",         ["ab_crunch", "bicycle_crunch", "hanging_leg_raise"],        ["ab_crunch", "bicycle_crunch", "russian_twist"]),
+    "hanging_leg_raise":        ("Пресс низ",     ["elbow_leg_raise", "leg_raise_lying", "cable_crunch"],      ["leg_raise_lying", "elbow_leg_raise"]),
+    "leg_raise_lying":          ("Пресс низ",     ["hanging_leg_raise", "elbow_leg_raise"],                    ["elbow_leg_raise", "ab_crunch"]),
+    "elbow_leg_raise":          ("Пресс низ",     ["hanging_leg_raise", "leg_raise_lying"],                    ["leg_raise_lying", "ab_crunch"]),
 }
 
 
@@ -5212,14 +5226,14 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 def nutrition_examples_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Вариант 1 (классика)", callback_data="nutr:ex:1"),
-            InlineKeyboardButton(text="Вариант 2 (яйца + гречка)", callback_data="nutr:ex:2"),
+            InlineKeyboardButton(text="Вариант 1", callback_data="nutr:ex:1"),
+            InlineKeyboardButton(text="Вариант 2", callback_data="nutr:ex:2"),
         ],
         [
-            InlineKeyboardButton(text="Вариант 3 (тунец + паста)", callback_data="nutr:ex:3"),
-            InlineKeyboardButton(text="Вариант 4 (рыба + гречка)", callback_data="nutr:ex:4"),
+            InlineKeyboardButton(text="Вариант 3", callback_data="nutr:ex:3"),
+            InlineKeyboardButton(text="Вариант 4", callback_data="nutr:ex:4"),
         ],
-        [InlineKeyboardButton(text="Вариант 5 (яйца + рис)", callback_data="nutr:ex:5")],
+        [InlineKeyboardButton(text="Вариант 5", callback_data="nutr:ex:5")],
         [InlineKeyboardButton(text="💡 Фишки в питании", callback_data="nutr:tips")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
@@ -8486,6 +8500,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
-
-
-
