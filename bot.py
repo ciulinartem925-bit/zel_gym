@@ -215,7 +215,7 @@ TECH_GIFS = {
     "chest_fly":         "media/tech/chest_fly.mp4",
     # ── Спина / тяга ────────────────────────────────────────────────────────
     "latpulldown_wide":  "media/tech/latpulldown_wide.mp4",
-    "latpulldown_narrow": "media/tech/latpulldown_narrow.gif",
+    "latpulldown_narrow": "media/tech/latpulldown_narrow.mp4",
     "pullup_chinup":     "media/tech/pullup_chinup.mp4",
     "pullup_wide":       "media/tech/pullup_wide.mp4",
     "rowtrain":          "media/tech/rowtrain.mp4",
@@ -265,6 +265,10 @@ TECH_GIFS = {
     # Руки
     "french_press":      "media/tech/french_press.mp4",
     "concentration_curl":"media/tech/concentration_curl.mp4",
+    "pushup_wide":       "media/tech/pushup_wide.mp4",
+    "pike_pushup":       "media/tech/pike_pushup.mp4",
+    "wall_pushup":       "media/tech/wall_pushup.mp4",
+    "pullup_narrow":     "media/tech/pullup_narrow.mp4",
     # Кор
     "bicycle_crunch":    "media/tech/bicycle_crunch.mp4",
     "russian_twist":     "media/tech/russian_twist.mp4",
@@ -644,7 +648,7 @@ TECH = {
     },
     "rowtrain": {
         "title": "Тяга горизонтального блока",
-        "mp4": "media/tech/latpulldown.mp4",
+        "mp4": "media/tech/rowtrain.mp4",
         "text": (
             "📚 Тяга горизонтального блока (середина спины)\n\n"
             "✅ Настройка\n"
@@ -662,7 +666,7 @@ TECH = {
     },
     "dumbbell_row": {
         "title": "Тяга гантели",
-        "mp4": "media/tech/latpulldown.mp4",
+        "mp4": "media/tech/dumbbell_row.mp4",
         "text": (
             "📚 Тяга гантели одной рукой (спина)\n\n"
             "✅ Настройка\n"
