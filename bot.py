@@ -384,6 +384,137 @@ EXERCISE_NAMES = {
     "elbow_leg_raise":        "Подъёмы ног в упоре на локтях",
 }
 
+# =========================
+# ✅ ЗАМЕНЫ УПРАЖНЕНИЙ
+# =========================
+# Ключ — tech_key упражнения (как в EXERCISE_NAMES).
+# Значение — (group_label, [gym_alts_keys], [home_alts_keys])
+# gym/home — списки tech_key из EXERCISE_NAMES
+
+EXERCISE_SUBSTITUTIONS: Dict[str, Tuple[str, List[str], List[str]]] = {
+    # ── ПРИСЕД / КВАДРИЦЕПС ──────────────────────────────────────────────────
+    "squat_barbell":       ("Квадрицепс",   ["hack_squat", "legpress", "goblet", "squat_sumo"],       ["squat_bw", "goblet", "bulgarian", "lunge_bw"]),
+    "squat_sumo":          ("Квадрицепс",   ["squat_barbell", "hack_squat", "legpress"],              ["squat_bw", "goblet", "lunge_bw"]),
+    "squat_bw":            ("Квадрицепс",   ["hack_squat", "goblet", "legpress"],                    ["bulgarian", "lunge_bw", "goblet"]),
+    "goblet":              ("Квадрицепс",   ["hack_squat", "legpress", "squat_barbell"],              ["squat_bw", "bulgarian", "lunge_bw"]),
+    "hack_squat":          ("Квадрицепс",   ["legpress", "squat_barbell", "goblet"],                 ["squat_bw", "bulgarian"]),
+    "legpress":            ("Квадрицепс",   ["hack_squat", "squat_barbell", "leg_extension"],        ["squat_bw", "lunge_bw", "bulgarian"]),
+    "leg_extension":       ("Квадрицепс",   ["legpress", "hack_squat"],                              ["squat_bw", "lunge_bw"]),
+    # ── ВЫПАДЫ / ЯГОДИЦЫ ─────────────────────────────────────────────────────
+    "bulgarian":           ("Ягодицы",      ["lunge_barbell", "legpress", "squat_barbell"],          ["lunge_bw", "lunge_dumbbell", "squat_bw"]),
+    "bulgarian_dumbbell":  ("Ягодицы",      ["bulgarian", "lunge_dumbbell", "legpress"],             ["lunge_bw", "lunge_walking", "squat_bw"]),
+    "lunge_barbell":       ("Ягодицы",      ["bulgarian", "legpress", "squat_barbell"],              ["lunge_bw", "lunge_walking"]),
+    "lunge_dumbbell":      ("Ягодицы",      ["bulgarian_dumbbell", "lunge_barbell"],                 ["lunge_bw", "lunge_walking", "bulgarian_dumbbell"]),
+    "lunge_walking":       ("Ягодицы",      ["lunge_dumbbell", "bulgarian_dumbbell"],                ["lunge_bw", "bulgarian_dumbbell"]),
+    "lunge_bw":            ("Ягодицы",      ["lunge_dumbbell", "bulgarian", "legpress"],             ["lunge_walking", "squat_bw", "bulgarian"]),
+    "glute_bridge":        ("Ягодицы",      ["glute_bridge_single", "legcurl", "hyperext"],          ["glute_bridge_bodyweight", "glute_bridge_single", "superman"]),
+    "glute_bridge_single": ("Ягодицы",      ["glute_bridge", "cable_kickback"],                     ["glute_bridge_bodyweight", "superman"]),
+    "glute_bridge_bodyweight": ("Ягодицы",  ["glute_bridge", "cable_kickback"],                     ["glute_bridge_single", "superman"]),
+    "cable_kickback":      ("Ягодицы",      ["leg_adduction", "glute_bridge"],                      ["glute_bridge_bodyweight", "glute_bridge_single"]),
+    "leg_adduction":       ("Приводящие",   ["cable_kickback", "legpress"],                         ["glute_bridge_bodyweight", "lunge_bw"]),
+    # ── БИЦЕПС БЕДРА / НИЖНЯЯ ТЯГА ──────────────────────────────────────────
+    "legcurl":             ("Бицепс бедра", ["rdl_barbell", "rdl_dumbbell", "glute_bridge"],         ["superman", "glute_bridge_bodyweight"]),
+    "rdl_barbell":         ("Бицепс бедра", ["deadlift", "rdl_dumbbell", "legcurl"],                 ["rdl_dumbbell", "good_morning", "hyperext"]),
+    "rdl_dumbbell":        ("Бицепс бедра", ["rdl_barbell", "deadlift", "legcurl"],                  ["good_morning", "hyperext", "superman"]),
+    "deadlift":            ("Нижняя тяга",  ["deadlift_sumo", "rdl_barbell", "hyperext"],            ["rdl_dumbbell", "good_morning", "superman"]),
+    "deadlift_sumo":       ("Нижняя тяга",  ["deadlift", "rdl_barbell"],                             ["rdl_dumbbell", "good_morning"]),
+    "hyperext":            ("Поясница",     ["rdl_barbell", "good_morning", "deadlift"],             ["superman", "good_morning", "rdl_dumbbell"]),
+    "superman":            ("Поясница",     ["hyperext", "good_morning"],                            ["glute_bridge_bodyweight", "hyperext"]),
+    "good_morning":        ("Поясница",     ["rdl_barbell", "hyperext", "deadlift"],                 ["superman", "hyperext"]),
+    # ── ИКРЫ ─────────────────────────────────────────────────────────────────
+    "calves_machine":      ("Икры",         ["calves_standing"],                                     ["calves_standing"]),
+    "calves_standing":     ("Икры",         ["calves_machine"],                                      ["calves_machine"]),
+    # ── ГРУДЬ ────────────────────────────────────────────────────────────────
+    "bench_barbell":       ("Грудь",        ["bench_dumbbell", "bench_machine", "incline_press_barbell", "chest_fly"], ["pushup_wide", "pushup_elevated", "dips"]),
+    "bench_dumbbell":      ("Грудь",        ["bench_barbell", "bench_machine", "incline_press_dumbbell"],              ["pushup_wide", "pushup_elevated", "dips"]),
+    "bench_machine":       ("Грудь",        ["bench_dumbbell", "bench_barbell"],                                       ["pushup_wide", "pushup_elevated"]),
+    "incline_press_barbell": ("Грудь верх", ["incline_press_dumbbell", "bench_barbell"],             ["pushup_elevated", "pike_pushup"]),
+    "incline_press_dumbbell": ("Грудь верх",["incline_press_barbell", "bench_dumbbell"],             ["pushup_elevated", "pike_pushup"]),
+    "chest_fly":           ("Грудь изол",   ["crossover_chest", "bench_dumbbell"],                  ["pushup_wide", "diamond_pushup"]),
+    "crossover_chest":     ("Грудь изол",   ["chest_fly", "bench_machine"],                         ["pushup_wide", "diamond_pushup"]),
+    "pushup_wide":         ("Грудь",        ["bench_dumbbell", "bench_machine", "chest_fly"],        ["pushup_elevated", "diamond_pushup", "explosive_pushup"]),
+    "pushup_elevated":     ("Грудь верх",   ["incline_press_dumbbell", "bench_dumbbell"],            ["pushup_wide", "pike_pushup"]),
+    "diamond_pushup":      ("Грудь/Трицепс",["bench_dumbbell", "dips"],                             ["narrow_pushup", "pushup_wide", "chair_dips_pushup"]),
+    "pike_pushup":         ("Плечи",        ["ohp_dumbbell", "ohp_dumbbell_sitting"],                ["pushup_elevated", "pushup_wide"]),
+    "dips":                ("Грудь/Трицепс",["bench_barbell", "bench_dumbbell"],                    ["chair_dips_pushup", "narrow_pushup", "diamond_pushup"]),
+    "explosive_pushup":    ("Грудь/Атлет", ["bench_dumbbell", "pushup_wide"],                       ["pushup_wide", "single_leg_pushup"]),
+    "single_leg_pushup":   ("Грудь",        ["pushup_wide", "bench_dumbbell"],                      ["explosive_pushup", "pushup_elevated"]),
+    "bodyweight_hands_up_pushup": ("Грудь", ["pushup_wide"],                                        ["diamond_pushup", "pushup_elevated"]),
+    "chair_dips_pushup":   ("Трицепс",      ["dips", "triceps_cable"],                              ["narrow_pushup", "diamond_pushup"]),
+    # ── СПИНА ────────────────────────────────────────────────────────────────
+    "latpulldown_wide":    ("Широчайшие",   ["pullup_wide", "latpulldown_narrow", "barbell_row"],    ["pullup_wide", "pullup_chinup"]),
+    "latpulldown_narrow":  ("Широчайшие",   ["pullup_narrow", "latpulldown_wide", "dumbbell_row"],   ["pullup_narrow", "pullup_chinup"]),
+    "pullup_wide":         ("Широчайшие",   ["latpulldown_wide", "tbar_row", "barbell_row"],         ["pullup_chinup", "pullup_narrow"]),
+    "pullup_chinup":       ("Широчайшие",   ["latpulldown_narrow", "barbell_row"],                   ["pullup_wide", "pullup_narrow"]),
+    "pullup_narrow":       ("Широчайшие",   ["latpulldown_narrow", "dumbbell_row"],                  ["pullup_chinup", "pullup_wide"]),
+    "rowtrain":            ("Спина середина",["barbell_row", "tbar_row", "dumbbell_row"],            ["dumbbell_row", "pullup_chinup"]),
+    "dumbbell_row":        ("Спина середина",["rowtrain", "barbell_row", "tbar_row"],                ["pullup_chinup", "pullup_wide"]),
+    "barbell_row":         ("Спина середина",["tbar_row", "rowtrain", "dumbbell_row"],               ["dumbbell_row", "pullup_wide"]),
+    "tbar_row":            ("Спина середина",["barbell_row", "rowtrain"],                            ["dumbbell_row", "pullup_wide"]),
+    "face_pull":           ("Задняя дельта",["rear_delt_machine", "rear_delt"],                     ["rear_delt", "dumbbell_row"]),
+    "rear_delt":           ("Задняя дельта",["face_pull", "rear_delt_machine"],                     ["dumbbell_row"]),
+    "rear_delt_machine":   ("Задняя дельта",["face_pull", "rear_delt"],                             ["rear_delt", "dumbbell_row"]),
+    # ── ПЛЕЧИ ────────────────────────────────────────────────────────────────
+    "ohp_barbell":         ("Плечи",        ["ohp_dumbbell", "ohp_dumbbell_sitting", "ohp_machine", "arnold_press"], ["ohp_dumbbell", "pike_pushup"]),
+    "ohp_dumbbell":        ("Плечи",        ["ohp_barbell", "arnold_press", "ohp_machine"],         ["ohp_dumbbell_sitting", "pike_pushup"]),
+    "ohp_dumbbell_sitting":("Плечи",        ["ohp_dumbbell", "arnold_press", "ohp_machine"],        ["ohp_dumbbell", "pike_pushup"]),
+    "ohp_machine":         ("Плечи",        ["ohp_dumbbell", "ohp_dumbbell_sitting"],               ["ohp_dumbbell", "pike_pushup"]),
+    "arnold_press":        ("Плечи",        ["ohp_dumbbell", "ohp_dumbbell_sitting"],               ["ohp_dumbbell", "pike_pushup"]),
+    "lateralraise_dumbbell":("Плечи боков.","front_raise", ["front_raise", "ohp_dumbbell"],         ["front_raise"]),
+    "front_raise":         ("Плечи передн.",["lateralraise_dumbbell"],                              ["lateralraise_dumbbell"]),
+    # ── БИЦЕПС ───────────────────────────────────────────────────────────────
+    "biceps_barbell":      ("Бицепс",       ["biceps_dumbbell", "hammer", "concentration_curl"],    ["biceps_dumbbell", "hammer"]),
+    "biceps_dumbbell":     ("Бицепс",       ["biceps_barbell", "hammer", "concentration_curl"],     ["hammer", "concentration_curl"]),
+    "hammer":              ("Бицепс",       ["biceps_dumbbell", "concentration_curl"],              ["biceps_dumbbell", "concentration_curl"]),
+    "concentration_curl":  ("Бицепс",       ["biceps_dumbbell", "hammer"],                         ["hammer", "biceps_dumbbell"]),
+    # ── ТРИЦЕПС ──────────────────────────────────────────────────────────────
+    "triceps_oh":          ("Трицепс",      ["french_press_dumbbell", "triceps_cable", "dips"],     ["narrow_pushup", "diamond_pushup", "chair_dips_pushup"]),
+    "triceps_cable":       ("Трицепс",      ["french_press_barbell", "french_press_dumbbell", "dips"], ["narrow_pushup", "diamond_pushup"]),
+    "french_press_barbell":("Трицепс",      ["french_press_dumbbell", "triceps_cable"],             ["narrow_pushup", "chair_dips_pushup"]),
+    "french_press_dumbbell":("Трицепс",     ["triceps_oh", "french_press_barbell"],                 ["narrow_pushup", "chair_dips_pushup"]),
+    "narrow_pushup":       ("Трицепс",      ["triceps_cable", "dips"],                              ["diamond_pushup", "chair_dips_pushup"]),
+    # ── ПРЕСС / КОР ──────────────────────────────────────────────────────────
+    "planks_static":       ("Кор",          ["cable_crunch", "hanging_leg_raise", "elbow_leg_raise"],["side_plank", "ab_crunch", "bicycle_crunch"]),
+    "side_plank":          ("Кор",          ["planks_static", "cable_crunch"],                      ["planks_static", "ab_crunch"]),
+    "ab_crunch":           ("Пресс",        ["cable_crunch", "hanging_leg_raise"],                  ["bicycle_crunch", "russian_twist", "leg_raise_lying"]),
+    "bicycle_crunch":      ("Пресс",        ["cable_crunch", "hanging_leg_raise"],                  ["ab_crunch", "russian_twist"]),
+    "russian_twist":       ("Пресс",        ["cable_crunch", "hanging_leg_raise"],                  ["ab_crunch", "bicycle_crunch"]),
+    "cable_crunch":        ("Пресс",        ["hanging_leg_raise", "elbow_leg_raise"],               ["ab_crunch", "bicycle_crunch", "russian_twist"]),
+    "hanging_leg_raise":   ("Пресс низ",    ["cable_crunch", "elbow_leg_raise"],                    ["leg_raise_lying", "ab_crunch"]),
+    "leg_raise_lying":     ("Пресс низ",    ["hanging_leg_raise", "elbow_leg_raise"],               ["ab_crunch", "bicycle_crunch"]),
+    "elbow_leg_raise":     ("Пресс низ",    ["hanging_leg_raise", "cable_crunch"],                  ["leg_raise_lying", "ab_crunch"]),
+}
+# Исправим опечатку в lateralraise_dumbbell — поправим формат
+EXERCISE_SUBSTITUTIONS["lateralraise_dumbbell"] = ("Плечи боков.", ["front_raise", "ohp_dumbbell"], ["front_raise"])
+
+
+def get_substitutions(tech_key: str, place: str) -> List[Tuple[str, str]]:
+    """Возвращает список (tech_key, display_name) замен для упражнения.
+    Учитывает место тренировки (зал/дома).
+    Возвращает до 4 вариантов."""
+    entry = EXERCISE_SUBSTITUTIONS.get(tech_key)
+    if not entry:
+        return []
+    _, gym_alts, home_alts = entry
+    is_home = "дома" in (place or "").lower()
+    alts: List[str] = list(home_alts if is_home else gym_alts)
+    # если список пустой — берём из другой категории
+    if not alts:
+        alts = list(gym_alts if is_home else home_alts)
+    result = []
+    seen = {tech_key}
+    for key in alts:
+        if key in seen:
+            continue
+        seen.add(key)
+        name = EXERCISE_NAMES.get(key)
+        if name:
+            result.append((key, name))
+        if len(result) >= 4:
+            break
+    return result
+
+
 # ТАРИФЫ
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 2,  "plan_regens": 3},
@@ -6945,32 +7076,52 @@ async def open_workouts(user_id: int, chat_id: int, bot: Bot, callback: Optional
 # ✅ Клавиатура дня тренировки — только управление и техники
 # убраны кнопки «Статистика» и «Меню»
 # =========================
+
+# =========================
+# ✅ UI HELPERS
+# =========================
+
+def safe_btn(text: str, maxlen: int = 24) -> str:
+    """Обрезает текст до maxlen символов с «…» — для inline-кнопок."""
+    text = text.strip()
+    if len(text) <= maxlen:
+        return text
+    # Пробуем не обрывать на середине слова
+    cut = text[:maxlen - 1].rsplit(" ", 1)[0] if " " in text[:maxlen] else text[:maxlen - 1]
+    return cut.rstrip("(,—") + "…"
+
+
 def workout_day_exercises_kb(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
-    """Клавиатура упражнений дня с чекбоксами и кнопкой техники."""
+    """Клавиатура упражнений дня.
+    Каждое упражнение — три ряда:
+      1) [✅/⬜️  Название упражнения]  — широкая кнопка на всю строку
+      2) [📚 Техника]  [🔄 Заменить]   — две компактные кнопки
+    Такой layout не выходит за границы сообщения даже на Android.
+    """
     rows = []
     for idx, name in enumerate(exercises):
         is_done = idx in done
-        short_name = name[:22] + "…" if len(name) > 22 else name
-        if is_done:
-            btn_text = f"✅ {short_name}"
-        else:
-            btn_text = f"⬜️ {short_name}"
-
-        done_btn = InlineKeyboardButton(
-            text=btn_text,
+        mark = "✅" if is_done else "⬜️"
+        label = safe_btn(name, 28)
+        # Строка 1: отметка выполнения
+        rows.append([InlineKeyboardButton(
+            text=f"{mark} {label}",
             callback_data=f"wex:done:{day}:{idx}"
-        )
+        )])
+        # Строка 2: техника + замена
         tech_key = get_tech_key_for_exercise(name)
+        action_row = []
         if tech_key:
-            tech_btn = InlineKeyboardButton(
+            action_row.append(InlineKeyboardButton(
                 text="📚 Техника",
                 callback_data=f"wex:tech:{day}:{tech_key}"
-            )
-            rows.append([done_btn, tech_btn])
-        else:
-            rows.append([done_btn])
+            ))
+        action_row.append(InlineKeyboardButton(
+            text="🔄 Заменить",
+            callback_data=f"wex:sub:{day}:{idx}"
+        ))
+        rows.append(action_row)
 
-    # Только кнопка «Назад к программе»
     rows.append([InlineKeyboardButton(text="📋 Программа", callback_data="nav:workouts")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -7069,6 +7220,148 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
         kb = workout_day_exercises_kb(day_num, exercises, done)
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer(f"{'✅' if ex_idx in done else '↩️'} {done_count}/{total}")
+
+
+async def cb_workout_ex_sub(callback: CallbackQuery, bot: Bot):
+    """Показываем список замен для конкретного упражнения.
+    callback_data: wex:sub:{day_num}:{ex_idx}
+    """
+    parts = callback.data.split(":")
+    day_num = int(parts[2])
+    ex_idx  = int(parts[3])
+    uid = callback.from_user.id
+
+    if not await is_access_active(uid):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    plan_text, plan_struct = await get_workout_plan(uid)
+    if not plan_struct:
+        await callback.answer("Нет плана", show_alert=True)
+        return
+
+    day_text = (plan_struct.get("days") or {}).get(str(day_num))
+    if not day_text:
+        await callback.answer("День не найден", show_alert=True)
+        return
+
+    exercises = parse_exercises_from_day_text(day_text)
+    if ex_idx >= len(exercises):
+        await callback.answer("Упражнение не найдено", show_alert=True)
+        return
+
+    ex_name  = exercises[ex_idx]
+    tech_key = get_tech_key_for_exercise(ex_name) or ""
+    u = await get_user(uid)
+    place = u.get("place") or "зал"
+    subs = get_substitutions(tech_key, place)
+
+    # Убираем упражнения, уже присутствующие в плане дня
+    present = set(exercises)
+    subs_filtered = [(k, n) for k, n in subs if n not in present]
+    if not subs_filtered:
+        subs_filtered = subs  # если все уже есть — показываем всё равно
+
+    back_data = f"wday:{day_num}"
+
+    if not subs_filtered:
+        await callback.answer(
+            "Для этого упражнения пока нет доступных замен",
+            show_alert=True
+        )
+        return
+
+    entry = EXERCISE_SUBSTITUTIONS.get(tech_key)
+    group = entry[0] if entry else "упражнение"
+    ex_short = safe_btn(ex_name, 30)
+
+    text = (
+        f"🔄 Замена: {ex_short}\n"
+        f"📌 {group}\n\n"
+        f"Выбери альтернативу:"
+    )
+
+    rows = []
+    for sub_key, sub_name in subs_filtered[:4]:
+        rows.append([InlineKeyboardButton(
+            text=safe_btn(sub_name, 34),
+            # кодируем: день : индекс упражнения : ключ замены
+            callback_data=f"wex:sbc:{day_num}:{ex_idx}:{sub_key}"
+        )])
+    rows.append([InlineKeyboardButton(text="❌ Отмена", callback_data=back_data)])
+
+    await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    await callback.answer()
+
+
+async def cb_workout_ex_sub_confirm(callback: CallbackQuery, bot: Bot):
+    """Применяем выбранную замену упражнения и обновляем план.
+    callback_data: wex:sbc:{day_num}:{ex_idx}:{sub_key}
+    """
+    parts = callback.data.split(":", 5)
+    day_num = int(parts[2])
+    ex_idx  = int(parts[3])
+    sub_key = parts[4]
+    uid = callback.from_user.id
+
+    if not await is_access_active(uid):
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    new_name = EXERCISE_NAMES.get(sub_key)
+    if not new_name:
+        await callback.answer("Упражнение не найдено в базе", show_alert=True)
+        return
+
+    plan_text, plan_struct = await get_workout_plan(uid)
+    if not plan_struct:
+        await callback.answer("Нет плана", show_alert=True)
+        return
+
+    day_text = (plan_struct.get("days") or {}).get(str(day_num))
+    if not day_text:
+        await callback.answer("День не найден", show_alert=True)
+        return
+
+    exercises = parse_exercises_from_day_text(day_text)
+    if ex_idx >= len(exercises):
+        await callback.answer("Упражнение не найдено", show_alert=True)
+        return
+
+    old_name = exercises[ex_idx]
+
+    # Заменяем строку «• Название — ...» в тексте дня
+    import re as _re
+    pattern = _re.compile(
+        r'(\u2022\s*)' + _re.escape(old_name) + r'(\s*(?:\u2014[^\n]*)?)',
+        _re.MULTILINE
+    )
+    new_day_text = pattern.sub(lambda m: m.group(1) + new_name + m.group(2), day_text, count=1)
+
+    if new_day_text == day_text:
+        await callback.answer("Не удалось заменить упражнение", show_alert=True)
+        return
+
+    # Сохраняем обновлённый план
+    plan_struct["days"][str(day_num)] = new_day_text
+    await save_workout_plan(uid, plan_text, dumps_plan(plan_struct))
+
+    # Если упражнение было отмечено выполненным — убираем отметку только для него.
+    # Индексы других упражнений не меняются.
+    done = await get_day_done_exercises(uid, day_num)
+    if ex_idx in done:
+        done.remove(ex_idx)
+        await set_day_done_exercises(uid, day_num, done)
+
+    # Перерисовываем экран дня
+    new_exercises = parse_exercises_from_day_text(new_day_text)
+    done = await get_day_done_exercises(uid, day_num)
+    text = build_day_display_text(day_num, new_day_text, new_exercises, done)
+    kb = workout_day_exercises_kb(day_num, new_exercises, done)
+    await clean_edit(callback, uid, text, reply_markup=kb)
+    short = safe_btn(new_name, 22)
+    await callback.answer(f"✅ Заменено на «{short}»")
+
 
 
 async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
@@ -8053,6 +8346,8 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_workout_day, F.data.startswith("wday:"))
     dp.callback_query.register(cb_workout_ex_done, F.data.startswith("wex:done:"))
     dp.callback_query.register(cb_workout_ex_tech, F.data.startswith("wex:tech:"))
+    dp.callback_query.register(cb_workout_ex_sub, F.data.startswith("wex:sub:"))
+    dp.callback_query.register(cb_workout_ex_sub_confirm, F.data.startswith("wex:sbc:"))
     dp.callback_query.register(cb_workout_rebuild, F.data == "workout:rebuild")
 
     dp.message.register(cmd_testpay, Command("testpay"))
