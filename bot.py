@@ -5268,14 +5268,14 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
         f"🥑 Жиры: {f} г\n"
         f"🍚 Углеводы: {c} г\n"
         f"🍽 Приёмов пищи: {meals}\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
         f"🌅 Завтрак — {b_kcal} ккал (30%)\n"
         f"   Б: {b_p} г  |  Ж: {b_f} г  |  У: {b_c} г\n\n"
         f"☀️ Обед — {l_kcal} ккал (40%)\n"
         f"   Б: {l_p} г  |  Ж: {l_f} г  |  У: {l_c} г\n\n"
         f"🌙 Ужин — {d_kcal} ккал (30%)\n"
         f"   Б: {d_p} г  |  Ж: {d_f} г  |  У: {d_c} г\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
         "Выбери пример рациона 👇\n"
         "(Все варианты подходят под твои цифры)"
     )
@@ -8486,4 +8486,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+
 
