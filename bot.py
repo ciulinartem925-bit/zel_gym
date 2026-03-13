@@ -5248,14 +5248,14 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 def nutrition_examples_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Вариант 1", callback_data="nutr:ex:1"),
-            InlineKeyboardButton(text="Вариант 2", callback_data="nutr:ex:2"),
+            InlineKeyboardButton(text="Вариант 1 (классика)", callback_data="nutr:ex:1"),
+            InlineKeyboardButton(text="Вариант 2 (яйца + гречка)", callback_data="nutr:ex:2"),
         ],
         [
-            InlineKeyboardButton(text="Вариант 3", callback_data="nutr:ex:3"),
-            InlineKeyboardButton(text="Вариант 4", callback_data="nutr:ex:4"),
+            InlineKeyboardButton(text="Вариант 3 (тунец + паста)", callback_data="nutr:ex:3"),
+            InlineKeyboardButton(text="Вариант 4 (рыба + гречка)", callback_data="nutr:ex:4"),
         ],
-        [InlineKeyboardButton(text="Вариант 5", callback_data="nutr:ex:5")],
+        [InlineKeyboardButton(text="Вариант 5 (яйца + рис)", callback_data="nutr:ex:5")],
         [
             InlineKeyboardButton(text="⬆️ Увеличить калории", callback_data="nutr:cal:plus"),
             InlineKeyboardButton(text="⬇️ Уменьшить калории", callback_data="nutr:cal:minus"),
@@ -5732,47 +5732,47 @@ async def cmd_start(message: Message, bot: Bot):
 
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
     text = (
-        "💳 <b>Выбери тариф — начни тренироваться сегодня</b>\n\n"
+        "💳 <b>Тарифы — начни тренироваться сегодня</b>\n\n"
         "Персональная программа, техника, питание и дневник — всё в одном боте.\n"
-        "Бот подстраивается под твою цель, уровень и место тренировок.\n\n"
+        "Бот адаптируется под твою цель, уровень и место тренировок.\n\n"
 
-        "─────────────────────────\n"
+        "━━━━━━━━━━━━━━━━━━\n"
         f"🔵 <b>1 месяц — {TARIFFS['t1']['price']}₽</b>\n"
-        "─────────────────────────\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
         "• Персональный план тренировок (зал или дома)\n"
-        "• Техника каждого упражнения — видео/фото прямо в тренировке\n"
-        "• 🔄 <b>Замена упражнений</b> — поменяй любое упражнение под себя\n"
-        "• Дневник тренировок: веса, повторы, история\n"
+        "• Техника упражнений — видео/фото прямо в тренировке\n"
+        "• 🔄 <b>Замена упражнений</b> — подстрой программу под себя\n"
+        "• Дневник тренировок: веса, повторения, история\n"
         "• Замеры тела и отслеживание прогресса\n"
-        "• Обновление программы: 3 раза\n\n"
+        "• Обновлений программы: 3\n\n"
 
-        "─────────────────────────\n"
-        f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b> ⭐ Рекомендуем\n"
-        "─────────────────────────\n\n"
-        "Именно столько нужно, чтобы увидеть реальный результат.\n\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        f"🟡 <b>3 месяца — {TARIFFS['t3']['price']}₽</b>  ⭐ Рекомендуем\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "Именно столько нужно, чтобы увидеть настоящий результат.\n\n"
         "• Всё из тарифа «1 месяц»\n"
         "• 🍽 <b>Питание: расчёт КБЖУ + готовый рацион на каждый день</b>\n"
         "• 🛒 Список продуктов на неделю с упаковками\n"
-        "• 🔄 <b>Замена упражнений</b> — подстрой программу полностью под себя\n"
-        "• Обновление программы: 10 раз\n\n"
+        "• 🔄 <b>Замена упражнений</b> без ограничений\n"
+        "• Обновлений программы: 10\n\n"
 
-        "─────────────────────────\n"
+        "━━━━━━━━━━━━━━━━━━\n"
         f"🟢 <b>Навсегда — {TARIFFS['life']['price']}₽</b>\n"
-        "─────────────────────────\n\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
         "Один раз — пользуйся без ограничений.\n\n"
         "• Полный доступ ко всем функциям\n"
         "• Тренировки + питание + дневник + замеры + техники\n"
-        "• 🔄 <b>Замена упражнений</b> — меняй программу сколько угодно\n"
-        "• Обновление программы: безлимит\n"
+        "• 🔄 <b>Замена упражнений</b> — меняй сколько угодно\n"
+        "• Обновлений программы: безлимит\n"
         "• Никаких повторных списаний\n\n"
 
-        "─────────────────────────\n"
-        "🔄 <b>Замена упражнений</b> — что это?\n\n"
-        "В каждом тренировочном дне рядом с упражнением есть кнопка замены.\n"
-        "Нажми — и выбери альтернативу из предложенных.\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "🔄 <b>Что такое замена упражнений?</b>\n\n"
+        "В каждом тренировочном дне рядом с упражнением есть кнопка 🔄.\n"
+        "Нажми — выбери альтернативу из предложенных.\n"
         "Замена применяется сразу во всех днях программы.\n"
-        "Так программа становится по-настоящему твоей.\n\n"
-        "⚠️ <i>Питание (КБЖУ + рацион) доступно только на тарифах «3 месяца» и «Навсегда».</i>\n\n"
+        "Доступно во всех тарифах.\n\n"
+        "⚠️ <i>Питание (КБЖУ + рацион) — только на тарифах «3 месяца» и «Навсегда».</i>\n\n"
         "👇 Выбери тариф и начни прямо сейчас:"
     )
 
@@ -6103,7 +6103,7 @@ async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
-    text = "💬 Поддержка\n\nПисать пожалуйста только по делу\n\nМожно:\n• Сообщить об ошибке\n• Предложить идею\n• Задать вопрос\n• Оставить отзыв\n\nНаписать: @zel_support"
+    text = "Поддержка\n\nНапиши проблему — одним сообщением.\nМожно приложить скриншот."
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -7691,26 +7691,27 @@ async def open_measures(user_id: int, chat_id: int, bot: Bot, state: FSMContext,
     await state.set_state(MeasureFlow.choose_type)
     text = (
         "📏 Замеры\n\n"
-        "Здесь ты отслеживаешь изменения своего тела — это важнее цифр на весах.\n\n"
+        "Здесь ты фиксируешь изменения тела. "
+        "Это точнее и честнее, чем просто смотреть на весы.\n\n"
         "─── Что измерять ───\n\n"
-        "⚖️ Вес — основной показатель\n"
+        "⚖️ Вес — основной показатель динамики\n"
         "📐 Талия, грудь, бёдра, рука — объёмы тела\n\n"
         "─── Когда измерять ───\n\n"
         "• Утром, сразу после сна\n"
         "• Натощак, после туалета\n"
-        "• В один и тот же день недели (например каждое воскресенье)\n"
-        "• В одной и той же одежде (или без неё)\n\n"
-        "─── Зачем это нужно ───\n\n"
-        "Весы могут обманывать: вес колеблется на 0.5–2 кг в течение дня "
-        "из-за воды, еды, соли — это нормально.\n\n"
-        "Замеры раз в неделю показывают реальный тренд:\n"
-        "если за месяц −1.5 кг и −2 см на талии — прогресс есть, "
-        "даже если отдельные дни казались стабильными.\n\n"
-        "─── Как читать результаты ───\n\n"
-        "• Вес стоит 1–2 недели — это нормально, смотри на месяц\n"
-        "• Вес вырос на 0.3–0.5 кг — чаще всего вода, не жир\n"
-        "• Объёмы уменьшились, вес стоит — ты теряешь жир и строишь мышцы 💪\n\n"
-        "Записывай регулярно — через 4–6 недель увидишь чёткий прогресс."
+        "• В одно и то же время, в один день недели\n"
+        "  (например каждое воскресенье утром)\n\n"
+        "─── Почему вес колеблется ───\n\n"
+        "Вес может меняться на 0.5–2 кг в течение дня — это нормально.\n"
+        "Причины: вода, соль, углеводы, цикл у женщин.\n"
+        "Это не жир и не мышцы — просто колебания.\n\n"
+        "─── Как отслеживать прогресс ───\n\n"
+        "Смотри на тренд за 3–4 недели, не на отдельный день.\n"
+        "Если за месяц −1.5 кг и −2 см на талии — прогресс есть,\n"
+        "даже если на этой неделе вес немного вырос.\n\n"
+        "Если вес не меняется, но объёмы уходят — ты теряешь жир\n"
+        "и строишь мышцы одновременно. Это отличный результат 💪\n\n"
+        "Записывай раз в неделю — через месяц цифры скажут всё."
     )
     if callback:
         await send_section(
@@ -7875,39 +7876,37 @@ async def cb_measure_type(callback: CallbackQuery, state: FSMContext):
 
 
 async def _auto_adjust_calories_by_weight(user_id: int) -> Optional[str]:
-    """Анализирует последние 2 замера веса и автоматически корректирует activity_factor.
+    """Анализирует два последних замера веса и при необходимости корректирует activity_factor.
 
-    Логика (за ~7+ дней):
-    - Набор < 0.1 кг при цели масса  → +0.07 (≈ +150 ккал)
-    - Набор > 1.0 кг/нед при цели масса → -0.07 (≈ -150 ккал)
-    - Потеря < 0.1 кг при цели сушка → -0.07 (≈ -150 ккал)
-    - Потеря > 1.0 кг/нед при цели сушка → +0.07 (≈ +150 ккал)
-    - Иначе — без изменений.
+    Правила (нормализованы к неделе):
+    Цель масса:
+      вес не растёт (<+0.1 кг/нед)  → +0.07 af  (≈ +150 ккал)
+      вес растёт быстро (>+1 кг/нед) → -0.07 af  (≈ -150 ккал)
+    Цель сушка:
+      вес не падает (>-0.1 кг/нед)   → -0.07 af  (≈ -150 ккал)
+      вес падает быстро (<-1 кг/нед)  → +0.07 af  (≈ +150 ккал)
 
-    Возвращает строку с уведомлением, если были изменения, иначе None.
+    Возвращает строку-подсказку если изменение было, иначе None.
     """
     from datetime import datetime as _dt
+
     rows = await get_last_measures(user_id, "weight", 2)
     if len(rows) < 2:
-        return None   # недостаточно данных
+        return None
 
     new_val, new_date = rows[0]
     old_val, old_date = rows[1]
 
-    # Считаем прошедшие дни между замерами
     try:
-        d_new = _dt.fromisoformat(new_date[:10])
-        d_old = _dt.fromisoformat(old_date[:10])
-        days_diff = (d_new - d_old).days
+        days_diff = (_dt.fromisoformat(new_date[:10]) - _dt.fromisoformat(old_date[:10])).days
     except Exception:
         return None
 
     if days_diff < 3:
-        # Слишком часто — не корректируем (может быть суточное колебание)
+        # Слишком малый интервал — суточное колебание, не трогаем
         return None
 
-    delta_kg = new_val - old_val                        # изменение веса (+ рост, - потеря)
-    delta_per_week = delta_kg / days_diff * 7           # нормализуем к неделе
+    delta_per_week = (new_val - old_val) / days_diff * 7
 
     u = await get_user(user_id)
     goal = (u.get("goal") or "").lower()
@@ -7915,38 +7914,33 @@ async def _auto_adjust_calories_by_weight(user_id: int) -> Optional[str]:
     is_cut = "суш" in goal or "cut" in goal
 
     if not is_mass and not is_cut:
-        return None   # для поддержания — не трогаем
+        return None
 
-    current_factor = float(u.get("activity_factor") or 0) or _activity_factor(
+    current_af = float(u.get("activity_factor") or 0) or _activity_factor(
         int(u.get("freq") or 3), u.get("place") or ""
     )
     STEP = 0.07
-    new_factor = None
-    message_hint = None
+    new_af = None
+    hint = None
 
     if is_mass:
         if delta_per_week < 0.1:
-            # Вес не растёт при наборе — добавляем калории
-            new_factor = round(min(current_factor + STEP, 2.5), 2)
-            message_hint = "⬆️ Вес почти не меняется — калории автоматически увеличены (~+150 ккал)"
+            new_af = round(min(current_af + STEP, 2.5), 2)
+            hint = "⬆️ Вес почти не растёт — калории автоматически увеличены (~+150 ккал)"
         elif delta_per_week > 1.0:
-            # Растёт слишком быстро (много жира) — убираем калории
-            new_factor = round(max(current_factor - STEP, 1.2), 2)
-            message_hint = "⬇️ Вес растёт слишком быстро — калории автоматически уменьшены (~-150 ккал)"
-
+            new_af = round(max(current_af - STEP, 1.2), 2)
+            hint = "⬇️ Вес растёт слишком быстро — калории автоматически уменьшены (~-150 ккал)"
     elif is_cut:
         if delta_per_week > -0.1:
-            # Вес не падает при сушке — убираем калории
-            new_factor = round(max(current_factor - STEP, 1.2), 2)
-            message_hint = "⬇️ Вес не снижается — калории автоматически уменьшены (~-150 ккал)"
+            new_af = round(max(current_af - STEP, 1.2), 2)
+            hint = "⬇️ Вес не снижается — калории автоматически уменьшены (~-150 ккал)"
         elif delta_per_week < -1.0:
-            # Падает слишком быстро (риск потери мышц) — добавляем
-            new_factor = round(min(current_factor + STEP, 2.5), 2)
-            message_hint = "⬆️ Вес снижается слишком быстро — калории автоматически увеличены (~+150 ккал)"
+            new_af = round(min(current_af + STEP, 2.5), 2)
+            hint = "⬆️ Вес снижается слишком быстро — калории автоматически увеличены (~+150 ккал)"
 
-    if new_factor is not None and new_factor != current_factor:
-        await update_user(user_id, activity_factor=new_factor)
-        return message_hint
+    if new_af is not None and new_af != current_af:
+        await update_user(user_id, activity_factor=new_af)
+        return hint
 
     return None
 
@@ -7967,12 +7961,12 @@ async def measure_value(message: Message, state: FSMContext, bot: Bot):
     await add_measure(uid, mtype, val)
     await try_delete_user_message(bot, message)
 
-    # Автоподстройка калорий при записи веса
+    # Автокоррекция калорий при записи веса
     cal_hint = ""
     if mtype == "weight":
-        adjustment_msg = await _auto_adjust_calories_by_weight(uid)
-        if adjustment_msg:
-            cal_hint = f"\n\n{adjustment_msg}"
+        adj = await _auto_adjust_calories_by_weight(uid)
+        if adj:
+            cal_hint = f"\n\n{adj}"
 
     rows = await get_last_measures(uid, mtype, 6)
     name = dict(MEASURE_TYPES).get(mtype, mtype)
