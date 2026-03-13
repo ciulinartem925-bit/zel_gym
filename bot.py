@@ -2503,6 +2503,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
+    rows.append([InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="nav:progress_tip")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -2615,8 +2616,7 @@ def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
          InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
-        [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength"),
-         InlineKeyboardButton(text="🏃 Выносливость", callback_data="p:goal:endurance")],
+        [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength")],
     ])
 
 
@@ -4242,10 +4242,31 @@ def workout_progress_bar(done: int, total: int, width: int = 10) -> str:
 
 
 def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
-                            done: List[int], all_done: bool = False) -> str:
+                            done: List[int], all_done: bool = False,
+                            goal: str = "") -> str:
     """Строит текст дня тренировки с заголовком типа дня."""
     total = len(exercises)
     done_count = len(done)
+
+    # ── Интервалы отдыха по цели и типу упражнения ──────────────────────────
+    g = (goal or "").lower()
+    is_strength_goal = "сил" in g
+    is_cut_goal = "суш" in g
+
+    # Базовые: присед, становая, жим, подтягивания
+    _BASE_KEYWORDS = ["присед", "станов", "жим штанг", "жим ног", "подтяг", "deadlift", "squat", "bench"]
+    # Средние: гантельные жимы, тяги, выпады
+    _MID_KEYWORDS = ["гантел", "выпад", "тяга гантел", "болгар", "goblet", "lunge", "dumbbell"]
+    # Изоляция — всё остальное (бицепс, трицепс, разводки и т.д.)
+
+    def _rest_for(ex_name: str) -> str:
+        n = ex_name.lower()
+        if any(k in n for k in _BASE_KEYWORDS):
+            return "3–5 мин" if is_strength_goal else "2–3 мин"
+        elif any(k in n for k in _MID_KEYWORDS):
+            return "2–3 мин" if is_strength_goal else "1.5–2 мин"
+        else:  # изоляция
+            return "1.5–2 мин" if is_strength_goal else "1–1.5 мин"
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
@@ -4290,18 +4311,24 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
             lines.append(f"📌 {day_note}")
     lines.append("")
     lines.append("⚠️ Перед тренировкой разомнись 5–10 минут")
-    lines.append("⏱ Отдых между подходами: ~1.5–2 мин")
-    lines.append("📚 Кнопка «Техника» под каждым упражнением")
+    lines.append("📚 Кнопка «Техника» — смотри правильное движение")
+    lines.append("🔄 Кнопка «Замена» — поменяй упражнение под себя")
+    lines.append("")
+    lines.append("Как работать:")
+    lines.append("— нажми на упражнение → введи вес × повторения")
+    lines.append("— пример: 60x8, 60x8, 60x7")
+    lines.append("— бот сохранит и покажет прогресс")
     lines.append("")
 
     ex_full = parse_exercises_full(day_text)
     for idx, (name, sets_reps) in enumerate(ex_full):
         is_done = idx in done
         mark = "✅" if is_done else "🔸"
+        rest = _rest_for(name)
         if sets_reps:
-            lines.append(f"{mark} {name} {sets_reps}")
+            lines.append(f"{mark} {name} {sets_reps}  ⏱ {rest}")
         else:
-            lines.append(f"{mark} {name}")
+            lines.append(f"{mark} {name}  ⏱ {rest}")
 
     lines.append("")
     lines.append("🏁 После тренировки — заминка и растяжка 5–10 минут")
@@ -4344,7 +4371,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
     is_cut = ("суш" in g)
     is_strength = ("сил" in g)
-    is_endurance = ("вынос" in g)
 
     tags = _limits_tags(limits)
 
@@ -4357,12 +4383,6 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         base_sets = "3" if is_novice else "4–5"
         iso_sets = "2" if is_novice else "2–3"
         rir = "1–2"
-    elif is_endurance:
-        reps_base = "12–20"
-        reps_iso = "15–25"
-        base_sets = "2–3"
-        iso_sets = "2–3"
-        rir = "2–3"
     else:
         reps_base = "6–10" if not is_cut else "8–12"
         reps_iso = "10–15" if not is_cut else "12–20"
@@ -5386,6 +5406,54 @@ FAQ_QUESTIONS = {
             "Больше месяца — меняй подход кардинально."
         )
     },
+    "faq:progression": {
+        "q": "📈 Как правильно прогрессировать?",
+        "a": (
+            "📈 Прогрессия нагрузки — основа роста\n\n"
+            "Без увеличения нагрузки тело перестаёт адаптироваться.\n"
+            "Это главный принцип любой тренировочной программы.\n\n"
+            "─── Что такое прогрессия ───\n\n"
+            "Постепенное увеличение стресса для мышц:\n"
+            "больше вес, больше повторений, больше объём.\n"
+            "Тело улучшается только в ответ на новый, чуть больший вызов.\n\n"
+            "─── 4 метода прогрессии ───\n\n"
+            "1. Увеличивай вес (линейная прогрессия)\n"
+            "Лучший метод для новичков.\n"
+            "Добавляй +2.5 кг, когда выполнил все подходы чисто.\n\n"
+            "Пример — жим лёжа:\n"
+            "Неделя 1: 60 кг × 8 повторений\n"
+            "Неделя 2: 60 кг × 9 повторений\n"
+            "Неделя 3: 62.5 кг × 8 повторений\n"
+            "Неделя 4: 62.5 кг × 9 повторений\n"
+            "→ За 2 месяца: +10 кг к рабочему весу\n\n"
+            "2. Увеличивай повторения\n"
+            "Тот же вес — больше повторов. Тоже прогресс.\n"
+            "Когда достиг верхней границы диапазона (8→10) — повышай вес.\n\n"
+            "3. Увеличивай объём (подходы)\n"
+            "3 подхода → 4 подхода. Суммарная нагрузка выросла.\n"
+            "Используй, когда вес добавить ещё рано.\n\n"
+            "4. Сокращай отдых\n"
+            "Тот же вес с меньшим отдыхом = выше интенсивность.\n\n"
+            "─── Когда увеличивать вес ───\n\n"
+            "✅ Выполнил все подходы в нужном диапазоне\n"
+            "✅ Техника не нарушается\n"
+            "✅ Последние повторения тяжёлые, но выполнимые\n\n"
+            "❌ Не увеличивай вес если:\n"
+            "— техника ломается\n"
+            "— не добрал повторения в прошлый раз\n"
+            "— плохо восстановился (сон, питание)\n\n"
+            "─── Почему прогресс замедляется ───\n\n"
+            "• Тело адаптировалось → нужна смена стимула\n"
+            "• Недостаток сна → гормоны не восстанавливаются\n"
+            "• Мало белка → нет строительного материала для мышц\n"
+            "• Слишком большой скачок веса → технический отказ\n"
+            "• Нет записей → не видишь реального прогресса\n\n"
+            "─── Главное правило ───\n\n"
+            "+2.5 кг в неделю × 50 недель = +125 кг за год.\n"
+            "Маленькие шаги → большой результат.\n"
+            "Записывай всё в «Дневник тренировок» — прогресс станет виден."
+        )
+    },
     "faq:diet": {
         "q": "🍽 Как правильно питаться для результата?",
         "a": (
@@ -5521,14 +5589,17 @@ def faq_kb():
         ],
         [
             InlineKeyboardButton(text="📉 Прогресс встал", callback_data="faq:plateau"),
+            InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="faq:progression"),
+        ],
+        [
             InlineKeyboardButton(text="🍽 Как питаться", callback_data="faq:diet"),
-        ],
-        [
             InlineKeyboardButton(text="😔 Нет мотивации", callback_data="faq:motivation"),
-            InlineKeyboardButton(text="😴 Сон и отдых", callback_data="faq:sleep"),
         ],
         [
+            InlineKeyboardButton(text="😴 Сон и отдых", callback_data="faq:sleep"),
             InlineKeyboardButton(text="🏋️ Зачем техника", callback_data="faq:technique"),
+        ],
+        [
             InlineKeyboardButton(text="🏃 Нужно ли кардио", callback_data="faq:cardio"),
         ],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
@@ -5766,6 +5837,45 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await open_diary(user_id=uid, chat_id=chat_id, bot=bot, state=state, callback=callback)
     elif key == "faq":
         await open_faq(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
+    elif key == "progress_tip":
+        text = (
+            "📈 Как прогрессировать в тренировках\n\n"
+            "Прогрессия нагрузки — основа роста силы и мышц.\n"
+            "Без неё тело перестаёт адаптироваться и прогресс останавливается.\n\n"
+            "─── Что такое прогрессия ───\n\n"
+            "Это постепенное увеличение нагрузки от тренировки к тренировке.\n"
+            "Тело адаптируется к стрессу — значит, стресс нужно увеличивать.\n\n"
+            "─── 4 способа прогрессировать ───\n\n"
+            "1. Увеличивай вес\n"
+            "Самый простой способ. Освоил 8 повторений — добавь 2.5 кг.\n"
+            "Пример:\n"
+            "Неделя 1: 60 кг × 8\n"
+            "Неделя 2: 60 кг × 9\n"
+            "Неделя 3: 62.5 кг × 8\n\n"
+            "2. Увеличивай повторения\n"
+            "Тот же вес, но больше повторов — тоже прогресс.\n"
+            "Диапазон 6–12 — добавляй по 1 повторению в неделю.\n\n"
+            "3. Увеличивай подходы\n"
+            "Работал 3 подхода — добавь 4-й. Новый объём = новый рост.\n\n"
+            "4. Улучшай технику\n"
+            "Чище движение → больше мышечная активация → лучше результат.\n"
+            "Особенно важно на старте.\n\n"
+            "─── Правило малых шагов ───\n\n"
+            "+2.5 кг каждые 1–2 недели — это 60–130 кг роста за год.\n"
+            "Не торопись. Стабильность важнее скорости.\n\n"
+            "─── Когда увеличивать вес ───\n\n"
+            "• Выполнил все подходы в нужном диапазоне (например 3×8)\n"
+            "• Техника не страдает\n"
+            "• Последние повторения тяжёлые, но выполнимые (RIR 1–2)\n\n"
+            "─── Записывай результаты ───\n\n"
+            "Используй «Дневник тренировок» в боте.\n"
+            "Без записей невозможно отследить рост.\n"
+            "Через 4–6 недель увидишь конкретные цифры прогресса."
+        )
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
+        ])
+        await clean_edit(callback, uid, text, reply_markup=back_kb)
     elif key == "upgrade":
         await open_upgrade(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
     elif key == "upgrade_after_profile":
@@ -6047,8 +6157,7 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
              InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
-            [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength"),
-             InlineKeyboardButton(text="🏃 Выносливость", callback_data="p:goal:endurance")],
+            [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength")],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
         ])
         await clean_edit(callback, uid, text, reply_markup=kb)
@@ -6257,7 +6366,6 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
         "mass": "масса",
         "cut": "сушка",
         "strength": "сила",
-        "endurance": "выносливость",
     }.get(v, v)
 
     await update_user(callback.from_user.id, goal=goal)
@@ -7065,7 +7173,6 @@ GOAL_DISPLAY = {
     "mass": "Набор мышечной массы",
     "cut": "Похудение / сушка",
     "strength": "Рост силы",
-    "endurance": "Выносливость",
     "keep": "Поддержание формы",
 }
 
@@ -7195,7 +7302,8 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
     done = await get_day_done_exercises(uid, day_num)
     already_done_today = await is_day_completed_today(uid, day_num)
 
-    text = build_day_display_text(day_num, day_text, exercises, done)
+    u = await get_user(uid)
+    text = build_day_display_text(day_num, day_text, exercises, done, goal=u.get("goal") or "")
     if already_done_today:
         text += "\n\n🎉 День уже засчитан сегодня! Можешь пройти снова."
     kb = workout_day_exercises_kb(day_num, exercises, done)
@@ -7238,16 +7346,19 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
     done_count = len(done)
     all_done = total > 0 and done_count == total
 
+    u = await get_user(uid)
+    user_goal = u.get("goal") or ""
+
     if all_done:
         day_title = get_day_display_name(day_num, day_text)
         await mark_day_completed(uid, day_num, day_title)
         await clear_day_progress(uid, day_num)
-        text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True)
+        text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True, goal=user_goal)
         kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer("🎉 День завершён!", show_alert=True)
     else:
-        text = build_day_display_text(day_num, day_text, exercises, done)
+        text = build_day_display_text(day_num, day_text, exercises, done, goal=user_goal)
         kb = workout_day_exercises_kb(day_num, exercises, done)
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer(f"{'✅' if ex_idx in done else '↩️'} {done_count}/{total}")
@@ -7353,7 +7464,8 @@ async def cb_workout_ex_apply(callback: CallbackQuery, bot: Bot):
     new_day_text = days[str(day_num)]
     new_exercises = parse_exercises_from_day_text(new_day_text)
     done = await get_day_done_exercises(uid, day_num)
-    text = build_day_display_text(day_num, new_day_text, new_exercises, done)
+    u = await get_user(uid)
+    text = build_day_display_text(day_num, new_day_text, new_exercises, done, goal=u.get("goal") or "")
     kb   = build_workout_keyboard(day_num, new_exercises, done)
     await clean_edit(callback, uid, text, reply_markup=kb)
 
