@@ -2974,8 +2974,14 @@ async def send_section(
                 return
             except Exception as e:
                 logger.warning(f"send_section: не удалось отправить фото {image_path}: {e}")
-        # fallback — просто редактируем текст
-        await clean_edit(callback, user_id, text, reply_markup=reply_markup)
+        # fallback (нет картинки или ошибка фото):
+        # Пробуем редактировать текущее сообщение. Если оно было фото — edit_text
+        # не работает, поэтому используем clean_send (удалить старое + отправить новое).
+        try:
+            await callback.message.edit_text(text, reply_markup=reply_markup)
+            await set_last_bot_msg_id(user_id, callback.message.message_id)
+        except Exception:
+            await clean_send(callback.bot, chat_id, user_id, text, reply_markup=reply_markup)
         return
 
     # ── ветка без callback: отправка нового сообщения ───────────────────────
