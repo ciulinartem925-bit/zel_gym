@@ -4768,6 +4768,13 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     }
 
     days: Dict[str, str] = {}
+
+    # Генерируем блок упражнений ОДИН РАЗ для каждого уникального типа дня.
+    # Это гарантирует, что все UPPER одинаковы, все LOWER одинаковы и т.д.
+    kind_cache: Dict[str, List[str]] = {}
+    for kind in set(template):
+        kind_cache[kind] = day_block(kind)
+
     for d in range(1, f + 1):
         kind = template[d - 1]
         kind_title, kind_desc = KIND_TITLES.get(kind, (system, ""))
@@ -4795,7 +4802,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 f"⏱ ~45–60 мин\n\n"
             )
 
-        body = "\n".join(day_block(kind))
+        body = "\n".join(kind_cache[kind])
         days[str(d)] = header + body
 
     plan_struct = {
@@ -5226,14 +5233,14 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
 def nutrition_examples_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Вариант 1", callback_data="nutr:ex:1"),
-            InlineKeyboardButton(text="Вариант 2", callback_data="nutr:ex:2"),
+            InlineKeyboardButton(text="Вариант 1 (классика)", callback_data="nutr:ex:1"),
+            InlineKeyboardButton(text="Вариант 2 (яйца + гречка)", callback_data="nutr:ex:2"),
         ],
         [
-            InlineKeyboardButton(text="Вариант 3", callback_data="nutr:ex:3"),
-            InlineKeyboardButton(text="Вариант 4", callback_data="nutr:ex:4"),
+            InlineKeyboardButton(text="Вариант 3 (тунец + паста)", callback_data="nutr:ex:3"),
+            InlineKeyboardButton(text="Вариант 4 (рыба + гречка)", callback_data="nutr:ex:4"),
         ],
-        [InlineKeyboardButton(text="Вариант 5", callback_data="nutr:ex:5")],
+        [InlineKeyboardButton(text="Вариант 5 (яйца + рис)", callback_data="nutr:ex:5")],
         [InlineKeyboardButton(text="💡 Фишки в питании", callback_data="nutr:tips")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
@@ -5282,14 +5289,14 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
         f"🥑 Жиры: {f} г\n"
         f"🍚 Углеводы: {c} г\n"
         f"🍽 Приёмов пищи: {meals}\n\n"
-        "━━━━━━━━━━━━━━━━\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
         f"🌅 Завтрак — {b_kcal} ккал (30%)\n"
         f"   Б: {b_p} г  |  Ж: {b_f} г  |  У: {b_c} г\n\n"
         f"☀️ Обед — {l_kcal} ккал (40%)\n"
         f"   Б: {l_p} г  |  Ж: {l_f} г  |  У: {l_c} г\n\n"
         f"🌙 Ужин — {d_kcal} ккал (30%)\n"
         f"   Б: {d_p} г  |  Ж: {d_f} г  |  У: {d_c} г\n\n"
-        "━━━━━━━━━━━━━━━━\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
         "Выбери пример рациона 👇\n"
         "(Все варианты подходят под твои цифры)"
     )
@@ -5983,7 +5990,7 @@ async def cb_profile_start_wizard(callback: CallbackQuery, state: FSMContext):
 async def open_support_from_reply(message: Message, state: FSMContext, bot: Bot):
     await ensure_user(message.from_user.id, message.from_user.username or "")
     await state.clear()
-    text = "💬 Поддержка\n\nПисать пожалуйста только по делу\n\nМожно:\n• Сообщить об ошибке\n• Предложить идею\n• Задать вопрос\n• Оставить отзыв\n\nНаписать: @zel_support"
+    text = "Поддержка\n\nНапиши проблему — одним сообщением.\nМожно приложить скриншот."
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -7670,7 +7677,9 @@ async def diary_enter_sets(message: Message, state: FSMContext, bot: Bot):
 async def diary_history(callback: CallbackQuery):
     history = await get_diary_history(callback.from_user.id, 10)
     if not history:
-        await callback.message.answer("Истории пока нет 🙂")
+        await clean_edit(callback, callback.from_user.id,
+                         "Истории пока нет 🙂",
+                         reply_markup=simple_back_to_menu_inline_kb())
         await callback.answer()
         return
 
@@ -7691,7 +7700,8 @@ async def diary_history(callback: CallbackQuery):
             msg += line + "\n"
         msg += "\n"
 
-    await safe_send(callback.message, msg, reply_markup=simple_back_to_menu_inline_kb())
+    await clean_edit(callback, callback.from_user.id, msg,
+                     reply_markup=simple_back_to_menu_inline_kb())
     await callback.answer()
 
 
@@ -7745,7 +7755,9 @@ async def measure_value(message: Message, state: FSMContext, bot: Bot):
 async def measures_history(callback: CallbackQuery):
     rows = await get_last_measures_any(callback.from_user.id, 30)
     if not rows:
-        await callback.message.answer("Истории пока нет 🙂")
+        await clean_edit(callback, callback.from_user.id,
+                         "Истории пока нет 🙂",
+                         reply_markup=simple_back_to_menu_inline_kb())
         await callback.answer()
         return
 
@@ -7761,7 +7773,8 @@ async def measures_history(callback: CallbackQuery):
             msg += f"• {val:g} ({ts[:10]})\n"
         msg += "\n"
 
-    await safe_send(callback.message, msg, reply_markup=measures_kb())
+    await clean_edit(callback, callback.from_user.id, msg,
+                     reply_markup=simple_back_to_menu_inline_kb())
     await callback.answer()
 
 
