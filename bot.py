@@ -5256,6 +5256,10 @@ def nutrition_examples_kb():
             InlineKeyboardButton(text="Вариант 4 (рыба + гречка)", callback_data="nutr:ex:4"),
         ],
         [InlineKeyboardButton(text="Вариант 5 (яйца + рис)", callback_data="nutr:ex:5")],
+        [
+            InlineKeyboardButton(text="⬆️ Увеличить калории", callback_data="nutr:cal:plus"),
+            InlineKeyboardButton(text="⬇️ Уменьшить калории", callback_data="nutr:cal:minus"),
+        ],
         [InlineKeyboardButton(text="❓ Вес не меняется — что делать?", callback_data="nutr:weight_stall")],
         [InlineKeyboardButton(text="💡 Фишки в питании", callback_data="nutr:tips")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
@@ -6271,10 +6275,13 @@ async def profile_field_weight(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Вес в кг 🙂 Например: 72.5")
         await try_delete_user_message(bot, message)
         return
-    await update_user(message.from_user.id, weight=w)
+    uid = message.from_user.id
+    await update_user(uid, weight=w)
+    # Синхронизируем с таблицей замеров — чтобы главное меню сразу показывало новый вес
+    await add_measure(uid, "weight", w)
     await state.clear()
     await try_delete_user_message(bot, message)
-    await _finish_field_edit(bot, message.chat.id, message.from_user.id)
+    await _finish_field_edit(bot, message.chat.id, uid)
 
 
 async def profile_field_limits(message: Message, state: FSMContext, bot: Bot):
@@ -6443,11 +6450,14 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Вес в кг 🙂 Например: 72.5")
         await try_delete_user_message(bot, message)
         return
-    await update_user(message.from_user.id, weight=w)
+    uid = message.from_user.id
+    await update_user(uid, weight=w)
+    # Синхронизируем с замерами — главное меню берёт вес из measurements
+    await add_measure(uid, "weight", w)
 
     await state.set_state(ProfileWizard.place)
     text = _profile_header(6) + "🏠 Где тренируешься?"
-    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=kb_place())
+    await clean_send(bot, message.chat.id, uid, text, reply_markup=kb_place())
     await try_delete_user_message(bot, message)
 
 
@@ -8174,6 +8184,36 @@ async def cb_nutr_weight_stall(callback: CallbackQuery, bot: Bot):
     await callback.answer()
 
 
+async def cb_nutr_cal(callback: CallbackQuery, bot: Bot):
+    """⬆️/⬇️ Изменение калорий через сдвиг activity_factor (~150 ккал за шаг)."""
+    uid = callback.from_user.id
+    if not await ensure_profile_ready(uid):
+        await clean_edit(callback, uid, "⚠️ Сначала заполни профиль.")
+        await callback.answer()
+        return
+
+    direction = callback.data.split(":")[-1]   # "plus" или "minus"
+    u = await get_user(uid)
+
+    # activity_factor хранит пользовательскую коррекцию; дефолт — из частоты тренировок
+    current = float(u.get("activity_factor") or 0) or _activity_factor(
+        int(u.get("freq") or 3), u.get("place") or ""
+    )
+    # Шаг ±0.07 ≈ ±150 ккал при среднем BMR ~2100 ккал
+    step = 0.07
+    if direction == "plus":
+        new_factor = round(min(current + step, 2.5), 2)
+        toast = "⬆️ Калории увеличены ~на 150 ккал"
+    else:
+        new_factor = round(max(current - step, 1.2), 2)
+        toast = "⬇️ Калории уменьшены ~на 150 ккал"
+
+    await update_user(uid, activity_factor=new_factor)
+    await callback.answer(toast, show_alert=False)
+    # Перерисовываем экран питания с новым коэффициентом
+    await open_nutrition(uid, callback.message.chat.id, bot, callback=callback)
+
+
 async def cb_nutr_basket(callback: CallbackQuery, bot: Bot):
     """Корзина продуктов на неделю."""
     if not await is_full_access_active(callback.from_user.id):
@@ -8545,6 +8585,7 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
     dp.callback_query.register(cb_nutr_basket, F.data == "nutr:basket")
     dp.callback_query.register(cb_nutr_tips, F.data == "nutr:tips")
+    dp.callback_query.register(cb_nutr_cal, F.data.startswith("nutr:cal:"))
     dp.callback_query.register(cb_nutr_weight_stall, F.data == "nutr:weight_stall")
 
     dp.callback_query.register(cb_faq_question, F.data.startswith("faq:"))
