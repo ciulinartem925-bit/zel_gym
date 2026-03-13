@@ -2974,14 +2974,8 @@ async def send_section(
                 return
             except Exception as e:
                 logger.warning(f"send_section: не удалось отправить фото {image_path}: {e}")
-        # fallback (нет картинки или ошибка фото):
-        # Пробуем редактировать текущее сообщение. Если оно было фото — edit_text
-        # не работает, поэтому используем clean_send (удалить старое + отправить новое).
-        try:
-            await callback.message.edit_text(text, reply_markup=reply_markup)
-            await set_last_bot_msg_id(user_id, callback.message.message_id)
-        except Exception:
-            await clean_send(callback.bot, chat_id, user_id, text, reply_markup=reply_markup)
+        # fallback — просто редактируем текст
+        await clean_edit(callback, user_id, text, reply_markup=reply_markup)
         return
 
     # ── ветка без callback: отправка нового сообщения ───────────────────────
@@ -7630,13 +7624,6 @@ async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await state.update_data(exercise=exercise)
     await state.set_state(DiaryFlow.enter_sets)
 
-    old_prompt_id = await get_diary_prompt_msg_id(callback.from_user.id)
-    if old_prompt_id:
-        try:
-            await bot.delete_message(chat_id=callback.message.chat.id, message_id=old_prompt_id)
-        except Exception:
-            pass
-
     today = datetime.now().strftime("%Y-%m-%d")
     text = (
         f"🗓 {today}\n"
@@ -7644,9 +7631,12 @@ async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
         "Напиши подходы: весxповторы\n"
         "Пример: 60x8, 60x8, 60x7"
     )
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:diary")]
+    ])
 
-    m = await bot.send_message(chat_id=callback.message.chat.id, text=text)
-    await set_diary_prompt_msg_id(callback.from_user.id, m.message_id)
+    # Редактируем текущее сообщение — новое не создаём
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
     await callback.answer()
 
 
@@ -7682,18 +7672,11 @@ async def diary_enter_sets(message: Message, state: FSMContext, bot: Bot):
     for i, (w, r) in enumerate(parsed, start=1):
         await add_set(session_id, exercise, i, w, r)
 
+    await try_delete_user_message(bot, message)
+
     today = datetime.now().strftime("%Y-%m-%d")
     msg = f"✅ Записал.\n🗓 {today}\n🏷 {exercise}\nПодходов: {len(parsed)}"
     await clean_send(bot, message.chat.id, message.from_user.id, msg, reply_markup=diary_exercises_kb())
-    await try_delete_user_message(bot, message)
-
-    prompt_id = await get_diary_prompt_msg_id(message.from_user.id)
-    if prompt_id:
-        try:
-            await bot.delete_message(chat_id=message.chat.id, message_id=prompt_id)
-        except Exception:
-            pass
-        await set_diary_prompt_msg_id(message.from_user.id, None)
 
     await state.set_state(DiaryFlow.choosing_exercise)
 
