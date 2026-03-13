@@ -5256,10 +5256,6 @@ def nutrition_examples_kb():
             InlineKeyboardButton(text="Вариант 4 (рыба + гречка)", callback_data="nutr:ex:4"),
         ],
         [InlineKeyboardButton(text="Вариант 5 (яйца + рис)", callback_data="nutr:ex:5")],
-        [
-            InlineKeyboardButton(text="➕ Увеличить калории", callback_data="nutr:cal:plus"),
-            InlineKeyboardButton(text="➖ Уменьшить калории", callback_data="nutr:cal:minus"),
-        ],
         [InlineKeyboardButton(text="❓ Вес не меняется — что делать?", callback_data="nutr:weight_stall")],
         [InlineKeyboardButton(text="💡 Фишки в питании", callback_data="nutr:tips")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
@@ -7895,80 +7891,149 @@ async def measures_history(callback: CallbackQuery):
 # ПИТАНИЕ: 3 варианта
 # =========================
 def build_shopping_basket(goal: str, calories: int, protein_g: int, fat_g: int, carbs_g: int, meals: int) -> str:
-    """Генерирует список продуктов на неделю под цель пользователя."""
+    """Генерирует список продуктов на неделю под цель пользователя.
+    Формат: точное количество + подсказка по упаковкам, чтобы не нужно было считать."""
+
+    def _pkg_chicken(g: int) -> str:
+        """Куриная грудка. Упаковки ~500 г или ~1 кг."""
+        kg = g / 1000
+        packs = max(1, round(g / 500))
+        if kg < 0.9:
+            return f"{g} г  ({packs} упаковка ~500 г)"
+        kg_r = round(kg * 2) / 2        # округляем до 0.5
+        packs_1kg = max(1, round(kg))
+        return f"{kg_r:.1f} кг  (≈ {packs_1kg} уп. по ~500–600 г)"
+
+    def _pkg_fish(g: int) -> str:
+        """Рыба. Упаковки ~400–500 г."""
+        kg = g / 1000
+        packs = max(1, round(g / 450))
+        if kg < 0.9:
+            return f"{g} г  ({packs} упаковка ~400 г)"
+        return f"{round(kg, 1):.1f} кг  (≈ {packs} упаковки ~400–500 г)"
+
+    def _pkg_eggs(n: int) -> str:
+        """Яйца. Упаковки по 10 шт."""
+        packs = max(1, round(n / 10))
+        return f"{n} шт  ({packs} упаковка по 10 шт)"
+
+    def _pkg_curd(g: int) -> str:
+        """Творог. Пачки 200 г или 500 г."""
+        if g <= 300:
+            return f"{g} г  (1 пачка 200 г + немного)"
+        packs_500 = max(1, round(g / 500))
+        return f"{g} г  (≈ {packs_500} пачки по 500 г)"
+
+    def _pkg_cereal(g: int, name: str) -> str:
+        """Крупа. Пачки 500–1000 г."""
+        if g <= 550:
+            return f"{g} г  (1 пачка 500 г)"
+        packs = max(1, round(g / 1000))
+        return f"{g} г  (≈ {packs} пачки по 1 кг)"
+
+    def _pkg_oats(g: int) -> str:
+        """Овсянка. Пачки 500 г."""
+        packs = max(1, round(g / 500))
+        return f"{g} г  ({packs} пачка 500 г)"
+
+    def _pkg_oil(g: int) -> str:
+        """Масло. Бутылки 500–900 мл."""
+        tbsp = max(1, round(g / 10))
+        if g <= 500:
+            return f"{g} мл  (~{tbsp} ст.л.)  (1 бутылка)"
+        return f"{g} мл  (~{tbsp} ст.л.)  (≈ {round(g/750)} бутылки)"
+
+    def _pkg_nuts(g: int) -> str:
+        """Орехи. Пачки 100–200 г."""
+        if g <= 150:
+            return f"{g} г  (1 пачка ~100–150 г)"
+        packs = max(1, round(g / 150))
+        return f"{g} г  (≈ {packs} пачки ~150 г)"
+
+    def _pkg_potato(g: int) -> str:
+        """Картофель. Сетки 1–2 кг."""
+        kg = round(g / 1000, 1)
+        if g < 800:
+            return f"{g} г  (небольшой пакет)"
+        return f"{kg:.1f} кг  (1 сетка 1–1.5 кг)"
+
+    def _pkg_fruit(g: int) -> str:
+        """Бананы/яблоки. Штучно или кг."""
+        kg = round(g / 1000, 1)
+        pcs = max(2, round(g / 130))   # ~130 г один банан/яблоко
+        return f"~{kg:.1f} кг  (≈ {pcs} шт — яблоки, бананы, ягоды)"
+
+    def _pkg_yogurt(g: int) -> str:
+        packs = max(1, round(g / 400))
+        return f"{g} г  ({packs} баночки ~400 г)"
+
     g = (goal or "").lower()
     is_cut = "суш" in g
     is_mass = "мас" in g
 
-    # Базовые недельные количества (на 7 дней)
-    # Белок: основной источник
-    chicken_week = int(round(protein_g * 0.45 * 7 / 0.31))   # 45% белка из курицы
-    fish_week    = int(round(protein_g * 0.25 * 7 / 0.18))   # 25% из рыбы
-    eggs_week    = max(7, int(round(protein_g * 0.15 * 7 / 0.127 / 60)))  # ~15% из яиц (шт)
-    curd_week    = int(round(protein_g * 0.15 * 7 / 0.18))   # ~15% из творога
+    # ── Недельные количества (граммы / штуки) ──────────────────────────
+    chicken_g = int(round(protein_g * 0.45 * 7 / 0.31))
+    fish_g    = int(round(protein_g * 0.25 * 7 / 0.18))
+    eggs_n    = max(7, int(round(protein_g * 0.15 * 7 / 0.127 / 60)))
+    curd_g    = int(round(protein_g * 0.15 * 7 / 0.18))
 
-    # Углеводы
-    rice_week    = int(round(carbs_g * 0.35 * 7 / 0.76))
-    buckwheat_w  = int(round(carbs_g * 0.25 * 7 / 0.57))
-    oats_week    = int(round(carbs_g * 0.15 * 7 / 0.60))
-    potato_week  = int(round(carbs_g * 0.10 * 7 / 0.17))
-    fruit_week   = int(round(carbs_g * 0.15 * 7 / 0.17))   # фрукты ~17% углеводов
+    rice_g      = int(round(carbs_g * 0.35 * 7 / 0.76))
+    buckwheat_g = int(round(carbs_g * 0.25 * 7 / 0.57))
+    oats_g      = int(round(carbs_g * 0.15 * 7 / 0.60))
+    potato_g    = int(round(carbs_g * 0.10 * 7 / 0.17))
+    if is_cut:
+        potato_g = potato_g // 2
+    fruit_g     = int(round(carbs_g * 0.15 * 7 / 0.17))
 
-    # Жиры
-    oil_week     = int(round(fat_g * 0.4 * 7 / 1.0))         # масло 40% жиров
-    nuts_week    = int(round(fat_g * 0.3 * 7 / 0.5))         # орехи ~50% жиров
-
-    # Овощи — всегда
-    veg_week     = 1400  # 200г в день × 7
+    oil_g  = int(round(fat_g * 0.4 * 7 / 1.0))
+    nuts_g = int(round(fat_g * 0.3 * 7 / 0.5))
+    yogurt_g = 0 if is_cut else 800
 
     lines = [
-        f"🛒 Корзина на неделю",
-        f"Цель: {goal} | {calories} ккал/день",
-        f"Б {protein_g}г / Ж {fat_g}г / У {carbs_g}г",
+        "🛒 Корзина на неделю",
+        f"Цель: {goal or '—'}  |  {calories} ккал/день",
+        f"Б {protein_g} г  /  Ж {fat_g} г  /  У {carbs_g} г",
         "",
-        "🥩 БЕЛОК:",
-        f"• Куриная грудка — {chicken_week} г (~{chicken_week//1000:.1f} кг)" if chicken_week >= 1000 else f"• Куриная грудка — {chicken_week} г",
-        f"• Рыба белая (треска/минтай) — {fish_week} г" + (" (~{:.1f} кг)".format(fish_week/1000) if fish_week >= 1000 else ""),
-        f"• Яйца — {eggs_week} шт",
-        f"• Творог 0–5% — {curd_week} г",
+        "─── 🥩 БЕЛОК ───",
+        f"☐  Куриная грудка — {_pkg_chicken(chicken_g)}",
+        f"☐  Рыба (треска/минтай) — {_pkg_fish(fish_g)}",
+        f"☐  Яйца — {_pkg_eggs(eggs_n)}",
+        f"☐  Творог 0–5% — {_pkg_curd(curd_g)}",
     ]
 
     if is_mass:
-        beef_week = int(round(protein_g * 0.10 * 7 / 0.25))
-        lines.append(f"• Говядина (варёная) — {beef_week} г  (для разнообразия)")
+        beef_g = int(round(protein_g * 0.10 * 7 / 0.25))
+        lines.append(f"☐  Говядина — {beef_g} г  (1 упаковка, для разнообразия)")
 
     lines += [
         "",
-        "🍚 УГЛЕВОДЫ:",
-        f"• Рис (сухой) — {rice_week} г",
-        f"• Гречка (сухая) — {buckwheat_w} г",
-        f"• Овсянка (сухая) — {oats_week} г",
-        f"• Картофель — {potato_week} г" if not is_cut else f"• Картофель — {potato_week//2} г  (на сушке меньше)",
-        f"• Фрукты (яблоко/банан/ягоды) — ~{fruit_week} г/нед",
+        "─── 🍚 УГЛЕВОДЫ ───",
+        f"☐  Рис (сухой) — {_pkg_cereal(rice_g, 'рис')}",
+        f"☐  Гречка (сухая) — {_pkg_cereal(buckwheat_g, 'гречка')}",
+        f"☐  Овсянка (сухая) — {_pkg_oats(oats_g)}",
+        f"☐  Картофель — {_pkg_potato(potato_g)}" + ("  (на сушке меньше)" if is_cut else ""),
+        f"☐  Фрукты — {_pkg_fruit(fruit_g)}",
         "",
-        "🥦 ОВОЩИ:",
-        f"• Овощи (огурец, помидор, капуста) — ~{veg_week} г/нед",
-        "  (покупай любые свежие или замороженные)",
+        "─── 🥦 ОВОЩИ ───",
+        "☐  Свежие/замороженные овощи — 1.5 кг  (огурцы, помидоры, капуста)",
+        "    Покупай любые — что есть в магазине и нравится.",
         "",
-        "🫒 ЖИРЫ:",
-        f"• Масло оливковое/подсолнечное — {oil_week} г  (~{oil_week//10} ст.л.)",
-        f"• Орехи (миндаль/грецкий) — {nuts_week} г",
+        "─── 🫒 ЖИРЫ ───",
+        f"☐  Масло оливковое/подсолнечное — {_pkg_oil(oil_g)}",
+        f"☐  Орехи (миндаль/грецкий) — {_pkg_nuts(nuts_g)}",
     ]
 
     if not is_cut:
-        lines += [
-            f"• Греческий йогурт 2% — 500–700 г",
-        ]
+        lines.append(f"☐  Греческий йогурт 2% — {_pkg_yogurt(yogurt_g)}")
 
     lines += [
         "",
-        "💡 Замены:",
+        "─── 💡 Можно заменять ───",
         "  курица ↔ индейка ↔ рыба",
         "  рис ↔ гречка ↔ макароны",
         "  творог ↔ греческий йогурт",
         "",
-        "⚠️ Это примерный список. Корректируй под",
-        "   свой вкус и доступность продуктов.",
+        "⚠️ Список примерный. Корректируй под вкус и наличие.",
     ]
 
     return "\n".join(lines)
@@ -8071,34 +8136,6 @@ async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
     await callback.answer()
 
 
-async def cb_nutr_cal(callback: CallbackQuery, bot: Bot):
-    """Увеличение или уменьшение калорий на 150 ккал через activity_factor."""
-    uid = callback.from_user.id
-    if not await ensure_profile_ready(uid):
-        await clean_edit(callback, uid, "⚠️ Сначала заполни профиль.")
-        await callback.answer()
-        return
-
-    direction = callback.data.split(":")[-1]   # "plus" или "minus"
-    u = await get_user(uid)
-
-    # Текущий коэффициент активности (или дефолт 1.55)
-    current_factor = float(u.get("activity_factor") or 1.55)
-    # Шаг ~150 ккал ≈ ±0.07 к activity_factor при TDEE ~2000 ккал
-    step = 0.07
-    if direction == "plus":
-        new_factor = round(min(current_factor + step, 2.5), 2)
-        label = "➕ Калории увеличены примерно на 150 ккал"
-    else:
-        new_factor = round(max(current_factor - step, 1.2), 2)
-        label = "➖ Калории уменьшены примерно на 150 ккал"
-
-    await update_user(uid, activity_factor=new_factor)
-    await callback.answer(label, show_alert=False)
-    # Перерисовываем экран питания с новым коэффициентом
-    await open_nutrition(uid, callback.message.chat.id, bot, callback=callback)
-
-
 async def cb_nutr_weight_stall(callback: CallbackQuery, bot: Bot):
     """Объяснение что делать если вес не меняется."""
     text = (
@@ -8108,31 +8145,29 @@ async def cb_nutr_weight_stall(callback: CallbackQuery, bot: Bot):
         "Скорее всего ты ешь ровно столько, сколько тратишь.\n"
         "Профицита нет — мышцам не из чего расти.\n\n"
         "Что делать:\n"
-        "→ Нажми «➕ Увеличить калории» — добавь 100–150 ккал\n"
-        "→ Подожди 1–2 недели и смотри на вес\n"
-        "→ Если вес не растёт — увеличь ещё раз\n\n"
+        "→ Добавь 1–2 приёма пищи или увеличь порции\n"
+        "→ Ориентир: +100–150 ккал к своей норме\n"
+        "→ Подожди 1–2 недели и смотри на вес\n\n"
         "Цель: +0.5–1 кг в неделю = хороший набор без лишнего жира.\n\n"
         "─── 🎯 Хочешь похудеть, но вес стоит ───\n\n"
         "Тело адаптировалось к дефициту. Это нормально через 3–4 недели.\n\n"
         "Что делать:\n"
-        "→ Нажми «➖ Уменьшить калории» — убери 100–150 ккал\n"
+        "→ Немного уменьши порции или убери перекус\n"
         "→ Или добавь активности (прогулки, кардио)\n"
         "→ Жди 1–2 недели — вес начнёт двигаться\n\n"
         "Важно: не убирай больше 300 ккал сразу — начнут уходить мышцы.\n\n"
         "─── 🎯 Хочешь похудеть, но вес растёт ───\n\n"
         "Калорий больше, чем тратишь. Скрытые калории в еде — частая причина.\n\n"
         "Что делать:\n"
-        "→ Нажми «➖ Уменьшить калории»\n"
         "→ Проверь порции — часто переедаем без осознания\n"
-        "→ Следи 3–5 дней, записывая всё что ешь\n\n"
+        "→ Следи 3–5 дней, записывая всё что ешь\n"
+        "→ Убери один высококалорийный продукт из рациона\n\n"
         "─── Общее правило ───\n\n"
-        "Меняй калории по 100–150 ккал за раз.\n"
+        "Меняй питание маленькими шагами по 100–150 ккал за раз.\n"
         "Жди 1–2 недели после каждого изменения.\n"
         "Вес колеблется изо дня в день — смотри на среднее за неделю."
     )
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Увеличить калории", callback_data="nutr:cal:plus"),
-         InlineKeyboardButton(text="➖ Уменьшить калории", callback_data="nutr:cal:minus")],
         [InlineKeyboardButton(text="⬅️ Назад к рациону", callback_data="nutr:back")],
     ])
     await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
@@ -8510,7 +8545,6 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
     dp.callback_query.register(cb_nutr_basket, F.data == "nutr:basket")
     dp.callback_query.register(cb_nutr_tips, F.data == "nutr:tips")
-    dp.callback_query.register(cb_nutr_cal, F.data.startswith("nutr:cal:"))
     dp.callback_query.register(cb_nutr_weight_stall, F.data == "nutr:weight_stall")
 
     dp.callback_query.register(cb_faq_question, F.data.startswith("faq:"))
