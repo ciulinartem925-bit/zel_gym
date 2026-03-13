@@ -7296,6 +7296,7 @@ async def cb_workout_ex_alt(callback: CallbackQuery, bot: Bot):
 
 async def cb_workout_ex_apply(callback: CallbackQuery, bot: Bot):
     """Применяет выбранную замену, обновляет план и перерисовывает день.
+    Замена применяется во ВСЕХ днях программы, где встречается то же упражнение.
     callback_data: wex:apl:{day_num}:{ex_idx}:{alt_key}
     """
     parts = callback.data.split(":", 5)
@@ -7328,23 +7329,40 @@ async def cb_workout_ex_apply(callback: CallbackQuery, bot: Bot):
         await callback.answer("Не удалось найти упражнение в тексте", show_alert=True)
         return
 
-    # Заменяем строку «• Название — подходы» → «• НовоеНазвание — подходы»
-    new_day_text = day_text.replace(old_prefix, f"• {new_name}", 1)
-    plan_struct["days"][str(day_num)] = new_day_text
+    new_prefix = f"• {new_name}"
+    days = plan_struct.get("days") or {}
+    synced_days: List[int] = []  # дни, где была произведена замена (кроме текущего)
+
+    # Заменяем во ВСЕХ днях программы, где встречается старое упражнение
+    for d_key, d_text in days.items():
+        if old_prefix in d_text:
+            days[d_key] = d_text.replace(old_prefix, new_prefix)
+            d_num = int(d_key)
+            if d_num != day_num:
+                synced_days.append(d_num)
+
+    plan_struct["days"] = days
     await save_workout_plan(uid, plan_text, dumps_plan(plan_struct))
 
-    # Снимаем отметку только с заменённого упражнения (индексы остальных не меняются)
+    # Снимаем отметку только с заменённого упражнения в текущем дне
     done = await get_day_done_exercises(uid, day_num)
     if ex_idx in done:
         done.remove(ex_idx)
         await set_day_done_exercises(uid, day_num, done)
 
+    new_day_text = days[str(day_num)]
     new_exercises = parse_exercises_from_day_text(new_day_text)
     done = await get_day_done_exercises(uid, day_num)
     text = build_day_display_text(day_num, new_day_text, new_exercises, done)
     kb   = build_workout_keyboard(day_num, new_exercises, done)
     await clean_edit(callback, uid, text, reply_markup=kb)
-    await callback.answer(f"✅ {safe_btn(new_name, 22)}")
+
+    # Тост-уведомление: сообщаем если замена прошла синхронно в других днях
+    if synced_days:
+        days_str = ", ".join(str(d) for d in sorted(synced_days))
+        await callback.answer(f"✅ Заменено в днях {day_num}, {days_str}", show_alert=False)
+    else:
+        await callback.answer(f"✅ {safe_btn(new_name, 22)}")
 
 
 async def cb_workout_stats(callback: CallbackQuery, bot: Bot):
@@ -7675,11 +7693,14 @@ async def diary_enter_sets(message: Message, state: FSMContext, bot: Bot):
 
 
 async def diary_history(callback: CallbackQuery):
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:diary")]
+    ])
     history = await get_diary_history(callback.from_user.id, 10)
     if not history:
         await clean_edit(callback, callback.from_user.id,
                          "Истории пока нет 🙂",
-                         reply_markup=simple_back_to_menu_inline_kb())
+                         reply_markup=back_kb)
         await callback.answer()
         return
 
@@ -7700,8 +7721,7 @@ async def diary_history(callback: CallbackQuery):
             msg += line + "\n"
         msg += "\n"
 
-    await clean_edit(callback, callback.from_user.id, msg,
-                     reply_markup=simple_back_to_menu_inline_kb())
+    await clean_edit(callback, callback.from_user.id, msg, reply_markup=back_kb)
     await callback.answer()
 
 
@@ -7753,11 +7773,14 @@ async def measure_value(message: Message, state: FSMContext, bot: Bot):
 
 
 async def measures_history(callback: CallbackQuery):
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:measures")]
+    ])
     rows = await get_last_measures_any(callback.from_user.id, 30)
     if not rows:
         await clean_edit(callback, callback.from_user.id,
                          "Истории пока нет 🙂",
-                         reply_markup=simple_back_to_menu_inline_kb())
+                         reply_markup=back_kb)
         await callback.answer()
         return
 
@@ -7773,8 +7796,7 @@ async def measures_history(callback: CallbackQuery):
             msg += f"• {val:g} ({ts[:10]})\n"
         msg += "\n"
 
-    await clean_edit(callback, callback.from_user.id, msg,
-                     reply_markup=simple_back_to_menu_inline_kb())
+    await clean_edit(callback, callback.from_user.id, msg, reply_markup=back_kb)
     await callback.answer()
 
 
