@@ -2798,6 +2798,21 @@ def _activity_factor(freq: int, place: str) -> float:
     return 1.65 if is_gym else 1.55
 
 
+def freq_to_activity_factor(freq: int, place: str = "") -> float:
+    """Автоматически вычисляет activity_factor по количеству тренировок в неделю.
+    0 → низкая (1.20), 1-2 → лёгкая (1.35), 3-4 → умеренная (1.45/1.55), 5+ → высокая (1.65)."""
+    pl = (place or "").lower()
+    is_gym = ("зал" in pl) or (pl == "gym")
+    f = int(freq or 0)
+    if f == 0:
+        return 1.20
+    if f <= 2:
+        return 1.35
+    if f <= 4:
+        return 1.45 if is_gym else 1.40
+    return 1.65 if is_gym else 1.55
+
+
 def _activity_label(factor) -> str:
     """Возвращает текстовую метку уровня активности по числовому коэффициенту."""
     if not factor:
@@ -6162,6 +6177,12 @@ async def cb_do_rebuild(callback: CallbackQuery, state: FSMContext, bot: Bot):
         if fsm_key in data:
             pending_fields[db_key] = data[fsm_key]
 
+    # Если изменился freq, но не задан явный activity_factor — пересчитываем автоматически
+    if "freq" in pending_fields and "activity_factor" not in pending_fields:
+        u = await get_user(uid)
+        place = pending_fields.get("place") or u.get("place") or ""
+        pending_fields["activity_factor"] = freq_to_activity_factor(int(pending_fields["freq"]), place)
+
     if pending_fields:
         await update_user(uid, **pending_fields)
         # Если изменился вес — синхронизируем с замерами
@@ -6592,23 +6613,26 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
     if v == "0":
         data = await state.get_data()
         if data.get("editing_field") in ("exp", "freq"):
+            # Редактирование: новичок → freq=3, activity=умеренная автоматически
+            u = await get_user(callback.from_user.id)
+            auto_factor = freq_to_activity_factor(3, u.get("place") or "")
             await state.clear()
-            await state.update_data(pending_exp="0", pending_freq=3)
+            await state.update_data(pending_exp="0", pending_freq=3, pending_activity_factor=auto_factor)
             await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
             await callback.answer()
             return
 
-        await update_user(callback.from_user.id, exp="0", freq=3)
+        # Первичное заполнение: новичок → freq=3, activity=умеренная, пропускаем оба вопроса
+        uid = callback.from_user.id
+        await update_user(uid, exp="0", freq=3)
+        u = await get_user(uid)
+        auto_factor = freq_to_activity_factor(3, u.get("place") or "")
+        await update_user(uid, activity_factor=auto_factor)
 
-        # Новичок — freq уже 3, пропускаем выбор частоты, идём на activity
-        await state.set_state(ProfileWizard.activity_level)
-        text = (
-            _profile_header(9)
-            + "🏃 Уровень активности\n\n"
-            "Уровень активности влияет на расчёт калорий.\n"
-            "Выбери вариант, который лучше всего описывает твой образ жизни:"
-        )
-        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_activity_level())
+        # Сразу к ограничениям
+        await state.set_state(ProfileWizard.limits)
+        text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
+        await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("activity"))
         await callback.answer()
         return
 
@@ -6636,22 +6660,26 @@ async def cb_profile_freq(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     if data.get("editing_field") == "freq":
+        # При редактировании — автоматически пересчитываем activity_factor по freq
+        u = await get_user(callback.from_user.id)
+        auto_factor = freq_to_activity_factor(f, u.get("place") or "")
         await state.clear()
-        await state.update_data(pending_freq=f)
+        await state.update_data(pending_freq=f, pending_activity_factor=auto_factor)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
 
-    await update_user(callback.from_user.id, freq=f)
+    # Первичное заполнение — автоматически вычисляем activity_factor и пропускаем вопрос
+    uid = callback.from_user.id
+    await update_user(uid, freq=f)
+    u = await get_user(uid)
+    auto_factor = freq_to_activity_factor(f, u.get("place") or "")
+    await update_user(uid, activity_factor=auto_factor)
 
-    await state.set_state(ProfileWizard.activity_level)
-    text = (
-        _profile_header(9)
-        + "🏃 Уровень активности\n\n"
-        "Уровень активности влияет на расчёт калорий.\n"
-        "Выбери вариант, который лучше всего описывает твой образ жизни:"
-    )
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_activity_level())
+    # Пропускаем вопрос активности — сразу к ограничениям
+    await state.set_state(ProfileWizard.limits)
+    text = _profile_header(10) + "⛔️ Ограничения/травмы? (или «нет»):"
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_text_step("activity"))
     await callback.answer()
 
 
