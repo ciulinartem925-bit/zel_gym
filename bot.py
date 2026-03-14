@@ -585,8 +585,8 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 
 # ТАРИФЫ
 TARIFFS = {
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 3,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 7,  "plan_regens": 10},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
     "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
 }
 
@@ -5304,15 +5304,15 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
                 est = max(1, int(round(g / 60.0)))
                 lines.append(f"• {FOOD_DB[k]['name']} — {est} шт (~{int(g)}г)")
             elif k in ("oil_sunfl", "oil_olive"):
-                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} мл")
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} мл (1 ст.л. ≈ 10–12 мл)")
             elif k in ("milk", "kefir"):
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} мл")
             elif k in ("chicken", "chicken_thigh", "turkey", "fish", "tuna_can"):
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (в сыром виде)")
             elif k in ("rice", "buckwheat", "oats", "pasta"):
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (в сухом виде)")
-            elif k in ("veg", "potato", "banana", "apple"):
-                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (в сыром виде)")
+            elif k in ("veg", "potato", "banana", "apple", "bread_rye", "curd_2"):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
             else:
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
         lines.append("")
@@ -6140,8 +6140,35 @@ async def cb_rebuild_plan(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await cb_profile_edit(callback, state)
 
 
-async def cb_do_rebuild(callback: CallbackQuery, bot: Bot):
-    """Кнопка «Составить новый план» в профиле — пересборка плана с текущими данными."""
+async def cb_do_rebuild(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Кнопка «Составить новый план» в профиле — применяет pending-изменения и пересобирает план."""
+    uid = callback.from_user.id
+    # Применяем все временно сохранённые изменения профиля в БД
+    data = await state.get_data()
+    pending_fields = {}
+    field_map = {
+        "pending_goal": "goal",
+        "pending_sex": "sex",
+        "pending_age": "age",
+        "pending_height": "height",
+        "pending_weight": "weight",
+        "pending_place": "place",
+        "pending_exp": "exp",
+        "pending_freq": "freq",
+        "pending_activity_factor": "activity_factor",
+        "pending_limits": "limits",
+    }
+    for fsm_key, db_key in field_map.items():
+        if fsm_key in data:
+            pending_fields[db_key] = data[fsm_key]
+
+    if pending_fields:
+        await update_user(uid, **pending_fields)
+        # Если изменился вес — синхронизируем с замерами
+        if "weight" in pending_fields:
+            await add_measure(uid, "weight", pending_fields["weight"])
+
+    await state.clear()
     await _do_rebuild_plan(callback, bot)
 
 
@@ -6328,8 +6355,8 @@ async def profile_field_age(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Возраст числом 🙂 Например: 23")
         await try_delete_user_message(bot, message)
         return
-    await update_user(message.from_user.id, age=age)
     await state.clear()
+    await state.update_data(pending_age=age)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, message.from_user.id)
 
@@ -6340,8 +6367,8 @@ async def profile_field_height(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Рост в см 🙂 Например: 178")
         await try_delete_user_message(bot, message)
         return
-    await update_user(message.from_user.id, height=h)
     await state.clear()
+    await state.update_data(pending_height=h)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, message.from_user.id)
 
@@ -6353,10 +6380,8 @@ async def profile_field_weight(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     uid = message.from_user.id
-    await update_user(uid, weight=w)
-    # Синхронизируем с таблицей замеров — чтобы главное меню сразу показывало новый вес
-    await add_measure(uid, "weight", w)
     await state.clear()
+    await state.update_data(pending_weight=w)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, uid)
 
@@ -6369,8 +6394,8 @@ async def profile_field_limits(message: Message, state: FSMContext, bot: Bot):
         return
     if limits.lower() in ("нет", "нету", "никаких", "no"):
         limits = ""
-    await update_user(message.from_user.id, limits=limits)
     await state.clear()
+    await state.update_data(pending_limits=limits)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, message.from_user.id)
 
@@ -6438,14 +6463,17 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
         "strength": "сила",
     }.get(v, v)
 
-    await update_user(callback.from_user.id, goal=goal)
-
     data = await state.get_data()
     if data.get("editing_field") == "goal":
+        # Сохраняем временно в FSM, не в БД — применится при "Составить новый план"
+        await state.update_data(pending_goal=goal)
         await state.clear()
+        await state.update_data(pending_goal=goal)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
+
+    await update_user(callback.from_user.id, goal=goal)
 
     await state.set_state(ProfileWizard.sex)
     text = _profile_header(2) + "👤 Пол?"
@@ -6456,14 +6484,16 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
 async def cb_profile_sex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     sex = "м" if v == "m" else "ж"
-    await update_user(callback.from_user.id, sex=sex)
 
     data = await state.get_data()
     if data.get("editing_field") == "sex":
         await state.clear()
+        await state.update_data(pending_sex=sex)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
+
+    await update_user(callback.from_user.id, sex=sex)
 
     await state.set_state(ProfileWizard.age)
     text = _profile_header(3) + "🎂 Возраст (числом):"
@@ -6541,15 +6571,16 @@ async def profile_weight_text(message: Message, state: FSMContext, bot: Bot):
 async def cb_profile_place(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     place = "дома" if v == "bodyweight" else "зал"
-    await update_user(callback.from_user.id, place=place)
 
     data = await state.get_data()
     if data.get("editing_field") == "place":
         await state.clear()
+        await state.update_data(pending_place=place)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
 
+    await update_user(callback.from_user.id, place=place)
     await state.set_state(ProfileWizard.exp)
     text = _profile_header(7) + "📈 Опыт?"
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb_exp())
@@ -6559,14 +6590,15 @@ async def cb_profile_place(callback: CallbackQuery, state: FSMContext, bot: Bot)
 async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     if v == "0":
-        await update_user(callback.from_user.id, exp="0", freq=3)
-
         data = await state.get_data()
         if data.get("editing_field") in ("exp", "freq"):
             await state.clear()
+            await state.update_data(pending_exp="0", pending_freq=3)
             await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
             await callback.answer()
             return
+
+        await update_user(callback.from_user.id, exp="0", freq=3)
 
         # Новичок — freq уже 3, пропускаем выбор частоты, идём на activity
         await state.set_state(ProfileWizard.activity_level)
@@ -6581,14 +6613,16 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
         return
 
     exp_text = "1-2 года" if v == "mid" else "2+ года"
-    await update_user(callback.from_user.id, exp=exp_text)
 
     data = await state.get_data()
     if data.get("editing_field") == "exp":
         await state.clear()
+        await state.update_data(pending_exp=exp_text)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
+
+    await update_user(callback.from_user.id, exp=exp_text)
 
     await state.set_state(ProfileWizard.freq)
     text = _profile_header(8) + "📅 Сколько тренировок в неделю?"
@@ -6599,14 +6633,16 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 async def cb_profile_freq(callback: CallbackQuery, state: FSMContext, bot: Bot):
     f = int(callback.data.split(":")[2])
-    await update_user(callback.from_user.id, freq=f)
 
     data = await state.get_data()
     if data.get("editing_field") == "freq":
         await state.clear()
+        await state.update_data(pending_freq=f)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
+
+    await update_user(callback.from_user.id, freq=f)
 
     await state.set_state(ProfileWizard.activity_level)
     text = (
@@ -6621,15 +6657,17 @@ async def cb_profile_freq(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 async def cb_profile_activity_level(callback: CallbackQuery, state: FSMContext, bot: Bot):
     factor = float(callback.data.split(":")[2])
-    await update_user(callback.from_user.id, activity_factor=factor)
 
     data = await state.get_data()
     if data.get("editing_field") == "activity":
-        # Редактирование из профиля — возвращаем в меню профиля
+        # Редактирование из профиля — сохраняем временно в FSM
         await state.clear()
+        await state.update_data(pending_activity_factor=factor)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id)
         await callback.answer()
         return
+
+    await update_user(callback.from_user.id, activity_factor=factor)
 
     # Первичное заполнение — идём дальше по мастеру
     await state.set_state(ProfileWizard.limits)
