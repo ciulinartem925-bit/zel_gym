@@ -585,8 +585,8 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 
 # ТАРИФЫ
 TARIFFS = {
-    "t1":    {"title": "1 месяц",                "days": 30,   "price": 3,  "plan_regens": 3},
-    "t3":    {"title": "3 месяца",               "days": 90,   "price": 7,  "plan_regens": 10},
+    "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
+    "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
     "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
 }
 
@@ -6728,7 +6728,34 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
         "• дать готовые примеры питания\n\n"
         "Чтобы открыть все функции — выбери подходящий тариф."
     )
-    await clean_send(bot, message.chat.id, message.from_user.id, summary, reply_markup=kb)
+
+    # ── Удаляем предыдущее сообщение бота (как в clean_send) ────────────────
+    last_id = await get_last_bot_msg_id(message.from_user.id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
+    # ── Отправляем видео с caption, либо текст если файл отсутствует ─────────
+    video_path = "media2/tech/profile_success.mp4"
+    if os.path.exists(video_path):
+        m = await bot.send_video(
+            chat_id=message.chat.id,
+            video=FSInputFile(video_path),
+            caption=summary,
+            reply_markup=kb,
+            parse_mode=ParseMode.HTML,
+        )
+    else:
+        m = await bot.send_message(
+            chat_id=message.chat.id,
+            text=summary,
+            reply_markup=kb,
+            parse_mode=ParseMode.HTML,
+        )
+
+    await set_last_bot_msg_id(message.from_user.id, m.message_id)
     await try_delete_user_message(bot, message)
 
 
