@@ -4326,9 +4326,152 @@ def workout_progress_bar(done: int, total: int, width: int = 10) -> str:
     return f"{bar} {pct}%"
 
 
+def _build_warmup(limits: str, day_type: str) -> str:
+    """Генерирует персональную разминку с учётом травм и типа дня."""
+    tags = _limits_tags(limits)
+
+    # ── Базовая разминка (всегда) ────────────────────────────────────────────
+    base = [
+        "• Ходьба на месте или лёгкий бег — 3 мин",
+        "• Вращения в плечевых суставах — 10 раз вперёд/назад",
+        "• Вращения в тазобедренных суставах — 10 раз",
+        "• Наклоны головы вперёд/назад и в стороны — по 5 раз",
+    ]
+
+    # ── Дополнительно по типу дня ────────────────────────────────────────────
+    day_t = (day_type or "").lower()
+    if any(x in day_t for x in ["низ", "ноги", "legs", "fullbody", "фулбади", "full body"]):
+        base += [
+            "• Приседания без веса — 15 раз (медленно)",
+            "• Выпады на месте — по 8 раз на каждую ногу",
+            "• Подъёмы на носки — 15 раз",
+        ]
+    if any(x in day_t for x in ["верх", "грудь", "плеч", "push", "толчок", "fullbody", "фулбади", "full body"]):
+        base += [
+            "• Отжимания от стены или пола — 10 раз (медленно)",
+            "• Разведения рук в стороны с мини-амплитудой — 15 раз",
+        ]
+    if any(x in day_t for x in ["спина", "тяга", "pull", "бицепс", "fullbody", "фулбади", "full body"]):
+        base += [
+            "• Тяга резинки или имитация тяги без веса — 15 раз",
+            "• Наклоны корпуса вперёд с прямой спиной — 10 раз",
+        ]
+
+    # ── Спецупражнения при травмах ───────────────────────────────────────────
+    injury_lines = []
+    if tags["knee"]:
+        injury_lines += [
+            "🦵 Колено — доп. разминка:",
+            "• Сгибание/разгибание ноги сидя — 15 раз каждой",
+            "• Круговые движения в коленном суставе — 10 раз",
+            "• Подъём прямой ноги лёжа — 12 раз каждой",
+        ]
+    if tags["back"]:
+        injury_lines += [
+            "🔙 Спина — доп. разминка:",
+            "• Кошка-корова (cat-cow) — 10 раз медленно",
+            "• Поясничный мост лёжа — 12 раз",
+            "• Вращения корпуса стоя — 10 раз в каждую сторону",
+        ]
+    if tags["shoulder"]:
+        injury_lines += [
+            "🦾 Плечо — доп. разминка:",
+            "• Маятник Codman (наклон, рука висит, малые круги) — 30 сек",
+            "• Внешняя ротация плеча с резинкой/без — 15 раз",
+            "• Пожимание плечами + опускание — 10 раз",
+        ]
+    if tags["elbow"]:
+        injury_lines += [
+            "💪 Локоть/запястье — доп. разминка:",
+            "• Сгибание/разгибание запястий без веса — 15 раз",
+            "• Пронация и супинация предплечья — 15 раз",
+            "• Лёгкое разминание мышц предплечья руками — 1 мин",
+        ]
+
+    result = "⚡️ Разминка (5–10 мин):\n" + "\n".join(base)
+    if injury_lines:
+        result += "\n\n" + "\n".join(injury_lines)
+    return result
+
+
+def _build_cooldown(limits: str, day_type: str) -> str:
+    """Генерирует персональную заминку с учётом травм и типа дня."""
+    tags = _limits_tags(limits)
+
+    day_t = (day_type or "").lower()
+
+    # ── Растяжка по типу дня ─────────────────────────────────────────────────
+    stretches = []
+    if any(x in day_t for x in ["низ", "ноги", "legs", "fullbody", "фулбади", "full body"]):
+        stretches += [
+            "• Растяжка квадрицепса стоя — 30 сек на каждую ногу",
+            "• Растяжка бицепса бедра (наклон к ноге) — 30 сек",
+            "• Растяжка ягодиц (поза голубя или «цифра 4») — 30 сек",
+            "• Растяжка икр у стены — 30 сек на каждую ногу",
+        ]
+    if any(x in day_t for x in ["верх", "грудь", "плеч", "push", "толчок", "fullbody", "фулбади", "full body"]):
+        stretches += [
+            "• Растяжка груди (руки за спину, грудь вперёд) — 30 сек",
+            "• Растяжка передней дельты (рука через тело) — 30 сек",
+            "• Растяжка трицепса (рука за голову) — 30 сек на каждую",
+        ]
+    if any(x in day_t for x in ["спина", "тяга", "pull", "бицепс", "fullbody", "фулбади", "full body"]):
+        stretches += [
+            "• Растяжка широчайших (рука на опору, наклон в сторону) — 30 сек",
+            "• Поза ребёнка (child's pose) — 1 мин",
+            "• Растяжка бицепса (рука на стену, поворот корпуса) — 20 сек",
+        ]
+    if not stretches:
+        stretches = [
+            "• Наклоны к ногам стоя — 30 сек",
+            "• Поза ребёнка — 1 мин",
+            "• Скручивание лёжа — 30 сек на каждую сторону",
+        ]
+
+    # ── Спецрекомендации при травмах ────────────────────────────────────────
+    injury_lines = []
+    if tags["knee"]:
+        injury_lines += [
+            "🦵 Колено — восстановление:",
+            "• Растяжка квадрицепса лёжа на животе — 40 сек каждой",
+            "• Лёд на колено (если есть воспаление) — 10–15 мин",
+            "• Подъём прямой ноги лёжа — 3×15 (укрепление без нагрузки)",
+            "• ❗️ Избегай глубоких приседов и резких движений",
+        ]
+    if tags["back"]:
+        injury_lines += [
+            "🔙 Спина — восстановление:",
+            "• Кошка-корова — 10 раз медленно",
+            "• Скручивание лёжа (колено к противоположному плечу) — 30 сек",
+            "• Поза ребёнка — 1.5 мин",
+            "• ❗️ Не скручивай и не перегружай поясницу после тренировки",
+        ]
+    if tags["shoulder"]:
+        injury_lines += [
+            "🦾 Плечо — восстановление:",
+            "• Растяжка через тело (рука горизонтально) — 30 сек",
+            "• Растяжка в дверном проёме — 30 сек",
+            "• Лёд на плечо при болях — 10 мин",
+            "• ❗️ Не поднимай руку резко вверх, избегай боли",
+        ]
+    if tags["elbow"]:
+        injury_lines += [
+            "💪 Локоть/запястье — восстановление:",
+            "• Растяжка сгибателей (рука вперёд ладонью вверх, пальцы вниз) — 30 сек",
+            "• Растяжка разгибателей (рука вперёд ладонью вниз, пальцы вниз) — 30 сек",
+            "• Самомассаж предплечья — 1–2 мин",
+            "• ❗️ Если локоть болит после тренировки — приложи лёд на 10 мин",
+        ]
+
+    result = "🏁 Заминка и растяжка (5–10 мин):\n" + "\n".join(stretches)
+    if injury_lines:
+        result += "\n\n" + "\n".join(injury_lines)
+    return result
+
+
 def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
                             done: List[int], all_done: bool = False,
-                            goal: str = "") -> str:
+                            goal: str = "", limits: str = "") -> str:
     """Строит текст дня тренировки с заголовком типа дня."""
     total = len(exercises)
     done_count = len(done)
@@ -4395,7 +4538,7 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
         if day_note:
             lines.append(f"📌 {day_note}")
     lines.append("")
-    lines.append("⚠️ Перед тренировкой разомнись 5–10 минут")
+    lines.append(_build_warmup(limits, day_type))
     lines.append("📚 — техника выполнения упражнения")
     lines.append("🔄 — заменить упражнение под себя")
     lines.append("")
@@ -4411,7 +4554,7 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
             lines.append(f"{mark} {name}  ⏱ {rest}")
 
     lines.append("")
-    lines.append("🏁 После тренировки — заминка и растяжка 5–10 минут")
+    lines.append(_build_cooldown(limits, day_type))
     lines.append("")
 
     bar = workout_progress_bar(done_count, total)
@@ -7472,7 +7615,7 @@ async def cb_workout_day(callback: CallbackQuery, bot: Bot):
     already_done_today = await is_day_completed_today(uid, day_num)
 
     u = await get_user(uid)
-    text = build_day_display_text(day_num, day_text, exercises, done, goal=u.get("goal") or "")
+    text = build_day_display_text(day_num, day_text, exercises, done, goal=u.get("goal") or "", limits=u.get("limits") or "")
     if already_done_today:
         text += "\n\n🎉 День уже засчитан сегодня! Можешь пройти снова."
     kb = workout_day_exercises_kb(day_num, exercises, done)
@@ -7517,17 +7660,18 @@ async def cb_workout_ex_done(callback: CallbackQuery, bot: Bot):
 
     u = await get_user(uid)
     user_goal = u.get("goal") or ""
+    user_limits = u.get("limits") or ""
 
     if all_done:
         day_title = get_day_display_name(day_num, day_text)
         await mark_day_completed(uid, day_num, day_title)
         await clear_day_progress(uid, day_num)
-        text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True, goal=user_goal)
+        text = build_day_display_text(day_num, day_text, exercises, list(range(total)), all_done=True, goal=user_goal, limits=user_limits)
         kb = workout_day_exercises_kb(day_num, exercises, list(range(total)))
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer("🎉 День завершён!", show_alert=True)
     else:
-        text = build_day_display_text(day_num, day_text, exercises, done, goal=user_goal)
+        text = build_day_display_text(day_num, day_text, exercises, done, goal=user_goal, limits=user_limits)
         kb = workout_day_exercises_kb(day_num, exercises, done)
         await clean_edit(callback, uid, text, reply_markup=kb)
         await callback.answer(f"{'✅' if ex_idx in done else '↩️'} {done_count}/{total}")
@@ -7634,7 +7778,7 @@ async def cb_workout_ex_apply(callback: CallbackQuery, bot: Bot):
     new_exercises = parse_exercises_from_day_text(new_day_text)
     done = await get_day_done_exercises(uid, day_num)
     u = await get_user(uid)
-    text = build_day_display_text(day_num, new_day_text, new_exercises, done, goal=u.get("goal") or "")
+    text = build_day_display_text(day_num, new_day_text, new_exercises, done, goal=u.get("goal") or "", limits=u.get("limits") or "")
     kb   = build_workout_keyboard(day_num, new_exercises, done)
     await clean_edit(callback, uid, text, reply_markup=kb)
 
