@@ -4844,11 +4844,11 @@ FOOD_DB = {
     "bread_rye": {"name": "Хлеб ржаной",                   "kcal": 217, "p": 5.9,  "f": 1.1,  "c": 44.5},  # calorizator.ru: Хлеб ржаной формовой
     "potato":    {"name": "Картофель",                      "kcal": 79,  "p": 2.0,  "f": 0.1,  "c": 17.5},  # без изменений (данные точные)
     "veg":       {"name": "Овощи (огурец/помидор/капуста)", "kcal": 25,  "p": 1.2,  "f": 0.2,  "c": 4.5},   # без изменений (среднее значение)
-    # Белковые продукты
-    "chicken":   {"name": "Куриная грудка (варёная)",       "kcal": 157, "p": 32.1, "f": 3.2,  "c": 0.0},   # calorizator.ru: Куриная грудка варёная
-    "chicken_thigh": {"name": "Куриное бедро (без кожи)",   "kcal": 202, "p": 26.0, "f": 10.9, "c": 0.0},   # без изменений
-    "turkey":    {"name": "Индейка (варёная)",              "kcal": 181, "p": 28.6, "f": 7.4,  "c": 0.0},   # без изменений
-    "fish":      {"name": "Рыба белая (минтай/хек)",        "kcal": 79,  "p": 17.6, "f": 1.0,  "c": 0.0},   # calorizator.ru: Минтай отварной
+    # Белковые продукты (мясо и рыба — КБЖУ на 100г СЫРОГО продукта)
+    "chicken":   {"name": "Куриная грудка",                 "kcal": 113, "p": 23.6, "f": 1.9,  "c": 0.4},   # calorizator.ru: Куриная грудка сырая
+    "chicken_thigh": {"name": "Куриное бедро (без кожи)",   "kcal": 160, "p": 20.0, "f": 8.2,  "c": 0.0},   # сырое бедро без кожи
+    "turkey":    {"name": "Индейка",                        "kcal": 147, "p": 21.6, "f": 6.5,  "c": 0.0},   # сырое филе индейки
+    "fish":      {"name": "Рыба белая (минтай/хек)",        "kcal": 72,  "p": 15.9, "f": 0.9,  "c": 0.0},   # calorizator.ru: Минтай сырой
     "tuna_can":  {"name": "Тунец консервированный",         "kcal": 96,  "p": 21.0, "f": 1.2,  "c": 0.0},   # calorizator.ru: Тунец в собственном соку
     "eggs":      {"name": "Яйца куриные",                   "kcal": 157, "p": 12.7, "f": 11.5, "c": 0.7},   # calorizator.ru: Яйцо куриное варёное
     "curd_2":    {"name": "Творог 2–5%",                    "kcal": 103, "p": 18.0, "f": 2.0,  "c": 3.3},   # calorizator.ru: Творог 2% — без изменений
@@ -4923,17 +4923,17 @@ def _adjust_to_target(day_meals: List[List[Tuple[str, float]]], target: Dict[str
 
     # Лимиты зависят от цели: при высоких углеводах крупы должны быть больше
     target_carbs = target.get("c", 200)
-    carb_scale = max(1.0, target_carbs / 200)   # при У=475 → scale=2.375
+    carb_scale = max(1.0, target_carbs / 200)   # при У=503 → scale=2.515
 
     LIMITS: Dict[str, Tuple[float, float]] = {
-        "rice":          (30, int(150 * carb_scale)), "buckwheat":    (30, int(150 * carb_scale)),
-        "oats":          (30, int(120 * carb_scale)), "pasta":        (30, int(150 * carb_scale)),
-        "bread_rye":     (20, int(80  * carb_scale)), "potato":       (60, int(300 * carb_scale)),
-        "banana":        (60, int(150 * carb_scale)), "apple":        (60, int(150 * carb_scale)),
-        "chicken":       (40, 280), "chicken_thigh": (40, 280), "turkey":      (40, 280),
+        "rice":          (30, int(220 * carb_scale)), "buckwheat":    (30, int(220 * carb_scale)),
+        "oats":          (30, int(150 * carb_scale)), "pasta":        (30, int(220 * carb_scale)),
+        "bread_rye":     (20, int(200 * carb_scale)), "potato":       (60, int(300 * carb_scale)),
+        "banana":        (60, int(400 * carb_scale)), "apple":        (60, int(250 * carb_scale)),
+        "chicken":       (40, 280), "chicken_thigh": (30, 200), "turkey":      (40, 280),
         "fish":          (50, 320), "tuna_can":      (40, 240), "eggs":        (55, 330),
-        "curd_2":        (80, 350), "kefir":         (80, 400), "milk":        (80, 400),
-        "oil_sunfl":     (5, 35),  "oil_olive":     (5, 35),
+        "curd_2":        (80, 350), "kefir":         (80, 600), "milk":        (80, 500),
+        "oil_sunfl":     (2, 30),  "oil_olive":     (2, 30),
     }
 
     def clamp_meals():
@@ -5116,66 +5116,71 @@ def _build_day_variant(variant: int, meals: int) -> List[List[Tuple[str, float]]
 
     if variant == 1:
         # Классика: овсянка + курица + рис
+        # Цель: ~2946 ккал | Б 118 Ж 53 У 507
         day = [
-            [("oats", 80.0), ("milk", 200.0), ("banana", 100.0)],
-            [("rice", 100.0), ("chicken", 180.0), ("veg", 200.0), ("oil_sunfl", 10.0)],
-            [("rice", 90.0), ("chicken", 160.0), ("veg", 150.0)],
+            [("oats", 100.0), ("milk", 300.0), ("banana", 180.0)],
+            [("rice", 150.0), ("chicken", 110.0), ("veg", 200.0), ("oil_sunfl", 26.0)],
+            [("rice", 140.0), ("chicken", 110.0), ("veg", 200.0)],
         ]
         if meals >= 4:
-            day.append([("curd_2", 200.0), ("apple", 120.0)])
+            day.append([("kefir", 300.0), ("banana", 200.0)])
         if meals >= 5:
-            day.append([("kefir", 200.0), ("bread_rye", 40.0)])
+            day.append([("bread_rye", 130.0), ("apple", 200.0)])
         return day
 
     if variant == 2:
         # Яйца + гречка + куриное бедро
+        # Цель: ~2863 ккал стартово, алгоритм доводит до ~2947
         day = [
-            [("eggs", 180.0), ("bread_rye", 60.0), ("veg", 100.0)],
-            [("buckwheat", 100.0), ("chicken_thigh", 180.0), ("veg", 200.0), ("oil_sunfl", 10.0)],
-            [("buckwheat", 80.0), ("chicken_thigh", 150.0), ("veg", 150.0)],
+            [("eggs", 120.0), ("bread_rye", 190.0), ("banana", 220.0)],
+            [("buckwheat", 180.0), ("chicken_thigh", 50.0), ("veg", 200.0), ("oil_sunfl", 4.0)],
+            [("buckwheat", 170.0), ("chicken_thigh", 40.0), ("veg", 200.0)],
         ]
         if meals >= 4:
-            day.append([("curd_2", 200.0), ("banana", 100.0)])
+            day.append([("kefir", 300.0), ("banana", 350.0)])
         if meals >= 5:
-            day.append([("kefir", 200.0)])
+            day.append([("milk", 300.0), ("apple", 200.0)])
         return day
 
     if variant == 3:
-        # Тунец + макароны + творог
+        # Тунец + макароны
+        # Цель: ~2909 ккал | Б 112 Ж 48 У 506
         day = [
-            [("oats", 80.0), ("kefir", 200.0), ("apple", 120.0)],
-            [("pasta", 100.0), ("tuna_can", 180.0), ("veg", 200.0), ("oil_sunfl", 10.0)],
-            [("pasta", 80.0), ("chicken", 160.0), ("veg", 150.0)],
+            [("oats", 100.0), ("milk", 300.0), ("banana", 200.0)],
+            [("pasta", 190.0), ("tuna_can", 80.0), ("veg", 200.0), ("oil_sunfl", 22.0)],
+            [("pasta", 170.0), ("tuna_can", 70.0), ("veg", 200.0)],
         ]
         if meals >= 4:
-            day.append([("curd_2", 200.0), ("banana", 100.0)])
+            day.append([("kefir", 300.0), ("banana", 200.0)])
         if meals >= 5:
-            day.append([("milk", 200.0), ("bread_rye", 40.0)])
+            day.append([("bread_rye", 70.0), ("apple", 200.0)])
         return day
 
     if variant == 4:
         # Рыба + гречка — мало готовки
+        # Цель: ~2941 ккал | Б 120 Ж 55 У 510
         day = [
-            [("oats", 80.0), ("milk", 200.0), ("banana", 100.0)],
-            [("buckwheat", 100.0), ("fish", 200.0), ("veg", 200.0), ("oil_sunfl", 10.0)],
-            [("buckwheat", 80.0), ("fish", 160.0), ("veg", 150.0)],
+            [("oats", 100.0), ("milk", 300.0), ("banana", 250.0)],
+            [("buckwheat", 170.0), ("fish", 100.0), ("veg", 200.0), ("oil_sunfl", 22.0)],
+            [("buckwheat", 160.0), ("fish", 90.0), ("veg", 200.0)],
         ]
         if meals >= 4:
-            day.append([("curd_2", 200.0), ("apple", 120.0), ("bread_rye", 40.0)])
+            day.append([("kefir", 300.0), ("banana", 250.0)])
         if meals >= 5:
-            day.append([("kefir", 250.0), ("bread_rye", 40.0)])
+            day.append([("bread_rye", 130.0), ("apple", 200.0)])
         return day
 
-    # Вариант 5: яйца + курица + хлеб (максимально просто)
+    # Вариант 5: яйца + рис + кефир
+    # Цель: ~2947 ккал | Б 122 Ж 54 У 506
     day = [
-        [("eggs", 180.0), ("bread_rye", 60.0)],
-        [("rice", 100.0), ("chicken", 180.0), ("veg", 200.0), ("oil_sunfl", 10.0)],
-        [("rice", 90.0), ("chicken", 150.0), ("veg", 150.0)],
+        [("eggs", 120.0), ("bread_rye", 100.0), ("banana", 230.0)],
+        [("rice", 180.0), ("chicken", 100.0), ("veg", 200.0), ("oil_sunfl", 18.0)],
+        [("rice", 170.0), ("chicken", 90.0), ("veg", 200.0)],
     ]
     if meals >= 4:
-        day.append([("curd_2", 200.0), ("banana", 100.0)])
+        day.append([("kefir", 480.0), ("banana", 230.0)])
     if meals >= 5:
-        day.append([("kefir", 200.0), ("apple", 120.0)])
+        day.append([("milk", 300.0), ("apple", 200.0)])
     return day
 
 
@@ -5228,7 +5233,15 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
                 est = max(1, int(round(g / 60.0)))
                 lines.append(f"• {FOOD_DB[k]['name']} — {est} шт (~{int(g)}г)")
             elif k in ("oil_sunfl", "oil_olive"):
-                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (1 ст.л. ≈ 10г)")
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} мл")
+            elif k in ("milk", "kefir"):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} мл")
+            elif k in ("chicken", "chicken_thigh", "turkey", "fish", "tuna_can"):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (в сыром виде)")
+            elif k in ("rice", "buckwheat", "oats", "pasta"):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (в сухом виде)")
+            elif k in ("veg", "potato", "banana", "apple"):
+                lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г (в сыром виде)")
             else:
                 lines.append(f"• {FOOD_DB[k]['name']} — {int(round(g))} г")
         lines.append("")
@@ -5237,10 +5250,11 @@ def build_meal_day_text(day_i: int, calories: int, protein_g: int, fat_g: int, c
     lines.append(f"   Б: {final_p}г ({signed(dp)})  Ж: {final_f}г ({signed(df)})  У: {final_c}г ({signed(dc)})")
     lines.append("")
     lines.append("⚠️ Примечания:")
-    lines.append("   • Крупы и макароны — вес СУХИМИ (до варки)")
-    lines.append("   • Рис варёный ×3, гречка ×2.5 от сухого")
-    lines.append("   • Мясо и рыба — вес ГОТОВЫМИ (варёными)")
-    lines.append("   • Яйцо среднее ≈ 55–65 г")
+    lines.append("   • Крупы (рис, гречка, овсянка, макароны) — взвешивай в СУХОМ виде")
+    lines.append("   • Мясо и рыба — взвешивай в СЫРОМ (не варёном) виде")
+    lines.append("   • Молоко и кефир — в миллилитрах (мл)")
+    lines.append("   • Масло — в миллилитрах (1 ст.л. ≈ 10–12 мл)")
+    lines.append("   • Яйцо среднее ≈ 55–65 г (С1)")
     return "\n".join(lines)
 
 
