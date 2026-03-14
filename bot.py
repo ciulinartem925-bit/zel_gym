@@ -7015,11 +7015,14 @@ async def cb_check_payment(callback: CallbackQuery, bot: Bot):
             # Уведомляем админа
             if ADMIN_ID:
                 try:
+                    raw_username = callback.from_user.username
+                    username_str = f"@{raw_username}" if raw_username else "отсутствует"
                     await bot.send_message(
                         chat_id=ADMIN_ID,
                         text=(
                             f"💰 Оплата подтверждена (ЮКасса)\n"
                             f"user_id: {uid}\n"
+                            f"username: {username_str}\n"
                             f"tariff: {tariff_code} ({t['title']})\n"
                             f"amount: {t['price']}₽\n"
                             f"yukassa_id: {yk_payment_id}"
