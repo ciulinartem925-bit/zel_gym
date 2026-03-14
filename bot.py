@@ -598,8 +598,79 @@ TG_SAFE_MSG_LEN = 3800
 MIN_DAYS = 3
 MAX_DAYS = 5
 
-logging.basicConfig(level=logging.INFO)
+import logging.handlers as _log_handlers
+
+def _setup_logging():
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    # Консоль
+    sh = logging.StreamHandler()
+    sh.setFormatter(fmt)
+    root.addHandler(sh)
+    # Файл с ротацией: 5 МБ × 3 файла
+    try:
+        fh = _log_handlers.RotatingFileHandler(
+            "bot.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+        )
+        fh.setFormatter(fmt)
+        root.addHandler(fh)
+    except Exception:
+        pass  # если нет прав — только консоль
+
+_setup_logging()
 logger = logging.getLogger("trainer_bot")
+
+# =========================
+# ЗАЩИТА ОТ ПЕРЕГРУЗКИ
+# =========================
+import time as _time
+from aiogram import BaseMiddleware
+from aiogram.types import TelegramObject, Update as TgUpdate
+
+# Семафор: не более 50 апдейтов обрабатываются одновременно.
+_CONCURRENCY_LIMIT = 50
+_THROTTLE_SECONDS = 1.0  # минимальный интервал между запросами одного пользователя
+_user_last_request: Dict[int, float] = {}
+
+
+class LoadProtectionMiddleware(BaseMiddleware):
+    """
+    Middleware защиты от перегрузки:
+    1. Семафор на 50 одновременных обработок.
+    2. Троттлинг: если пользователь шлёт чаще 1 раза в секунду —
+       тихо игнорируем (на callback отвечаем answer()).
+    """
+    def __init__(self):
+        super().__init__()
+        self._sem = asyncio.Semaphore(_CONCURRENCY_LIMIT)
+
+    async def __call__(self, handler, event: TelegramObject, data: dict):
+        # Получаем user_id
+        user_id: Optional[int] = None
+        for attr in ("message", "callback_query", "my_chat_member", "chat_member"):
+            sub = getattr(event, attr, None)
+            if sub and hasattr(sub, "from_user") and sub.from_user:
+                user_id = sub.from_user.id
+                break
+
+        # --- Троттлинг ---
+        if user_id is not None:
+            now = _time.monotonic()
+            last = _user_last_request.get(user_id, 0.0)
+            if now - last < _THROTTLE_SECONDS:
+                cb = getattr(event, "callback_query", None)
+                if cb:
+                    try:
+                        await cb.answer("\u23f3 Не так быстро!", show_alert=False)
+                    except Exception:
+                        pass
+                return
+            _user_last_request[user_id] = now
+
+        # --- Семафор параллельности ---
+        async with self._sem:
+            return await handler(event, data)
 
 
 # =========================
@@ -8765,6 +8836,8 @@ async def main():
     logger.info("Webhook cleared, starting polling...")
 
     dp = Dispatcher()
+    # Подключаем middleware защиты от перегрузки
+    dp.update.middleware(LoadProtectionMiddleware())
     setup_handlers(dp)
 
     async def bot_loop():
