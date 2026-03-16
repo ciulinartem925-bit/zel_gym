@@ -2629,78 +2629,43 @@ def profile_ready_kb():
     ])
 
 
-def profile_edit_field_kb(u: dict, regens_str: str = "", pending: dict = None) -> InlineKeyboardMarkup:
+def profile_edit_field_kb(u: dict, regens_str: str = "", pending: dict | None = None) -> InlineKeyboardMarkup:
     """Меню выбора конкретного поля профиля для редактирования — 2 столбца.
-    pending — временные несохранённые изменения; их значения показываются в кнопках со ✅.
-    """
+    pending — dict с pending_* ключами из FSM; если есть — показывает актуальное значение в кнопках."""
     p = pending or {}
 
-    def val(db_key, pending_key, fallback="—"):
-        if pending_key in p:
-            return str(p[pending_key]), True
-        v = u.get(db_key)
-        return (str(v) if v is not None else fallback), False
+    def val(db_key: str, pending_key: str, fallback: str = "—") -> str:
+        v = p[pending_key] if pending_key in p else u.get(db_key)
+        return str(v) if v is not None else fallback
 
-    def btn_text(emoji_label, db_key, pending_key, fmt=None):
-        v, changed = val(db_key, pending_key)
-        display = fmt(v) if fmt else v
-        mark = " ✅" if changed else ""
-        return f"{emoji_label}: {display}{mark}"
+    act_factor = p.get("pending_activity_factor") if "pending_activity_factor" in p else u.get("activity_factor")
 
     plan_btn_text = "🚀 Составить новый план"
     if regens_str:
         plan_btn_text += f"  ({regens_str})"
 
-    # Активность — отдельно, так как нужен float
-    act_v, act_changed = val("activity_factor", "pending_activity_factor")
-    try:
-        act_float = float(act_v) if act_v not in ("—", "") else None
-    except ValueError:
-        act_float = None
-    act_label = _activity_label(act_float) + (" ✅" if act_changed else "")
-
-    # Ограничения
-    lim_v, lim_changed = val("limits", "pending_limits")
-    lim_display = (lim_v if lim_v not in ("—", "", "None") else "нет") + (" ✅" if lim_changed else "")
-
     rows = [
         [
-            InlineKeyboardButton(
-                text=btn_text("🎯 Цель", "goal", "pending_goal"),
-                callback_data="pf:goal"),
-            InlineKeyboardButton(
-                text=btn_text("👤 Пол", "sex", "pending_sex"),
-                callback_data="pf:sex"),
+            InlineKeyboardButton(text=f"🎯 Цель: {val('goal','pending_goal')}", callback_data="pf:goal"),
+            InlineKeyboardButton(text=f"👤 Пол: {val('sex','pending_sex')}", callback_data="pf:sex"),
         ],
         [
-            InlineKeyboardButton(
-                text=btn_text("🎂 Возраст", "age", "pending_age"),
-                callback_data="pf:age"),
-            InlineKeyboardButton(
-                text=btn_text("📏 Рост", "height", "pending_height", lambda v: f"{v} см"),
-                callback_data="pf:height"),
+            InlineKeyboardButton(text=f"🎂 Возраст: {val('age','pending_age')}", callback_data="pf:age"),
+            InlineKeyboardButton(text=f"📏 Рост: {val('height','pending_height')} см", callback_data="pf:height"),
         ],
         [
-            InlineKeyboardButton(
-                text=btn_text("⚖️ Вес", "weight", "pending_weight", lambda v: f"{v} кг"),
-                callback_data="pf:weight"),
-            InlineKeyboardButton(
-                text=btn_text("🏠 Место", "place", "pending_place"),
-                callback_data="pf:place"),
+            InlineKeyboardButton(text=f"⚖️ Вес: {val('weight','pending_weight')} кг", callback_data="pf:weight"),
+            InlineKeyboardButton(text=f"🏠 Место: {val('place','pending_place')}", callback_data="pf:place"),
         ],
         [
-            InlineKeyboardButton(
-                text=btn_text("📈 Опыт", "exp", "pending_exp"),
-                callback_data="pf:exp"),
-            InlineKeyboardButton(
-                text=btn_text("📅 Трен/нед", "freq", "pending_freq"),
-                callback_data="pf:freq"),
+            InlineKeyboardButton(text=f"📈 Опыт: {val('exp','pending_exp')}", callback_data="pf:exp"),
+            InlineKeyboardButton(text=f"📅 Трен/нед: {val('freq','pending_freq')}", callback_data="pf:freq"),
         ],
         [
-            InlineKeyboardButton(text=f"🏃 Активность: {act_label}", callback_data="pf:activity"),
+            InlineKeyboardButton(text=f"🏃 Активность: {_activity_label(act_factor)}", callback_data="pf:activity"),
         ],
         [
-            InlineKeyboardButton(text=f"⛔️ Ограничения: {lim_display}", callback_data="pf:limits"),
+            InlineKeyboardButton(text="⛔️ Ограничения", callback_data="pf:limits"),
         ],
         [InlineKeyboardButton(text=plan_btn_text, callback_data="p:do_rebuild")],
         [InlineKeyboardButton(text="🏠 Назад", callback_data="nav:menu")],
@@ -6036,63 +6001,76 @@ async def open_payment_from_reply(message: Message, state: FSMContext, bot: Bot)
     await try_delete_user_message(bot, message)
 
 
-def _profile_summary_text(u: dict, pending: dict = None) -> str:
+def _profile_summary_text(u: dict, pending: dict | None = None) -> str:
     """Рендерит текст профиля.
-    pending — словарь временных (несохранённых) изменений из FSM.
-    Изменённые поля отображаются с новым значением и отмечаются ✅.
-    """
+    pending — словарь с ключами вида pending_* из FSM-стейта.
+    Если параметр изменён в pending — показывает новое значение и ✅."""
     p = pending or {}
 
-    # field_map: db_key -> pending_key
-    field_map = {
-        "goal":            "pending_goal",
-        "sex":             "pending_sex",
-        "age":             "pending_age",
-        "height":          "pending_height",
-        "weight":          "pending_weight",
-        "place":           "pending_place",
-        "exp":             "pending_exp",
-        "freq":            "pending_freq",
-        "activity_factor": "pending_activity_factor",
-        "limits":          "pending_limits",
-    }
+    def pick(db_key: str, pending_key: str):
+        """Возвращает (значение, изменено_ли)."""
+        if pending_key in p:
+            return p[pending_key], True
+        return u.get(db_key), False
 
-    def val(db_key, fallback="—"):
-        pk = field_map.get(db_key)
-        if pk and pk in p:
-            return str(p[pk]), True   # (значение, изменено)
-        v = u.get(db_key)
-        return (str(v) if v is not None else fallback), False
+    goal,   g_ch  = pick("goal",            "pending_goal")
+    sex,    s_ch  = pick("sex",             "pending_sex")
+    age,    a_ch  = pick("age",             "pending_age")
+    height, h_ch  = pick("height",          "pending_height")
+    weight, w_ch  = pick("weight",          "pending_weight")
+    place,  pl_ch = pick("place",           "pending_place")
+    exp,    e_ch  = pick("exp",             "pending_exp")
+    freq,   f_ch  = pick("freq",            "pending_freq")
+    limits, l_ch  = pick("limits",          "pending_limits")
+    act_f,  ac_ch = pick("activity_factor", "pending_activity_factor")
 
-    def line(label, db_key, fmt=None):
-        v, changed = val(db_key)
-        display = fmt(v) if fmt else v
+    def ln(label, value, changed, suffix=""):
         mark = " ✅" if changed else ""
-        return f"{label}: {display}{mark}"
+        v = value if value is not None else "—"
+        return f"{label}: {v}{suffix}{mark}"
 
-    has_pending = any(pk in p for pk in field_map.values())
-    hint = ""
-    if has_pending:
-        hint = (
-            "\n\n💡 Для того, чтобы параметр сохранился и план тренировок обновился, "
-            "нажми «Составить новый план»."
-        )
+    return "\n".join([
+        "⚙️ Профиль\n",
+        ln("Цель",             goal,                    g_ch),
+        ln("Пол",              sex,                     s_ch),
+        ln("Возраст",          age,                     a_ch),
+        ln("Рост",             height,                  h_ch,  " см"),
+        ln("Вес",              weight,                  w_ch,  " кг"),
+        ln("Где тренируешься", place,                   pl_ch),
+        ln("Опыт",             exp,                     e_ch),
+        ln("Тренировки",       freq,                    f_ch,  "×/нед"),
+        ln("Активность",       _activity_label(act_f),  ac_ch),
+        ln("Ограничения",      limits or "нет",         l_ch),
+    ])
 
-    return (
-        "⚙️ Профиль\n\n"
-        + line("Цель", "goal") + "\n"
-        + line("Пол", "sex") + "\n"
-        + line("Возраст", "age") + "\n"
-        + line("Рост", "height", lambda v: f"{v} см") + "\n"
-        + line("Вес", "weight", lambda v: f"{v} кг") + "\n"
-        + line("Где тренируешься", "place") + "\n"
-        + line("Опыт", "exp") + "\n"
-        + line("Тренировки", "freq", lambda v: f"{v}×/нед") + "\n"
-        + line("Активность", "activity_factor",
-               lambda v: _activity_label(float(v) if v not in ("—", "") else None)) + "\n"
-        + line("Ограничения", "limits", lambda v: v if v else "нет")
-        + hint
-    )
+
+# =========================
+# PENDING-ИЗМЕНЕНИЯ ПРОФИЛЯ
+# =========================
+
+_PENDING_KEYS = (
+    "pending_goal", "pending_sex", "pending_age", "pending_height",
+    "pending_weight", "pending_place", "pending_exp", "pending_freq",
+    "pending_activity_factor", "pending_limits",
+)
+
+
+async def _get_pending(state: FSMContext) -> dict:
+    """Возвращает все накопленные pending_* поля из FSM-стейта."""
+    data = await state.get_data()
+    return {k: data[k] for k in _PENDING_KEYS if k in data}
+
+
+async def _save_pending_field(state: FSMContext, **kwargs) -> None:
+    """Добавляет/обновляет pending-поля, НЕ трогая остальные накопленные значения.
+    Используется вместо state.clear() + state.update_data() чтобы не потерять
+    уже изменённые параметры."""
+    data = await state.get_data()
+    # Сохраняем все уже накопленные pending-*, editing_field и прочие служебные ключи
+    preserved = {k: v for k, v in data.items()
+                 if k.startswith("pending_") or k == "editing_field"}
+    preserved.update(kwargs)
+    await state.update_data(**preserved)
 
 
 async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot):
@@ -6112,6 +6090,7 @@ async def open_profile_from_reply(message: Message, state: FSMContext, bot: Bot)
 
 async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     """Показываем меню выбора — что именно менять в профиле."""
+    # НЕ очищаем стейт — сохраняем накопленные pending-изменения
     uid = callback.from_user.id
 
     # ── Пэйволл: редактирование профиля только с активной подпиской
@@ -6146,13 +6125,17 @@ async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
     else:
         regens_str = ""
 
-    # Читаем pending-изменения из FSM (если есть — пользователь уже что-то менял)
-    fsm_data = await state.get_data()
-    pending = _extract_pending(fsm_data)
+    pending = await _get_pending(state)
 
-    text = _profile_summary_text(u, pending)
-    if regens_str:
-        text += f"\n\n🔄 Смен плана: {regens_str}"
+    profile_text = _profile_summary_text(u, pending)
+    instruction = (
+        "\nЧтобы изменить параметр — нажми на него и введи новое значение.\n\n"
+        "Можно изменить несколько параметров подряд.\n"
+        "Когда всё будет готово — нажми «Составить новый план»."
+    )
+    regens_line = f"\n\n🔄 Смен плана: {regens_str}" if regens_str else ""
+    text = profile_text + instruction + regens_line
+
     await clean_edit(callback, uid, text, reply_markup=profile_edit_field_kb(u, regens_str, pending))
     await callback.answer()
 
@@ -6435,18 +6418,8 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-def _extract_pending(data: dict) -> dict:
-    """Извлекает только pending_* ключи из данных FSM."""
-    pending_keys = {
-        "pending_goal", "pending_sex", "pending_age", "pending_height",
-        "pending_weight", "pending_place", "pending_exp", "pending_freq",
-        "pending_activity_factor", "pending_limits",
-    }
-    return {k: v for k, v in data.items() if k in pending_keys}
-
-
-async def _finish_field_edit(bot: Bot, chat_id: int, user_id: int, state: FSMContext = None):
-    """После изменения одного поля — показываем профиль с pending-изменениями.
+async def _finish_field_edit(bot: Bot, chat_id: int, user_id: int, state: FSMContext):
+    """После изменения одного поля — показываем профиль с накопленными pending-значениями.
     Пересборка происходит только при нажатии 'Составить новый план'."""
     u = await get_user(user_id)
     regens_left, is_unlimited = await get_plan_regens(user_id)
@@ -6457,15 +6430,17 @@ async def _finish_field_edit(bot: Bot, chat_id: int, user_id: int, state: FSMCon
     else:
         regens_str = ""
 
-    # Получаем pending-изменения из FSM если state передан
-    pending = {}
-    if state is not None:
-        fsm_data = await state.get_data()
-        pending = _extract_pending(fsm_data)
+    pending = await _get_pending(state)
 
-    text = _profile_summary_text(u, pending)
-    if regens_str:
-        text += f"\n🔄 Смен плана: {regens_str}"
+    profile_text = _profile_summary_text(u, pending)
+    instruction = (
+        "\nЧтобы изменить параметр — нажми на него и введи новое значение.\n\n"
+        "Можно изменить несколько параметров подряд.\n"
+        "Когда всё будет готово — нажми «Составить новый план»."
+    )
+    regens_line = f"\n\n🔄 Смен плана: {regens_str}" if regens_str else ""
+    text = profile_text + instruction + regens_line
+
     await clean_send(bot, chat_id, user_id, text,
                      reply_markup=profile_edit_field_kb(u, regens_str, pending))
 
@@ -6476,8 +6451,7 @@ async def profile_field_age(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Возраст числом 🙂 Например: 23")
         await try_delete_user_message(bot, message)
         return
-    await state.clear()
-    await state.update_data(pending_age=age)
+    await _save_pending_field(state, pending_age=age)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, message.from_user.id, state)
 
@@ -6488,8 +6462,7 @@ async def profile_field_height(message: Message, state: FSMContext, bot: Bot):
         await message.answer("Рост в см 🙂 Например: 178")
         await try_delete_user_message(bot, message)
         return
-    await state.clear()
-    await state.update_data(pending_height=h)
+    await _save_pending_field(state, pending_height=h)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, message.from_user.id, state)
 
@@ -6501,8 +6474,7 @@ async def profile_field_weight(message: Message, state: FSMContext, bot: Bot):
         await try_delete_user_message(bot, message)
         return
     uid = message.from_user.id
-    await state.clear()
-    await state.update_data(pending_weight=w)
+    await _save_pending_field(state, pending_weight=w)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, uid, state)
 
@@ -6515,8 +6487,7 @@ async def profile_field_limits(message: Message, state: FSMContext, bot: Bot):
         return
     if limits.lower() in ("нет", "нету", "никаких", "no"):
         limits = ""
-    await state.clear()
-    await state.update_data(pending_limits=limits)
+    await _save_pending_field(state, pending_limits=limits)
     await try_delete_user_message(bot, message)
     await _finish_field_edit(bot, message.chat.id, message.from_user.id, state)
 
@@ -6587,9 +6558,7 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     if data.get("editing_field") == "goal":
         # Сохраняем временно в FSM, не в БД — применится при "Составить новый план"
-        await state.update_data(pending_goal=goal)
-        await state.clear()
-        await state.update_data(pending_goal=goal)
+        await _save_pending_field(state, pending_goal=goal)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
         await callback.answer()
         return
@@ -6608,8 +6577,7 @@ async def cb_profile_sex(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     if data.get("editing_field") == "sex":
-        await state.clear()
-        await state.update_data(pending_sex=sex)
+        await _save_pending_field(state, pending_sex=sex)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
         await callback.answer()
         return
@@ -6695,8 +6663,7 @@ async def cb_profile_place(callback: CallbackQuery, state: FSMContext, bot: Bot)
 
     data = await state.get_data()
     if data.get("editing_field") == "place":
-        await state.clear()
-        await state.update_data(pending_place=place)
+        await _save_pending_field(state, pending_place=place)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
         await callback.answer()
         return
@@ -6716,8 +6683,7 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
             # Редактирование: новичок → freq=3, activity=умеренная автоматически
             u = await get_user(callback.from_user.id)
             auto_factor = freq_to_activity_factor(3, u.get("place") or "")
-            await state.clear()
-            await state.update_data(pending_exp="0", pending_freq=3, pending_activity_factor=auto_factor)
+            await _save_pending_field(state, pending_exp="0", pending_freq=3, pending_activity_factor=auto_factor)
             await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
             await callback.answer()
             return
@@ -6740,8 +6706,7 @@ async def cb_profile_exp(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     data = await state.get_data()
     if data.get("editing_field") == "exp":
-        await state.clear()
-        await state.update_data(pending_exp=exp_text)
+        await _save_pending_field(state, pending_exp=exp_text)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
         await callback.answer()
         return
@@ -6763,8 +6728,7 @@ async def cb_profile_freq(callback: CallbackQuery, state: FSMContext, bot: Bot):
         # При редактировании — автоматически пересчитываем activity_factor по freq
         u = await get_user(callback.from_user.id)
         auto_factor = freq_to_activity_factor(f, u.get("place") or "")
-        await state.clear()
-        await state.update_data(pending_freq=f, pending_activity_factor=auto_factor)
+        await _save_pending_field(state, pending_freq=f, pending_activity_factor=auto_factor)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
         await callback.answer()
         return
@@ -6789,8 +6753,7 @@ async def cb_profile_activity_level(callback: CallbackQuery, state: FSMContext, 
     data = await state.get_data()
     if data.get("editing_field") == "activity":
         # Редактирование из профиля — сохраняем временно в FSM
-        await state.clear()
-        await state.update_data(pending_activity_factor=factor)
+        await _save_pending_field(state, pending_activity_factor=factor)
         await _finish_field_edit(bot, callback.message.chat.id, callback.from_user.id, state)
         await callback.answer()
         return
