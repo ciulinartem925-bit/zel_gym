@@ -6079,7 +6079,7 @@ def _profile_summary_text(u: dict, pending: dict = None) -> str:
         )
 
     return (
-        "⚙️ Профиль\n\n"
+        "⚙️Редактирование профиля\n\n"
         + line("Цель", "goal") + "\n"
         + line("Пол", "sex") + "\n"
         + line("Возраст", "age") + "\n"
@@ -6089,7 +6089,9 @@ def _profile_summary_text(u: dict, pending: dict = None) -> str:
         + line("Опыт", "exp") + "\n"
         + line("Тренировки", "freq", lambda v: f"{v}×/нед") + "\n"
         + line("Активность", "activity_factor",
-               lambda v: _activity_label(float(v) if v not in ("—", "") else None)) + "\n"
+               lambda v: _activity_label(float(v) if v not in ("—", "") else None)) + "\n\n"
+        "Выбери параметр — введи новое значение.\n"
+        "Когда всё готово — нажми «Составить новый план»\n\n"
         + line("Ограничения", "limits", lambda v: v if v else "нет")
         + hint
     )
