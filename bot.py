@@ -6129,7 +6129,7 @@ async def cb_profile_edit(callback: CallbackQuery, state: FSMContext):
 
     profile_text = _profile_summary_text(u, pending)
     instruction = (
-        "\nЧтобы изменить параметр — нажми на него и введи новое значение.\n\n"
+        "\n\n🔄 Чтобы изменить параметр — нажми на него и введи новое значение.\n"
         "Можно изменить несколько параметров подряд.\n"
         "Когда всё будет готово — нажми «Составить новый план»."
     )
