@@ -4338,25 +4338,70 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     total = len(exercises)
     done_count = len(done)
 
-    # ── Интервалы отдыха по цели и типу упражнения ──────────────────────────
-    g = (goal or "").lower()
-    is_strength_goal = "сил" in g
-    is_cut_goal = "суш" in g
+    # ── Интервалы отдыха по типу и сложности упражнения ────────────────────
+    # Приоритет: тип упражнения важнее цели пользователя.
 
-    # Базовые: присед, становая, жим, подтягивания
-    _BASE_KEYWORDS = ["присед", "станов", "жим штанг", "жим ног", "подтяг", "deadlift", "squat", "bench"]
-    # Средние: гантельные жимы, тяги, выпады
-    _MID_KEYWORDS = ["гантел", "выпад", "тяга гантел", "болгар", "goblet", "lunge", "dumbbell"]
-    # Изоляция — всё остальное (бицепс, трицепс, разводки и т.д.)
+    # 1. Тяжёлая база — 3–5 мин
+    _HEAVY_BASE = [
+        "присед", "станов", "жим лёжа", "жим штанг", "жим стоя",
+        "deadlift", "squat", "bench press", "overhead press", "ohp",
+    ]
+    # 2. Упражнения с собственным весом тяжёлые — 2–3 мин
+    _BW_HEAVY = [
+        "подтягива", "отжимания на брусьях", "брусь", "dips", "пистолетик", "pistol",
+        "pullup", "pull-up", "chinup", "chin-up",
+    ]
+    # 3. Средняя база — 2–3 мин
+    _MID_BASE = [
+        "тяга верхн", "тяга блок", "latpulldown", "lat pulldown",
+        "жим гантел", "тяга в наклон", "тяга гантел", "тяга штанг в наклон",
+        "жим на наклонн", "incline press", "bolgar", "болгар",
+        "goblet", "dumbbell press", "dumbbell row",
+    ]
+    # 4. Изоляция крупных мышц — 90 сек — 2 мин
+    _ISO_LARGE = [
+        "разводк", "fly", "chest fly", "тяга на прямых", "pullover",
+        "жим ног", "leg press", "legpress",
+        "разгибание ног", "сгибание ног", "leg curl", "legcurl",
+        "гиперэкстенз", "hyperext", "roman", "rdl", "румынск",
+    ]
+    # 5. Изоляция малых мышц — 60–90 сек
+    _ISO_SMALL = [
+        "сгибани", "бицепс", "bicep", "hammer",
+        "разгибани", "трицепс", "tricep", "french press",
+        "подъём на носки", "подъемы на носки", "носки", "calves", "calf",
+        "lateralraise", "lateral raise", "подъём гантел",
+        "face pull", "rear delt", "задн",
+    ]
+    # 6. Упражнения с собственным весом средние — 60–90 сек
+    _BW_MID = [
+        "отжимани", "приседани", "выпад", "lunge", "pushup", "push-up",
+        "squat_bw", "glute bridge", "ягодичный мост",
+    ]
+    # 7. Упражнения с собственным весом лёгкие — 45–60 сек
+    _BW_LIGHT = [
+        "планка", "plank", "скручивани", "crunch", "подъём ног", "подъемы ног",
+        "leg raise", "ab ", "пресс", "bicycle",
+    ]
 
     def _rest_for(ex_name: str) -> str:
         n = ex_name.lower()
-        if any(k in n for k in _BASE_KEYWORDS):
-            return "3–5 мин" if is_strength_goal else "2–3 мин"
-        elif any(k in n for k in _MID_KEYWORDS):
-            return "2–3 мин" if is_strength_goal else "1.5–2 мин"
-        else:  # изоляция
-            return "1.5–2 мин" if is_strength_goal else "1–1.5 мин"
+        if any(k in n for k in _HEAVY_BASE):
+            return "3–5 мин"
+        if any(k in n for k in _BW_HEAVY):
+            return "2–3 мин"
+        if any(k in n for k in _MID_BASE):
+            return "2–3 мин"
+        if any(k in n for k in _ISO_LARGE):
+            return "90 сек — 2 мин"
+        if any(k in n for k in _ISO_SMALL):
+            return "60–90 сек"
+        if any(k in n for k in _BW_MID):
+            return "60–90 сек"
+        if any(k in n for k in _BW_LIGHT):
+            return "45–60 сек"
+        # По умолчанию — средняя изоляция
+        return "60–90 сек"
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
@@ -4417,6 +4462,9 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
 
     lines.append("")
     lines.append("🏁 После тренировки — заминка и растяжка 5–10 минут")
+    lines.append("")
+    lines.append("✅ Главное правило")
+    lines.append("Если в следующем подходе не можешь повторить тот же вес и количество повторений с той же техникой — ты не отдохнул достаточно. Это универсальный ориентир для любого упражнения.")
     lines.append("")
 
     bar = workout_progress_bar(done_count, total)
