@@ -2573,7 +2573,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
-    rows.append([InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="nav:progress_tip")])
+    rows.append([InlineKeyboardButton(text="❓ Вопросы в тренировках", callback_data="nav:workout_questions")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -4338,70 +4338,51 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     total = len(exercises)
     done_count = len(done)
 
-    # ── Интервалы отдыха по типу и сложности упражнения ────────────────────
-    # Приоритет: тип упражнения важнее цели пользователя.
+    # ── Интервалы отдыха по цели и типу упражнения ──────────────────────────
+    g = (goal or "").lower()
+    is_strength_goal = "сил" in g
+    is_cut_goal = "суш" in g
 
-    # 1. Тяжёлая база — 3–5 мин
-    _HEAVY_BASE = [
-        "присед", "станов", "жим лёжа", "жим штанг", "жим стоя",
-        "deadlift", "squat", "bench press", "overhead press", "ohp",
-    ]
-    # 2. Упражнения с собственным весом тяжёлые — 2–3 мин
-    _BW_HEAVY = [
-        "подтягива", "отжимания на брусьях", "брусь", "dips", "пистолетик", "pistol",
-        "pullup", "pull-up", "chinup", "chin-up",
-    ]
-    # 3. Средняя база — 2–3 мин
-    _MID_BASE = [
-        "тяга верхн", "тяга блок", "latpulldown", "lat pulldown",
-        "жим гантел", "тяга в наклон", "тяга гантел", "тяга штанг в наклон",
-        "жим на наклонн", "incline press", "bolgar", "болгар",
-        "goblet", "dumbbell press", "dumbbell row",
-    ]
-    # 4. Изоляция крупных мышц — 90 сек — 2 мин
-    _ISO_LARGE = [
-        "разводк", "fly", "chest fly", "тяга на прямых", "pullover",
-        "жим ног", "leg press", "legpress",
-        "разгибание ног", "сгибание ног", "leg curl", "legcurl",
-        "гиперэкстенз", "hyperext", "roman", "rdl", "румынск",
-    ]
-    # 5. Изоляция малых мышц — 60–90 сек
-    _ISO_SMALL = [
-        "сгибани", "бицепс", "bicep", "hammer",
-        "разгибани", "трицепс", "tricep", "french press",
-        "подъём на носки", "подъемы на носки", "носки", "calves", "calf",
-        "lateralraise", "lateral raise", "подъём гантел",
-        "face pull", "rear delt", "задн",
-    ]
-    # 6. Упражнения с собственным весом средние — 60–90 сек
-    _BW_MID = [
-        "отжимани", "приседани", "выпад", "lunge", "pushup", "push-up",
-        "squat_bw", "glute bridge", "ягодичный мост",
-    ]
-    # 7. Упражнения с собственным весом лёгкие — 45–60 сек
-    _BW_LIGHT = [
-        "планка", "plank", "скручивани", "crunch", "подъём ног", "подъемы ног",
-        "leg raise", "ab ", "пресс", "bicycle",
-    ]
+    # Тяжёлая база: присед, становая, жим штанги, жим стоя, подтягивания
+    _BASE_KEYWORDS = ["присед", "станов", "жим штанг", "жим ног", "подтяг", "deadlift", "squat", "bench",
+                      "жим лёжа", "жим стоя", "жим под угл"]
+    # Средние: тяги, гантельные жимы, блок
+    _MID_KEYWORDS = ["гантел", "выпад", "болгар", "goblet", "lunge", "dumbbell",
+                     "тяга", "тяг блока", "тяг в наклон", "тяг верхн"]
+    # Изоляция на малые мышцы (бицепс, трицепс, икры)
+    _SMALL_ISO_KEYWORDS = ["бицепс", "трицепс", "hammer", "concentration", "bicep",
+                           "french", "трице", "сгибани", "разгибани", "икр", "носки"]
 
     def _rest_for(ex_name: str) -> str:
         n = ex_name.lower()
-        if any(k in n for k in _HEAVY_BASE):
-            return "3–5 мин"
-        if any(k in n for k in _BW_HEAVY):
-            return "2–3 мин"
-        if any(k in n for k in _MID_BASE):
-            return "2–3 мин"
-        if any(k in n for k in _ISO_LARGE):
-            return "90 сек — 2 мин"
-        if any(k in n for k in _ISO_SMALL):
-            return "60–90 сек"
-        if any(k in n for k in _BW_MID):
-            return "60–90 сек"
-        if any(k in n for k in _BW_LIGHT):
-            return "45–60 сек"
-        # По умолчанию — средняя изоляция
-        return "60–90 сек"
+        is_base = any(k in n for k in _BASE_KEYWORDS)
+        is_mid  = any(k in n for k in _MID_KEYWORDS)
+        is_small_iso = any(k in n for k in _SMALL_ISO_KEYWORDS)
+
+        if is_strength_goal:
+            # Для силы: база 3–5 мин, средние 2–3 мин, изоляция 2–3 мин
+            if is_base:
+                return "3–5 мин"
+            elif is_mid:
+                return "2–3 мин"
+            else:
+                return "2–3 мин"
+        elif is_cut_goal:
+            # Для сушки: база 2–3 мин, средние 1.5–2 мин, изоляция 1.5 мин
+            if is_base:
+                return "2–3 мин"
+            elif is_mid:
+                return "1.5–2 мин"
+            else:
+                return "1.5 мин"
+        else:
+            # Для массы: база 2–3 мин, средние 1.5–2 мин, малая изоляция 1.5 мин, крупная изоляция 1.5 мин
+            if is_base:
+                return "2–3 мин"
+            elif is_mid:
+                return "1.5–2 мин"
+            else:
+                return "1.5 мин"
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
@@ -4463,9 +4444,6 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     lines.append("")
     lines.append("🏁 После тренировки — заминка и растяжка 5–10 минут")
     lines.append("")
-    lines.append("✅ Главное правило")
-    lines.append("Если в следующем подходе не можешь повторить тот же вес и количество повторений с той же техникой — ты не отдохнул достаточно. Это универсальный ориентир для любого упражнения.")
-    lines.append("")
 
     bar = workout_progress_bar(done_count, total)
     if all_done:
@@ -4511,14 +4489,21 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     f = max(MIN_DAYS, min(f, MAX_DAYS))
 
     if is_strength:
-        reps_base = "3–6"
-        reps_iso = "8–12"
+        reps_base = "1–5"
+        reps_iso = "1–5"
         base_sets = "3" if is_novice else "4–5"
         iso_sets = "2" if is_novice else "2–3"
         rir = "1–2"
+    elif is_cut:
+        reps_base = "10–15"
+        reps_iso = "10–15"
+        base_sets = "3" if is_novice else "3–4"
+        iso_sets = "2–3" if is_novice else "3"
+        rir = "1–2"
     else:
-        reps_base = "6–10" if not is_cut else "8–12"
-        reps_iso = "10–15" if not is_cut else "12–20"
+        # масса
+        reps_base = "8–12"
+        reps_iso = "8–12"
         base_sets = "3" if is_novice else "3–4"
         iso_sets = "2–3" if is_novice else "3"
         rir = "1–2"
@@ -4889,7 +4874,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         f"Частота: {f}×/нед • {weekday_schedule(f)}\n"
         f"Цель: {goal} • Уровень: {'новичок' if is_novice else 'средний+'}\n"
         f"Огр.: {limits_line}\n\n"
-        f"Правило: техника > вес • RIR {rir}\n"
+        f"Вес подбери так, чтобы последние 2–3 повторения давались с трудом — то есть близко к отказу.\n"
         "Выбери день кнопкой 👇"
     )
 
@@ -6045,9 +6030,47 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
             "Под конец небольшое правило: Каждую тренировку = либо делай больше повторений, либо добавляй больше вес. Так ты будешь становиться сильнее.\n\n"
             )
         back_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
+            [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nav:workout_questions")],
         ])
         await clean_edit(callback, uid, text, reply_markup=back_kb)
+    elif key == "workout_questions":
+        questions_text = "❓ <b>Вопросы в тренировках</b>\n\nВыбери вопрос:"
+        questions_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="nav:progress_tip")],
+            [InlineKeyboardButton(text="⚖️ Как подобрать вес", callback_data="nav:select_weight")],
+            [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
+        ])
+        await clean_edit(callback, uid, questions_text, reply_markup=questions_kb)
+    elif key == "select_weight":
+        weight_text = (
+            "🏋🏻 <b>Как подобрать рабочий вес</b>\n\n"
+            "<b>Шаг 1 — Узнай свой максимум</b>\n\n"
+            "Твой максимум — это самый тяжёлый вес, который ты можешь поднять 1 раз с правильной техникой. "
+            "Не хочешь рисковать и проверять максимум?\n\n"
+            "Используй простую формулу:\n"
+            "<i>Вес на штанге × (1 + количество повторений ÷ 30)</i>\n\n"
+            "Пример: ты жмёшь 60 кг на 10 повторений.\n\n"
+            "60 × (1 + 10 ÷ 30) = 80 кг — это твой примерный максимум.\n\n"
+            "<b>Шаг 2 — Возьми нужный процент от максимума</b>\n\n"
+            "Сила — 80–95% от максимума, 1–5 повторений\n"
+            "Масса — 60–80% от максимума, 6–20 повторений\n"
+            "Сушка — 60–75% от максимума, 8–15 повторений\n\n"
+            "Пример с максимумом 80 кг:\n\n"
+            "— На силу берёшь 64–76 кг\n"
+            "— На массу берёшь 48–64 кг\n"
+            "— На сушку берёшь 48–60 кг\n\n"
+            "<b>Шаг 3 — Проверь по ощущениям</b>\n\n"
+            "Близость к отказу важнее точного процента. Вес подобран правильно если:\n\n"
+            "— Последние 2–3 повторения даются с трудом ✅\n"
+            "— Технику держишь до конца ✅\n"
+            "— Ещё 1–2 повторения сделать уже не можешь ✅\n\n"
+            "Если можешь легко сделать ещё 5 повторений — вес слишком лёгкий. "
+            "Если техника разваливается в середине подхода — слишком тяжёлый."
+        )
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nav:workout_questions")],
+        ])
+        await clean_edit(callback, uid, weight_text, reply_markup=back_kb)
     elif key == "upgrade":
         await open_upgrade(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
     elif key == "upgrade_after_profile":
