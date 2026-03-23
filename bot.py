@@ -4488,25 +4488,37 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     f = int(freq or 3)
     f = max(MIN_DAYS, min(f, MAX_DAYS))
 
+    # Три уровня нагрузки: первые базовые, вторые базовые, изоляция
+    # Логика: тяжёлая база → средняя база → добивочная изоляция
     if is_strength:
-        reps_base = "1–5"
-        reps_iso = "1–5"
-        base_sets = "3" if is_novice else "4–5"
-        iso_sets = "2" if is_novice else "2–3"
+        sets1   = "5"                        # первые 2 базовых: тяжело
+        reps1   = "1–5"
+        sets2   = "4"                        # следующие 1-2 базовых: чуть легче
+        reps2   = "4–6"
+        iso_sets = "3"
+        reps_iso = "6–10"                    # изоляция — контроль техники
         rir = "1–2"
     elif is_cut:
-        reps_base = "10–15"
-        reps_iso = "10–15"
-        base_sets = "3" if is_novice else "3–4"
-        iso_sets = "2–3" if is_novice else "3"
+        sets1   = "3"                        # первые 2 базовых: сохраняем мышцы
+        reps1   = "6–10"
+        sets2   = "3"                        # следующие 1-2 базовых
+        reps2   = "10–15"
+        iso_sets = "3"
+        reps_iso = "12–20"                   # изоляция многоповторная
         rir = "1–2"
     else:
-        # масса
-        reps_base = "8–12"
-        reps_iso = "8–12"
-        base_sets = "3" if is_novice else "3–4"
-        iso_sets = "2–3" if is_novice else "3"
+        # масса — три разных стимула роста в одной тренировке
+        sets1   = "4"                        # первые 2 базовых: механическое напряжение
+        reps1   = "5–8"
+        sets2   = "3"                        # следующие 1-2 базовых: классическая гипертрофия
+        reps2   = "8–12"
+        iso_sets = "3"
+        reps_iso = "12–20"                   # изоляция: метаболический стресс
         rir = "1–2"
+
+    # Обратная совместимость: base_sets/reps_base используются в нескольких местах
+    base_sets = sets1
+    reps_base = reps1
 
     seed = (user_id or 0) + int(datetime.utcnow().strftime("%Y%m%d"))
     rnd = random.Random(seed)
@@ -4709,10 +4721,10 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             iso1 = pick1(ISO_LEGS if rnd.random() < 0.6 else ISO_SHOULD, avoid_keys, used)
             used.append(iso1)
             lines += ["База:",
-                      f"• {fmt(squat, base_sets, reps_base)}",
-                      f"• {fmt(hinge, base_sets, reps_base)}",
-                      f"• {fmt(hpush, base_sets, reps_base)}",
-                      f"• {fmt(vpull, base_sets, reps_base)}", "",
+                      f"• {fmt(squat, sets1, reps1)}",    # 1-й базовый
+                      f"• {fmt(hinge, sets1, reps1)}",    # 2-й базовый
+                      f"• {fmt(hpush, sets2, reps2)}",    # 3-й базовый
+                      f"• {fmt(vpull, sets2, reps2)}", "", # 4-й базовый
                       "Изоляция:",
                       f"• {fmt(iso1, iso_sets, reps_iso)}"]
             if not is_novice:
@@ -4732,10 +4744,10 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             # 1 изоляция: бицепс
             iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
             lines += ["База:",
-                      f"• {fmt(squat, base_sets, reps_base)}",
-                      f"• {fmt(vpull, base_sets, reps_base)}",
-                      f"• {fmt(hpull, base_sets, reps_base)}",
-                      f"• {fmt(vpush, base_sets, reps_base)}", "",
+                      f"• {fmt(squat, sets1, reps1)}",    # 1-й базовый
+                      f"• {fmt(vpull, sets1, reps1)}",    # 2-й базовый
+                      f"• {fmt(hpull, sets2, reps2)}",    # 3-й базовый
+                      f"• {fmt(vpush, sets2, reps2)}", "", # 4-й базовый
                       "Изоляция:",
                       f"• {fmt(iso1, iso_sets, reps_iso)}"]
             if not is_novice:
@@ -4753,10 +4765,10 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             iso1_pool = ISO_CHEST if is_gym else ISO_TRI
             iso1 = pick1(iso1_pool, avoid_keys, used); used.append(iso1)
             lines += ["База:",
-                      f"• {fmt(squat, base_sets, reps_base)}",
-                      f"• {fmt(hpush, base_sets, reps_base)}",
-                      f"• {fmt(hpull, base_sets, reps_base)}",
-                      f"• {fmt(hinge, base_sets, reps_base)}", "",
+                      f"• {fmt(squat, sets1, reps1)}",    # 1-й базовый
+                      f"• {fmt(hpush, sets1, reps1)}",    # 2-й базовый
+                      f"• {fmt(hpull, sets2, reps2)}",    # 3-й базовый
+                      f"• {fmt(hinge, sets2, reps2)}", "", # 4-й базовый
                       "Изоляция:",
                       f"• {fmt(iso1, iso_sets, reps_iso)}"]
             if not is_novice and not tags["elbow"]:
@@ -4770,12 +4782,12 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
             hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
             lines.append("База:")
-            lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
-            lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
+            lines.append(f"• {fmt(hpush, sets1, reps1)}")   # 1-й базовый
+            lines.append(f"• {fmt(vpull, sets1, reps1)}")   # 2-й базовый
+            lines.append(f"• {fmt(hpull, sets2, reps2)}")   # 3-й базовый
             if not tags["shoulder"]:
                 vpush = pick1(BASE_VPUSH, avoid_keys, used); used.append(vpush)
-                lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
+                lines.append(f"• {fmt(vpush, sets2, reps2)}")  # 4-й базовый
             lines += ["", "Изоляция:"]
             iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
             lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
@@ -4789,12 +4801,12 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
             hinge = pick1(BASE_HINGE, avoid_keys, used); used.append(hinge)
             lines.append("База:")
-            lines.append(f"• {fmt(squat, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
+            lines.append(f"• {fmt(squat, sets1, reps1)}")   # 1-й базовый
+            lines.append(f"• {fmt(hinge, sets1, reps1)}")   # 2-й базовый
             pool2 = [x for x in BASE_SQUAT if x != squat]
             if pool2 and not tags["knee"]:
                 sq2 = pick1(pool2, avoid_keys, used); used.append(sq2)
-                lines.append(f"• {fmt(sq2, base_sets, reps_base)}")
+                lines.append(f"• {fmt(sq2, sets2, reps2)}")  # 3-й базовый
             lines += ["", "Изоляция:"]
             iso1 = pick1(ISO_LEGS, avoid_keys, used); used.append(iso1)
             reps_iso1 = "15–20" if "носки" in iso1.lower() else reps_iso
@@ -4807,14 +4819,14 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         if kind == "PUSH":
             hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
             lines.append("База:")
-            lines.append(f"• {fmt(hpush, base_sets, reps_base)}")
+            lines.append(f"• {fmt(hpush, sets1, reps1)}")   # 1-й базовый
             if not tags["shoulder"]:
                 vpush = pick1(BASE_VPUSH, avoid_keys, used); used.append(vpush)
-                lines.append(f"• {fmt(vpush, base_sets, reps_base)}")
+                lines.append(f"• {fmt(vpush, sets1, reps1)}")  # 2-й базовый
             pool2 = [x for x in BASE_HPUSH if x != hpush]
             if pool2:
                 hp2 = pick1(pool2, avoid_keys, used); used.append(hp2)
-                lines.append(f"• {fmt(hp2, base_sets, reps_base)}")
+                lines.append(f"• {fmt(hp2, sets2, reps2)}")  # 3-й базовый
             lines += ["", "Изоляция:"]
             iso_c = pick1(ISO_CHEST if is_gym else ISO_TRI, avoid_keys, used)
             used.append(iso_c)
@@ -4829,12 +4841,12 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
             hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
             lines.append("База:")
-            lines.append(f"• {fmt(vpull, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hpull, base_sets, reps_base)}")
+            lines.append(f"• {fmt(vpull, sets1, reps1)}")   # 1-й базовый
+            lines.append(f"• {fmt(hpull, sets1, reps1)}")   # 2-й базовый
             pool2 = [x for x in BASE_HPULL if x != hpull]
             if pool2:
                 hp2 = pick1(pool2, avoid_keys, used); used.append(hp2)
-                lines.append(f"• {fmt(hp2, base_sets, reps_base)}")
+                lines.append(f"• {fmt(hp2, sets2, reps2)}")  # 3-й базовый
             lines += ["", "Изоляция:"]
             iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
             lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
@@ -4848,11 +4860,11 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             hinge = pick1(BASE_HINGE, avoid_keys, used); used.append(hinge)
             pool2 = [x for x in BASE_SQUAT if x != squat]
             lines.append("База:")
-            lines.append(f"• {fmt(squat, base_sets, reps_base)}")
-            lines.append(f"• {fmt(hinge, base_sets, reps_base)}")
+            lines.append(f"• {fmt(squat, sets1, reps1)}")   # 1-й базовый
+            lines.append(f"• {fmt(hinge, sets1, reps1)}")   # 2-й базовый
             if pool2 and not tags["knee"]:
                 sq2 = pick1(pool2, avoid_keys, used); used.append(sq2)
-                lines.append(f"• {fmt(sq2, base_sets, reps_base)}")
+                lines.append(f"• {fmt(sq2, sets2, reps2)}")  # 3-й базовый
             lines += ["", "Изоляция:"]
             for ex in ISO_LEGS:
                 if ex not in used and not (tags["knee"] and any(k in ex.lower() for k in avoid_knee)):
