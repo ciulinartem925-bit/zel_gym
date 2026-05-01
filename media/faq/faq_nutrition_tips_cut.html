@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Фишки при сушке</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+    --orange:  #d97706;
+    --orange-light: #fbbf24;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, #7c2d12 0%, #c2410c 50%, var(--orange) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: #fed7aa; margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: #fed7aa; }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: #92400e;
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(254,215,170,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--orange);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: #92400e; font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: #92400e; font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--orange), var(--orange-light));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .tip-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(217,119,6,0.2);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .tip-header {
+    display: flex; align-items: center; gap: 18px;
+    padding: 18px 24px;
+    background: rgba(217,119,6,0.04);
+    border-bottom: 1.5px solid rgba(217,119,6,0.1);
+  }
+
+  .tip-icon-big { font-size: 1.8rem; flex-shrink: 0; }
+  .tip-header h3 { margin: 0; font-size: 1.02rem; }
+
+  .tip-body { padding: 20px 24px; }
+  .tip-body p { font-size: 0.95rem; color: #3a4e3b; margin-bottom: 10px; }
+  .tip-body p:last-child { margin-bottom: 0; }
+
+  .example-box {
+    background: #fffbeb;
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-top: 12px;
+  }
+
+  .example-label {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--orange); margin-bottom: 10px;
+  }
+
+  .ex-row {
+    display: flex; align-items: flex-start;
+    gap: 10px; margin-bottom: 8px;
+    font-size: 0.9rem; color: #3a4e3b;
+  }
+
+  .ex-row:last-child { margin-bottom: 0; }
+  .ex-row .ico { flex-shrink: 0; width: 20px; text-align: center; }
+  .ex-row strong { color: #92400e; }
+
+  .note-box {
+    background: rgba(217,119,6,0.07);
+    border-left: 4px solid var(--orange);
+    border-radius: 0 14px 14px 0;
+    padding: 14px 18px; margin-top: 12px;
+    font-size: 0.92rem; color: #92400e;
+    font-weight: 500; line-height: 1.65;
+  }
+
+  .science-card {
+    background: linear-gradient(135deg, #7c2d12, #92400e);
+    border-radius: 20px; padding: 32px 36px; margin: 0 0 52px;
+  }
+
+  .science-tag {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: #fed7aa; margin-bottom: 12px;
+  }
+
+  .science-card h3 { color: #fff; font-size: 1.2rem; margin-bottom: 12px; line-height: 1.35; }
+  .science-card p { color: rgba(254,215,170,0.85); font-size: 0.97rem; font-weight: 300; margin-bottom: 12px; }
+  .science-card p:last-child { margin-bottom: 0; }
+  .science-card p strong { color: #fff; font-weight: 700; }
+
+  .final-card {
+    background: linear-gradient(135deg, #92400e, var(--orange));
+    border-radius: 24px; padding: 46px 38px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--orange); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: #92400e;
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--orange); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Питание · Сушка</div>
+  <h1>Фишки при <em>сушке</em></h1>
+  <p class="hero-sub">Как держать дефицит без срывов — конкретные приёмы с цифрами.</p>
+  <div class="hero-badge"><span>🔥</span> Читать 3 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Основная сложность сушки — поддерживать дефицит неделями без срывов. Голод и тяга к еде — главное препятствие.</p>
+    <p><strong>Ни один из приёмов ниже не отменяет главного:</strong> дефицит калорий + достаточно белка + силовые тренировки для сохранения мышц. Фишки лишь делают соблюдение проще.</p>
+  </div>
+
+  <!-- НАУЧНЫЙ ФАКТ -->
+  <div class="science-card">
+    <div class="science-tag">🔬 Научный факт</div>
+    <h3>Больше белка = меньше голода без усилий</h3>
+    <p>Увеличение доли белка в рационе снижает общее потребление пищи — без сознательных ограничений. Белок насыщает лучше углеводов и жиров за счёт более высокого термического эффекта и влияния на гормоны насыщения.</p>
+    <p><strong>На сушке нужно 2–2.4 г белка на кг веса.</strong> Это больше чем при наборе — белок не только насыщает, но и защищает мышцы от разрушения при дефиците.</p>
+  </div>
+
+  <div class="section-label">5 приёмов</div>
+  <h2>Как держать дефицит проще</h2>
+  <div class="divider"></div>
+
+  <div style="margin-top: 24px;">
+
+    <div class="tip-card">
+      <div class="tip-header">
+        <div class="tip-icon-big">🥩</div>
+        <h3>Белковый продукт — к каждому приёму пищи</h3>
+      </div>
+      <div class="tip-body">
+        <p>Белок даёт самое сильное чувство сытости среди всех макронутриентов. Если в каждом приёме есть белок — голод между едой значительно слабее.</p>
+        <div class="example-box">
+          <div class="example-label">Белок с низкой калорийностью</div>
+          <div class="ex-row"><div class="ico">🍗</div><div>Куриная грудка 200 г — <strong>46 г белка, 226 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🐟</div><div>Тунец консервированный — <strong>40 г белка, 180 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🧀</div><div>Творог 0% 200 г — <strong>34 г белка, 140 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🥚</div><div>3 яичных белка — <strong>11 г белка, 50 ккал</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <div class="tip-header">
+        <div class="tip-icon-big">🥦</div>
+        <h3>Начинай еду с овощей</h3>
+      </div>
+      <div class="tip-body">
+        <p>Желудок реагирует на объём, а не только на калории. Если начать приём пищи с тарелки овощей — они займут место в желудке и основную порцию съешь меньше. При этом калорий от овощей почти нет.</p>
+        <div class="example-box">
+          <div class="example-label">Объём vs калории</div>
+          <div class="ex-row"><div class="ico">🥒</div><div>Огурцы 300 г — <strong>45 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🥬</div><div>Капуста 300 г — <strong>75 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🍅</div><div>Помидоры 300 г — <strong>54 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🍎</div><div>Яблоко 200 г — <strong>104 ккал</strong>, хорошо насыщает надолго</div></div>
+        </div>
+        <div class="note-box">
+          💡 Простое правило: сначала овощи — потом всё остальное. Работает особенно хорошо на обеде и ужине.
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <div class="tip-header">
+        <div class="tip-icon-big">💧</div>
+        <h3>Стакан воды за 30 минут до еды</h3>
+      </div>
+      <div class="tip-body">
+        <p>500 мл воды за 30 минут до еды снижает количество съеденного в среднем на 13% — за счёт частичного заполнения объёма желудка перед едой.</p>
+        <div class="note-box">
+          💡 Иногда мозг путает жажду с голодом. Если хочется перекусить — сначала выпей стакан воды и подожди 10 минут. Часто желание есть проходит само.
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <div class="tip-header">
+        <div class="tip-icon-big">🕐</div>
+        <h3>Перенеси больше калорий на вечер</h3>
+      </div>
+      <div class="tip-body">
+        <p>Если основная часть калорий приходится на вечер — днём не так сильно хочется есть, а вечером можно поесть нормально и не ложиться голодным. Многим это помогает держать дефицит без срывов.</p>
+        <p>Общее количество калорий за день не меняется — только распределение. Попробуй 2 недели и посмотри как работает для тебя.</p>
+        <div class="note-box">
+          💡 Подходит не всем. Некоторые лучше держат дефицит с плотным завтраком. Главное — найти схему при которой легче не срываться.
+        </div>
+      </div>
+    </div>
+
+    <div class="tip-card">
+      <div class="tip-header">
+        <div class="tip-icon-big">🚶</div>
+        <h3>Добавь ходьбу — не урезай еду</h3>
+      </div>
+      <div class="tip-body">
+        <p>Если дефицит даётся тяжело — лучше добавить расход, чем убирать ещё больше еды. 30–40 минут быстрой ходьбы сжигают 150–250 ккал и не создают стресса для организма, в отличие от резкого снижения калорий.</p>
+        <div class="example-box">
+          <div class="example-label">Ходьба vs урезание</div>
+          <div class="ex-row"><div class="ico">🚶</div><div>Ходьба 40 мин → <strong>−200 ккал</strong> расхода, аппетит не растёт</div></div>
+          <div class="ex-row"><div class="ico">✂️</div><div>Убрать 200 ккал из еды → голоднее, риск срыва выше</div></div>
+        </div>
+        <div class="note-box">
+          💡 8000–10000 шагов в день дают дефицит 200–400 ккал без ощущения диеты. Самый недооценённый инструмент на сушке.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Белок к каждому приёму, овощи в начале еды, вода перед едой, перенос калорий на вечер и ходьба вместо урезания — пять приёмов которые делают дефицит терпимым.</p>
+    <div class="final-pills">
+      <div class="pill">Белок насыщает</div>
+      <div class="pill">Овощи первыми</div>
+      <div class="pill">Вода перед едой</div>
+      <div class="pill">Ходьба 8000+ шагов</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Вес стоит на сушке даже с этими приёмами — читай <b>«Вес стоит — что делать»</b> (сушка)</span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Как точно считать калории при дефиците — в <b>«Как правильно считать калории»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

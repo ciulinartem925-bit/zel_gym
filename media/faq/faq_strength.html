@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как увеличить силу в зале</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1;
+    color: #fff;
+    max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px;
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px;
+    font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px;
+    border-radius: 50px;
+    color: #fff;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem;
+    line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300;
+    margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark);
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 22px;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    color: var(--dark);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px;
+    margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* ── ПРАВИЛО-БЛОК ── */
+  .rule-card {
+    background: #fff;
+    border-radius: 18px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    padding: 28px 30px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .rule-num {
+    background: var(--dark);
+    color: var(--mint);
+    font-weight: 900;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .rule-body h3 { font-size: 1rem; margin-bottom: 7px; }
+  .rule-body p { font-size: 0.9rem; color: #556b56; margin-bottom: 0; }
+
+  /* ── TIMELINE ── */
+  .timeline {
+    margin: 32px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tl-item {
+    display: flex;
+    gap: 20px;
+    position: relative;
+  }
+
+  .tl-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 44px;
+  }
+
+  .tl-dot {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 900;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  .tl-dot.green  { background: var(--dark); color: var(--mint); }
+  .tl-dot.yellow { background: #f59e0b; color: #fff; }
+  .tl-dot.next   { background: var(--green); color: #fff; }
+
+  .tl-line {
+    width: 2px;
+    flex: 1;
+    min-height: 24px;
+    background: rgba(42,103,44,0.15);
+    margin: 4px 0;
+  }
+
+  .tl-body {
+    background: #fff;
+    border-radius: 16px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    padding: 20px 22px;
+    margin-bottom: 12px;
+    flex: 1;
+  }
+
+  .tl-body.yellow-bg {
+    background: #fffbeb;
+    border-color: #fcd34d;
+  }
+
+  .tl-body.green-bg {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border-color: #86efac;
+  }
+
+  .tl-body h3 { font-size: 0.98rem; margin-bottom: 6px; }
+  .tl-body p  { font-size: 0.88rem; color: #556b56; margin-bottom: 0; }
+  .tl-body.yellow-bg p { color: #78350f; }
+  .tl-body.green-bg  h3 { color: #166534; }
+  .tl-body.green-bg  p  { color: #166534; opacity: 0.8; }
+
+  /* ── ПРИМЕР ПО НЕДЕЛЯМ ── */
+  .weeks-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  @media(max-width: 580px) { .weeks-grid { grid-template-columns: 1fr 1fr; } }
+  @media(max-width: 360px) { .weeks-grid { grid-template-columns: 1fr; } }
+
+  .week-card {
+    border-radius: 14px;
+    padding: 16px 14px;
+  }
+
+  .week-card.ok   { background: #fff; border: 1.5px solid rgba(42,103,44,0.12); }
+  .week-card.fail { background: #fff5f5; border: 1.5px solid #fca5a5; }
+  .week-card.win  { background: var(--mint); border: 1.5px solid var(--green); }
+
+  .wk-label {
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .week-card.ok   .wk-label { color: var(--green); }
+  .week-card.fail .wk-label { color: #dc2626; }
+  .week-card.win  .wk-label { color: var(--darkest); }
+
+  .wk-data {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .wk-note {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .week-card.ok   .wk-note { color: #6a8a6b; }
+  .week-card.fail .wk-note { color: #dc2626; font-weight: 600; }
+  .week-card.win  .wk-note { color: var(--darkest); font-weight: 600; }
+
+  /* ── ПЕРЕХОД ── */
+  .transition-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin-top: 56px;
+  }
+
+  .transition-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .transition-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .transition-box p  { color: #78350f; margin-bottom: 10px; }
+  .transition-box p:last-child { margin-bottom: 0; }
+
+  /* ── ВОЛНОВАЯ ── */
+  .wave-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  @media(max-width: 520px) { .wave-grid { grid-template-columns: 1fr; } }
+
+  .wave-card {
+    border-radius: 16px;
+    padding: 24px 18px;
+  }
+
+  .wave-card.hard   { background: var(--dark); }
+  .wave-card.medium { background: var(--green); }
+  .wave-card.light  { background: var(--mint); }
+
+  .wave-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .wave-card.hard   .wave-tag { color: var(--mint); }
+  .wave-card.medium .wave-tag { color: rgba(255,255,255,0.75); }
+  .wave-card.light  .wave-tag { color: var(--darkest); }
+
+  .wave-week {
+    font-size: 1rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .wave-card.hard   .wave-week { color: #fff; }
+  .wave-card.medium .wave-week { color: #fff; }
+  .wave-card.light  .wave-week { color: var(--darkest); }
+
+  .wave-detail {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    margin-bottom: 6px;
+  }
+
+  .wave-card.hard   .wave-detail { color: rgba(255,255,255,0.75); }
+  .wave-card.medium .wave-detail { color: rgba(255,255,255,0.85); }
+  .wave-card.light  .wave-detail { color: var(--darkest); opacity: 0.8; }
+
+  .wave-example {
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .wave-card.light  .wave-example { border-color: rgba(42,103,44,0.2); }
+  .wave-card.hard   .wave-example { color: var(--mint); }
+  .wave-card.medium .wave-example { color: rgba(255,255,255,0.9); }
+  .wave-card.light  .wave-example { color: var(--darkest); }
+
+  /* ── NOTE BOX ── */
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 14px 14px 0;
+    padding: 16px 22px;
+    margin-top: 14px;
+    font-size: 0.92rem;
+    color: var(--dark);
+    font-weight: 500;
+    line-height: 1.65;
+  }
+
+  /* ── ДНЕВНИК ── */
+  .journal-section {
+    background: linear-gradient(135deg, var(--mint) 0%, var(--cream) 100%);
+    border-radius: 24px;
+    padding: 40px 36px;
+    margin: 56px 0;
+  }
+
+  .journal-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 22px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .journal-table th {
+    background: var(--dark);
+    color: var(--mint);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  .journal-table td {
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    color: #3a4e3b;
+    border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .journal-table tr:last-child td { border-bottom: none; }
+  .td-add  { color: var(--dark); font-weight: 700; }
+  .td-same { color: #999; }
+
+  /* ── МИФ ── */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin: 56px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* ── СОВЕТЫ ── */
+  .tips-section { margin: 56px 0; }
+  .tips-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .tip-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .tip-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .tip-content h3 { font-size: 0.96rem; margin-bottom: 4px; }
+  .tip-content p  { font-size: 0.88rem; color: #556b56; }
+
+  /* ── ФИНАЛ ── */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px;
+    padding: 46px 38px;
+    text-align: center;
+    margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills {
+    display: flex; flex-wrap: wrap;
+    gap: 10px; justify-content: center;
+  }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px;
+    border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: var(--dark);
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--green); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки в зале</div>
+  <h1>Как увеличить <em>силу</em></h1>
+  <p class="hero-sub">Сила растёт по своим правилам. Главное — правильно управлять весом на штанге и давать телу время восстановиться.</p>
+  <div class="hero-badge"><span>💪</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Тренировка на силу отличается от тренировки на массу: меньше повторений, больший вес, длиннее отдых между подходами. При такой работе нервная система адаптируется к подъёму больших весов.
+    Главный принцип тот же: нагрузка должна постепенно расти. Для силовых тренировок оптимальный метод — линейная прогрессия. Пока она работает — ничего менять не нужно.</p>
+  </div>
+
+  <!-- ОСНОВЫ -->
+  <div class="section-label">Прежде чем начать</div>
+  <h2>Три правила тренировки на силу</h2>
+  <div class="divider"></div>
+  <p>Прежде чем переходить к методу — важно понять, чем тренировка на силу отличается от того, к чему ты, возможно, привык.</p>
+
+  <div class="rule-card">
+    <div class="rule-num">1</div>
+    <div class="rule-body">
+      <h3>Мало повторений — большой вес</h3>
+      <p>На силу работают в диапазоне 1–6 повторений. Это не значит, что нужно сразу брать максимум — но вес должен быть достаточно тяжёлым, чтобы больше 6 повторений уже не получилось.</p>
+    </div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">2</div>
+    <div class="rule-body">
+      <h3>Длинный отдых между подходами</h3>
+      <p>На силу нужно отдыхать 3–5 минут между подходами. При коротком отдыхе следующий подход будет слабее и прогрессии не будет. Нервной системе нужно полноценное восстановление между тяжёлыми подходами.</p>
+    </div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-num">3</div>
+    <div class="rule-body">
+      <h3>Только базовые упражнения</h3>
+      <p>Сила лучше всего растёт в упражнениях, где работает сразу много мышц: присед, становая тяга, жим лёжа, жим стоя, тяга штанги. Именно в них применяй прогрессию. Изолирующие упражнения вторичны.</p>
+    </div>
+  </div>
+
+  <!-- ЛИНЕЙНАЯ ПРОГРЕССИЯ -->
+  <div class="section-gap">
+    <div class="section-label">Метод №1 — для новичков и среднего уровня</div>
+    <h2>Линейная прогрессия</h2>
+    <div class="divider"></div>
+
+    <p>Суть простая: каждую тренировку ты пытаешься сделать все запланированные подходы и повторения. Получилось — на следующей тренировке добавляешь вес. Не получилось — повторяешь тот же вес.</p>
+    <p>Никаких диапазонов повторений как в тренировке на массу. Здесь конкретное число: например, 5 подходов по 5 повторений (5×5). Твоя задача — сделать именно 5×5, не меньше, с хорошей техникой.</p>
+
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot green">1</div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-body">
+          <h3>Выбери стартовый вес — с запасом</h3>
+          <p>Возьми вес, с которым можешь уверенно сделать 5×5 без борьбы. Не нужно сразу работать на пределе. Лучше начать легче и прогрессировать, чем взять слишком много и застрять.</p>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot green">2</div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-body">
+          <h3>Сделал все повторения чисто — добавляй вес</h3>
+          <p>Все 5 подходов по 5 повторений прошли с хорошей техникой? На следующей тренировке добавляй 2.5 кг. Не больше — маленький шаг каждую тренировку за несколько месяцев даёт большой результат.</p>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot yellow">!</div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-body yellow-bg">
+          <h3>Не хватило повторений — повторяй тот же вес</h3>
+          <p>Не добрал хотя бы одно повторение — вес не добавляй. На следующей тренировке снова тот же вес. Так будет до тех пор, пока не сделаешь все повторения чисто.</p>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot green">3</div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-body green-bg">
+          <h3>Сделал чисто — снова добавляй вес</h3>
+          <p>Как только все повторения снова получились — добавляй 2.5 кг и повторяй цикл. И так от тренировки к тренировке.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <p style="margin-top: 20px;">Вот как это выглядит на практике — несколько тренировок подряд в приседаниях:</p>
+
+    <div class="weeks-grid">
+      <div class="week-card ok">
+        <div class="wk-label">Тренировка 1</div>
+        <div class="wk-data">80 кг<br>5/5/5/4/4</div>
+        <div class="wk-note">не хватило — повторяем тот же вес</div>
+      </div>
+      <div class="week-card ok">
+        <div class="wk-label">Тренировка 2</div>
+        <div class="wk-data">80 кг<br>5/5/5/5/4</div>
+        <div class="wk-note">почти — снова тот же вес</div>
+      </div>
+      <div class="week-card win">
+        <div class="wk-label">Тренировка 3</div>
+        <div class="wk-data">80 кг<br>5/5/5/5/5</div>
+        <div class="wk-note">все чисто — добавляем 2.5 кг</div>
+      </div>
+      <div class="week-card ok">
+        <div class="wk-label">Тренировка 4</div>
+        <div class="wk-data">82.5 кг<br>5/5/5/4/4</div>
+        <div class="wk-note">новый вес — снова работаем</div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      💡 Записывай каждый подход отдельно: не «5×5», а «5/5/5/4/4». Только так видно реальную картину — где не хватило сил — и можно принять правильное решение по следующей тренировке.
+    </div>
+  </div>
+
+  <!-- ПЕРЕХОД -->
+  <div class="transition-box">
+    <div class="transition-label">Когда линейная прогрессия перестаёт работать</div>
+    <h3>Вес не растёт несколько тренировок подряд — что делать?</h3>
+    <p>Если один и тот же вес не получается сделать чисто три-четыре тренировки подряд — линейная прогрессия исчерпала себя. Это нормально и происходит у всех, обычно через 3–6 месяцев.</p>
+    <p>В этот момент нужно переходить к следующему методу — волновой нагрузке.</p>
+  </div>
+
+  <!-- ВОЛНОВАЯ -->
+  <div class="section-gap">
+    <div class="section-label">Метод №2 — для среднего и продвинутого уровня</div>
+    <h2>Волновая нагрузка</h2>
+    <div class="divider"></div>
+
+    <p>Когда линейная прогрессия перестала работать — восстановление между тренировками уже не успевает происходить за один день. Нужен другой подход.</p>
+    <p>Волновая нагрузка решает это так: тренировки чередуются по тяжести — тяжёлая неделя, потом средняя, потом лёгкая. После трёх недель цикл начинается заново, но с чуть большим весом. Это и есть прогресс.</p>
+
+    <div class="wave-grid">
+      <div class="wave-card hard">
+        <div class="wave-tag">Неделя 1</div>
+        <div class="wave-week">Тяжёлая неделя</div>
+        <div class="wave-detail">Большой вес, мало повторений. Именно здесь нервная система получает главный стимул для роста силы.</div>
+        <div class="wave-example">Пример: 100 кг × 3×3</div>
+      </div>
+      <div class="wave-card medium">
+        <div class="wave-tag">Неделя 2</div>
+        <div class="wave-week">Средняя неделя</div>
+        <div class="wave-detail">Вес немного меньше, повторений больше. Тело закрепляет технику и частично восстанавливается.</div>
+        <div class="wave-example">Пример: 90 кг × 3×5</div>
+      </div>
+      <div class="wave-card light">
+        <div class="wave-tag">Неделя 3</div>
+        <div class="wave-week">Лёгкая неделя</div>
+        <div class="wave-detail">Лёгкий вес. Нервная система полностью восстанавливается и готовится к новому тяжёлому циклу.</div>
+        <div class="wave-example">Пример: 80 кг × 3×8</div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      💡 После трёх недель начинай новый цикл — но тяжёлая неделя теперь чуть тяжелее. Например, в первом цикле было 100 кг × 3×3, в следующем — 102.5 кг × 3×3. Вот и весь принцип.
+    </div>
+  </div>
+
+  <!-- ДНЕВНИК -->
+  <div class="journal-section">
+    <div class="section-label">Инструмент</div>
+    <h2>Зачем вести дневник тренировок</h2>
+    <div class="divider"></div>
+    <p style="color: var(--dark);">Без дневника оба метода не работают. Ты просто не вспомнишь, сколько было в прошлый раз — и не поймёшь, добавлять вес или нет. Записывай каждый подход отдельно — это занимает 30 секунд, но меняет всё.</p>
+    <table class="journal-table">
+      <thead>
+        <tr>
+          <th>Упражнение</th>
+          <th>Трен. 1</th>
+          <th>Трен. 2</th>
+          <th>Решение</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Присед</td>
+          <td>80 кг · 5/5/5/4/4</td>
+          <td>80 кг · 5/5/5/5/5</td>
+          <td class="td-add">↑ добавить вес</td>
+        </tr>
+        <tr>
+          <td>Жим лёжа</td>
+          <td>70 кг · 5/5/5/5/4</td>
+          <td>70 кг · 5/5/5/5/4</td>
+          <td class="td-same">→ повторить вес</td>
+        </tr>
+        <tr>
+          <td>Становая</td>
+          <td>100 кг · 5/5/5/5/5</td>
+          <td>102.5 кг · 5/5/5/4/4</td>
+          <td class="td-same">→ повторить вес</td>
+        </tr>
+        <tr>
+          <td>Жим стоя</td>
+          <td>50 кг · 5/5/5/5/5</td>
+          <td>52.5 кг · 5/5/5/5/5</td>
+          <td class="td-add">↑ добавить вес</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Распространённое заблуждение</div>
+    <h3>«Для силы нужно всегда работать на максимуме»</h3>
+    <p>Постоянная работа с предельным весом ведёт к накоплению усталости, и через несколько недель силовые показатели начинают снижаться.
+    Средние и лёгкие недели — запланированная часть тренировочного процесса. В этот период восстановление происходит полноценнее, что позволяет показывать более высокие результаты на следующем тяжёлом цикле.</p>
+  </div>
+
+  <!-- СОВЕТЫ -->
+  <div class="tips-section">
+    <div class="section-label">Практика</div>
+    <h2>Что поможет увеличивать силу стабильно</h2>
+    <div class="divider"></div>
+    <ul class="tips-list">
+      <li class="tip-item">
+        <div class="tip-icon">📓</div>
+        <div class="tip-content">
+          <h3>Записывай каждый подход отдельно</h3>
+          <p>Не «5×5», а «5/5/5/4/4». Только так видно где именно начало не хватать сил — и можно принять точное решение по следующей тренировке.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">⏱️</div>
+        <div class="tip-content">
+          <h3>Отдыхай 3–5 минут между тяжёлыми подходами</h3>
+          <p>Поставь таймер. Меньше отдыха — следующий подход будет слабее и прогрессии не будет.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🔬</div>
+        <div class="tip-content">
+          <h3>Добавляй вес маленькими шагами</h3>
+          <p>2.5 кг каждую тренировку или раз в неделю — нормальный темп. Попытки сразу прыгнуть на большой вес приводят к срыву техники и травмам.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">😴</div>
+        <div class="tip-content">
+          <h3>Восстановление важно даже больше, чем при тренировке на массу</h3>
+          <p>Недосыпание напрямую снижает силовые показатели. Без нормального сна прогрессия замедляется даже при правильном методе.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🍳</div>
+        <div class="tip-content">
+          <h3>Ешь достаточно углеводов</h3>
+          <p>При недостатке углеводов силовые показатели снижаются — гликоген является основным источником энергии при интенсивной нагрузке.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко о главном</h2>
+    <p>Начни с линейной прогрессии: добавляй 2.5 кг каждую тренировку, когда все повторения получились. Не получились — повторяй тот же вес. Когда линейная прогрессия перестанет работать — переходи на волновую: чередуй тяжёлые, средние и лёгкие недели.</p>
+    <div class="final-pills">
+      <div class="pill">Линейная прогрессия</div>
+      <div class="pill">Волновая нагрузка</div>
+      <div class="pill">Записывай подходы</div>
+      <div class="pill">3–5 мин отдых</div>
+      <div class="pill">Маленькие шаги</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Как выбрать стартовый вес — в <b>«Как подобрать рабочий вес»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Основы прогрессии нагрузки — в <b>«Как прогрессировать в тренировках»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Восстановление при тренировке на силу важнее, чем при массе — читай <b>«Почему важен сон»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

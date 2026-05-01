@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нет мотивации</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 580px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper { max-width: 820px; margin: 0 auto; padding: 56px 20px 100px; }
+
+  .intro-card {
+    background: var(--dark); border-radius: 24px;
+    padding: 36px 40px; margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: var(--dark); font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* Шаги */
+  .step-list { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+
+  .step-item {
+    background: #fff; border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    display: flex; overflow: hidden;
+  }
+
+  .step-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 0.72rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    writing-mode: vertical-rl; text-orientation: mixed;
+    transform: rotate(180deg); padding: 22px 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; min-width: 42px;
+  }
+
+  .step-body { padding: 24px 26px; flex: 1; }
+  .step-body h3 { color: var(--dark); margin-bottom: 8px; }
+  .step-body p  { font-size: 0.92rem; color: #3a4e3b; margin-bottom: 8px; }
+
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px; margin-top: 10px;
+    font-size: 0.9rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* Причины отсутствия мотивации */
+  .reason-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin: 24px 0;
+  }
+
+  @media(max-width: 520px) { .reason-grid { grid-template-columns: 1fr; } }
+
+  .reason-card {
+    background: #fff; border-radius: 18px;
+    padding: 22px; border: 1.5px solid rgba(42,103,44,0.1);
+  }
+
+  .reason-icon { font-size: 1.6rem; margin-bottom: 8px; display: block; }
+  .reason-card h3 { font-size: 0.95rem; margin-bottom: 6px; }
+  .reason-card p  { font-size: 0.87rem; color: #556b56; }
+
+  /* Таблица сроков */
+  .timeline-table {
+    width: 100%; border-collapse: collapse;
+    margin-top: 16px; background: #fff;
+    border-radius: 14px; overflow: hidden; font-size: 0.88rem;
+  }
+
+  .timeline-table th {
+    background: var(--dark); color: var(--mint);
+    font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 11px 14px; text-align: left;
+  }
+
+  .timeline-table td {
+    padding: 10px 14px; color: #3a4e3b;
+    border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .timeline-table tr:last-child td { border-bottom: none; }
+  .timeline-table td:first-child { font-weight: 700; color: var(--dark); }
+
+  /* Миф */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px; padding: 28px 32px; margin: 52px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* Тревожные сигналы */
+  .signal-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+
+  .signal-row {
+    display: flex; gap: 14px; background: #fff;
+    border-radius: 14px; padding: 16px 20px;
+    border: 1.5px solid rgba(42,103,44,0.08); align-items: flex-start;
+  }
+
+  .s-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .s-dot.yellow { background: #f59e0b; }
+  .s-dot.red    { background: #ef4444; }
+
+  .s-title { font-weight: 700; font-size: 0.93rem; color: var(--dark); margin-bottom: 3px; }
+  .s-desc  { font-size: 0.87rem; color: #556b56; }
+
+  /* Финал */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 44px 36px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px; padding: 32px 36px;
+    background: #fff; border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; background: var(--cream);
+    border-radius: 12px; font-size: 0.92rem;
+    color: #3a4e3b; line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow { color: var(--green); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки</div>
+  <h1>Мотивация <em>пропала</em></h1>
+  <p class="hero-sub">Не хочется идти на тренировку, легко придумать причину пропустить. Разбираем почему это происходит и что с этим делать.</p>
+  <div class="hero-badge"><span>😔</span> Читать 3 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Мотивация — это эмоциональное состояние, которое возникает и исчезает независимо от желания. Рассчитывать на неё как на постоянный ресурс не получится: она есть в начале, потом проходит.</p>
+    <p><strong>Долгосрочный прогресс строится не на мотивации, а на повторении действий вне зависимости от текущего состояния. Чем меньше усилий требует выход на тренировку — тем стабильнее результат.</strong></p>
+  </div>
+
+  <!-- ПОЧЕМУ ПРОПАДАЕТ -->
+  <div class="section-label">Причины</div>
+  <h2>Почему мотивация исчезает</h2>
+  <div class="divider"></div>
+  <p>Прежде чем искать способы «замотивироваться» — полезно понять, что именно происходит.</p>
+
+  <div class="reason-grid">
+    <div class="reason-card">
+      <span class="reason-icon">📉</span>
+      <h3>Нет видимого прогресса</h3>
+      <p>Первые недели результат незаметен. Тело меняется медленнее, чем ожидалось. Это нормально — изменения накапливаются постепенно и становятся заметны через 8–12 недель.</p>
+    </div>
+    <div class="reason-card">
+      <span class="reason-icon">🎯</span>
+      <h3>Цель слишком далеко</h3>
+      <p>Когда цель — «похудеть на 15 кг» — она не ощущается достижимой в ближайшее время. Отсутствие промежуточных результатов снижает желание продолжать.</p>
+    </div>
+    <div class="reason-card">
+      <span class="reason-icon">😴</span>
+      <h3>Накопилась физическая усталость</h3>
+      <p>Хроническое недосыпание и перегрузка снижают желание тренироваться на физиологическом уровне. Это не слабоволие — это реакция организма на недостаток восстановления.</p>
+    </div>
+    <div class="reason-card">
+      <span class="reason-icon">🔁</span>
+      <h3>Тренировки стали рутиной</h3>
+      <p>Когда программа не меняется месяцами и нет ощущения прогресса — интерес снижается. Новый стимул и видимые результаты возвращают желание тренироваться.</p>
+    </div>
+  </div>
+
+  <!-- ЧТО ДЕЛАТЬ -->
+  <div class="section-gap">
+    <div class="section-label">Что делать</div>
+    <h2>Четыре конкретных шага</h2>
+    <div class="divider"></div>
+
+    <div class="step-list">
+
+      <div class="step-item">
+        <div class="step-num">Шаг 1</div>
+        <div class="step-body">
+          <h3>Снизь требования к тренировке</h3>
+          <p>Когда не хочется идти на тренировку — главным барьером становится её масштаб. Полная тренировка кажется слишком большим усилием в текущем состоянии.</p>
+          <p>Снизь требования: вместо часа — 30 минут, вместо трёх подходов — два, вместо рабочего веса — 70% от него. Задача не максимум, а сохранить регулярность.</p>
+          <div class="note-box">
+            Сокращённая тренировка лучше пропущенной. Регулярность — основной фактор долгосрочного результата. 1–2 лёгкие тренировки в плохой период не ломают прогресс, полный перерыв — замедляет его.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">Шаг 2</div>
+        <div class="step-body">
+          <h3>Фиксируй результаты в цифрах</h3>
+          <p>Внешние изменения тела становятся заметны только через 8–12 недель. До этого единственный способ видеть прогресс — цифры в дневнике тренировок.</p>
+          <p>Запись «жим лёжа: 3×8 × 65 кг» против «3×8 × 60 кг» три недели назад — это конкретный измеримый результат. Он есть даже когда в зеркале ничего не изменилось.</p>
+          <div class="note-box">
+            Используй дневник в боте. Записывай вес и число повторений после каждой тренировки. Через месяц видно реальный прогресс — и это работает лучше, чем любая внешняя мотивация.
+          </div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">Шаг 3</div>
+        <div class="step-body">
+          <h3>Поставь ближайшую измеримую цель</h3>
+          <p>Цель «стать стройным» или «накачаться» не даёт чёткого ориентира. Непонятно когда она достигнута и как приближаться к ней на каждой тренировке.</p>
+          <p>Замени на конкретную и ближайшую: «сделать присед 3×5 × 80 кг», «подтянуться 8 раз», «пройти 10 000 шагов за 5 дней из 7». Такая цель достижима в течение 2–4 недель и создаёт ощущение прогресса.</p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">Шаг 4</div>
+        <div class="step-body">
+          <h3>Проверь восстановление</h3>
+          <p>Хроническое нежелание тренироваться — один из признаков накопленной усталости. Если пропало желание, снизилось настроение и тренировки перестали приносить удовлетворение — возможно дело не в мотивации, а в перегрузке.</p>
+          <div class="note-box">
+            Сделай разгрузочную неделю: снизь вес на 40–50%, уменьши число подходов. Проверь сон — хроническое недосыпание напрямую снижает мотивацию на физиологическом уровне через изменение уровня дофамина и кортизола.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Частое заблуждение</div>
+    <h3>«Нужно подождать пока появится желание»</h3>
+    <p>Мотивация чаще возникает после начала действия, а не до него. Желание тренироваться появляется в процессе тренировки — не в момент, когда нужно выйти из дома.</p>
+    <p><b>«Если пропустил несколько тренировок — всё потеряно»</b> — мышечная сила и объём начинают снижаться только после 2–3 недель полного отсутствия нагрузки. 1–2 пропущенные тренировки не влияют на результат. Важно вернуться, а не корить себя за пропуск.</p>
+  </div>
+
+  <!-- РЕАЛЬНЫЕ СРОКИ -->
+  <div class="section-gap">
+    <div class="section-label">Ориентир</div>
+    <h2>Через сколько появляются результаты</h2>
+    <div class="divider"></div>
+    <p>Большинство бросают тренировки до того, как начинают видеть изменения. Вот реальные сроки:</p>
+
+    <table class="timeline-table">
+      <thead>
+        <tr>
+          <th>Срок</th>
+          <th>Что происходит</th>
+          <th>Видно ли это</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1–3 недели</td>
+          <td>Нервная система адаптируется, силовые растут быстро</td>
+          <td>Только в дневнике</td>
+        </tr>
+        <tr>
+          <td>4–6 недель</td>
+          <td>Улучшается выносливость, тело начинает меняться</td>
+          <td>Почти незаметно</td>
+        </tr>
+        <tr>
+          <td>8–12 недель</td>
+          <td>Видимые изменения состава тела при правильном питании</td>
+          <td>Заметно в зеркале</td>
+        </tr>
+        <tr>
+          <td>6+ месяцев</td>
+          <td>Значительные изменения, которые видят окружающие</td>
+          <td>Очевидно для всех</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note-box" style="margin-top: 14px;">
+      Большинство бросают на 4–6 неделе — именно тогда, когда видимых изменений ещё нет, но они уже близко.
+    </div>
+  </div>
+
+  <!-- ТРЕВОЖНЫЕ СИГНАЛЫ -->
+  <div class="section-gap">
+    <div class="section-label">Важно</div>
+    <h2>Когда это не просто «нет мотивации»</h2>
+    <div class="divider"></div>
+    <p>Иногда нежелание тренироваться — сигнал того, что нужно снизить нагрузку, а не себя заставлять.</p>
+
+    <div class="signal-list">
+      <div class="signal-row">
+        <div class="s-dot yellow"></div>
+        <div>
+          <div class="s-title">⚠️ Несколько недель плохого сна и раздражительности</div>
+          <div class="s-desc">Возможно накопилась усталость. Сделай разгрузочную неделю и приоритизируй сон — это физиологическая проблема, а не вопрос силы воли.</div>
+        </div>
+      </div>
+      <div class="signal-row">
+        <div class="s-dot yellow"></div>
+        <div>
+          <div class="s-title">⚠️ Силовые показатели снижаются несколько недель подряд</div>
+          <div class="s-desc">Снижение силовых при отсутствии мотивации — признак перетренированности. Нужна разгрузка, а не повышение нагрузки.</div>
+        </div>
+      </div>
+      <div class="signal-row">
+        <div class="s-dot red"></div>
+        <div>
+          <div class="s-title">❌ Полное нежелание что-либо делать, подавленное настроение несколько недель</div>
+          <div class="s-desc">Это может выходить за рамки усталости от тренировок. В таком состоянии лучше обратиться за поддержкой — к врачу или психологу.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Не жди мотивации — снизь барьер входа. Укороченная тренировка лучше пропущенной. Фиксируй прогресс в цифрах, ставь ближайшие конкретные цели. Результаты станут видны в зеркале через 8–12 недель — до этого они есть только в дневнике.</p>
+    <div class="final-pills">
+      <div class="pill">Снизь требования</div>
+      <div class="pill">Записывай результаты</div>
+      <div class="pill">Ближайшая конкретная цель</div>
+      <div class="pill">Проверь восстановление</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Почему сон влияет на желание тренироваться — в <b>«Почему важен сон»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Прогресс встал и непонятно что делать — в <b>«Прогресс остановился»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как правильно повышать нагрузку — в <b>«Как прогрессировать в тренировках»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

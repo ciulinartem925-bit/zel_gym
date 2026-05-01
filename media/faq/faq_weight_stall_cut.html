@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вес стоит — что делать</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: var(--dark); font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* ── НАУЧ. ФАКТ ── */
+  .science-card {
+    background: linear-gradient(135deg, var(--darkest), var(--dark));
+    border-radius: 20px; padding: 32px 36px; margin: 0 0 52px;
+  }
+
+  .science-tag {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 12px;
+  }
+
+  .science-card h3 { color: #fff; font-size: 1.2rem; margin-bottom: 12px; line-height: 1.35; }
+
+  .science-card p {
+    color: rgba(201,235,190,0.85);
+    font-size: 0.97rem; font-weight: 300; margin-bottom: 12px;
+  }
+
+  .science-card p:last-child { margin-bottom: 0; }
+  .science-card p strong { color: #fff; font-weight: 700; }
+
+  /* ── ПРИЧИНЫ ── */
+  .cause-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .cause-header {
+    display: flex; align-items: center; gap: 18px;
+    padding: 20px 26px;
+    background: rgba(42,103,44,0.04);
+    border-bottom: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .cause-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 1rem;
+    width: 40px; height: 40px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cause-header h3 { margin: 0; font-size: 1.02rem; }
+
+  .cause-body { padding: 22px 26px; }
+  .cause-body p { font-size: 0.95rem; color: #3a4e3b; margin-bottom: 12px; }
+  .cause-body p:last-child { margin-bottom: 0; }
+
+  /* ── ПРИМЕР ── */
+  .example-box {
+    background: var(--cream);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 14px;
+  }
+
+  .example-label {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 12px;
+  }
+
+  .ex-row {
+    display: flex; align-items: flex-start;
+    gap: 10px; margin-bottom: 9px;
+    font-size: 0.9rem; color: #3a4e3b;
+  }
+
+  .ex-row:last-child { margin-bottom: 0; }
+  .ex-row .ico { flex-shrink: 0; width: 20px; text-align: center; }
+  .ex-row strong { color: var(--dark); }
+
+  /* ── NOTE ── */
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 14px 14px 0;
+    padding: 15px 20px; margin-top: 14px;
+    font-size: 0.92rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* ── МИФ ── */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b; border-radius: 20px;
+    padding: 28px 32px; margin: 56px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* ── ЧТО ДЕЛАТЬ ── */
+  .action-section {
+    background: linear-gradient(135deg, var(--mint) 0%, var(--cream) 100%);
+    border-radius: 24px; padding: 36px 34px; margin: 56px 0;
+  }
+
+  .action-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+
+  .action-step {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+
+  .action-step-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 0.9rem;
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  .action-step h3 { font-size: 0.97rem; margin-bottom: 5px; }
+  .action-step p  { font-size: 0.88rem; color: #556b56; margin: 0; }
+
+  /* ── СОВЕТЫ ── */
+  .tips-section { margin-top: 56px; }
+  .tips-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .tip-item {
+    display: flex; align-items: flex-start; gap: 16px;
+    background: #fff; border-radius: 16px; padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .tip-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .tip-content h3 { font-size: 0.96rem; margin-bottom: 4px; }
+  .tip-content p  { font-size: 0.88rem; color: #556b56; }
+
+  /* ── ФИНАЛ ── */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 46px 38px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--orange); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: #92400e;
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--orange); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Питание · Сушка</div>
+  <h1>Вес стоит — <em>что делать</em></h1>
+  <p class="hero-sub">Сидишь на дефиците, тренируешься — а весы не двигаются. Разбираем почему и что конкретно менять.</p>
+  <div class="hero-badge"><span>🔥</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>На сушке вес должен снижаться на 0.5–1 кг в неделю. Если он стоит уже две недели — почти всегда есть конкретная причина.
+    Задача сушки — убрать жир, сохранив мышцы. Слишком большой дефицит ускоряет потерю мышечной массы. Слишком маленький — вес не снижается.</p>
+  </div>
+
+  <!-- НАУЧНЫЙ ФАКТ -->
+  <div class="science-card">
+    <div class="science-tag">🔬 Научный факт</div>
+    <h3>Люди недооценивают съеденное в среднем на 30–47%</h3>
+    <p>Люди, которые жалуются на отсутствие результата при «соблюдении диеты», в среднем едят на 47% больше, чем думают.
+    Оценить калорийность на глаз сложно — особенно для жиров, соусов и смешанных блюд. Взвешивание еды даёт точный результат, приблизительный подсчёт — нет.</p>
+  </div>
+
+  <!-- ПРИЧИНЫ -->
+  <div class="section-label">Четыре причины</div>
+  <h2>Почему вес стоит на сушке</h2>
+  <div class="divider"></div>
+  <p>Разбери каждую — почти всегда находится одна из них.</p>
+
+  <div style="margin-top: 24px;">
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">1</div>
+        <h3>Скрытые калории перекрывают дефицит</h3>
+      </div>
+      <div class="cause-body">
+        <p>Это самая частая причина. Небольшие добавки к еде, которые кажутся незначительными, суммируются в 300–500 ккал — и полностью перекрывают весь дефицит.</p>
+        <div class="example-box">
+          <div class="example-label">Сколько прячется в мелочах</div>
+          <div class="ex-row"><div class="ico">🫒</div><div>1 ст.л. оливкового масла — <strong>120 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🥜</div><div>Горсть орехов (30 г) — <strong>180 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">☕</div><div>Кофе с молоком и сахаром — <strong>80–120 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🥫</div><div>Соус к салату (2 ст.л.) — <strong>100–150 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🍞</div><div>Кусочек хлеба к обеду — <strong>70–100 ккал</strong></div></div>
+        </div>
+        <div class="note-box">
+          💡 Итого: таких «мелочей» легко набегает 400–600 ккал — это полностью перекрывает дефицит в 300–400 ккал. Взвешивай еду и записывай всё.
+        </div>
+      </div>
+    </div>
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">2</div>
+        <h3>Вес задерживается из-за воды</h3>
+      </div>
+      <div class="cause-body">
+        <p>Тело удерживает воду при стрессе, в определённые дни цикла у женщин, после солёной еды и интенсивных тренировок. Задержка воды может маскировать реальный уход жира на 1–2 кг в течение нескольких недель.</p>
+        <p>Это значит, что жир реально уходит — но весы показывают то же число из-за воды. Через 1–2 недели вода уйдёт и вес резко упадёт. Это называют «вустом» или «whoosh effect» — явление описано в клинической практике при низкокалорийных диетах.</p>
+        <div class="note-box">
+          💡 Смотри на среднее за 7–10 дней, а не на один замер. Если среднее снижается хотя бы на 200–300 г в неделю — процесс идёт нормально.
+        </div>
+      </div>
+    </div>
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">3</div>
+        <h3>Дефицит слишком маленький</h3>
+      </div>
+      <div class="cause-body">
+        <p>Безопасный и эффективный дефицит для похудения — 300–500 ккал в день от нормы поддержания. Меньше — вес почти не двигается. При этом слишком большой дефицит (более 500–700 ккал) ускоряет потерю мышечной массы.</p>
+        <p>Если ешь на дефиците и вес не идёт уже 2 недели — скорее всего дефицит меньше чем кажется. Проверь подсчёт калорий с взвешиванием еды.</p>
+        <div class="example-box">
+          <div class="example-label">Как убрать 200–300 ккал безболезненно</div>
+          <div class="ex-row"><div class="ico">🍚</div><div>Уменьши порцию крупы на 40–50 г — <strong>−140–170 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🫒</div><div>Убери масло из одного приёма пищи — <strong>−100–120 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🚶</div><div>Добавь 30 мин ходьбы в день — <strong>−150–200 ккал</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">4</div>
+        <h3>Мало белка — уходят мышцы, а не жир</h3>
+      </div>
+      <div class="cause-body">
+        <p>На дефиците тело может использовать мышечный белок как источник энергии. Это называется катаболизм — и именно его нужно предотвратить. При недостатке белка вес снижается, но вместе с жиром уходят и мышцы.</p>
+        <p>При дефиците калорий для сохранения мышечной массы нужно 2–2.4 г белка на кг веса тела — заметно больше, чем при наборе.</p>
+        <div class="note-box">
+          💡 При 70 кг на сушке нужно 140–168 г белка в день. Это куриная грудка 300 г + творог 200 г + 3 яйца + стакан кефира. Белок защищает мышцы и хорошо насыщает.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Распространённое заблуждение</div>
+    <h3>«Надо убрать углеводы — тогда жир пойдёт»</h3>
+    <p>Низкоуглеводные диеты действительно дают быстрое снижение веса в первые недели — но это в основном вода, которая уходит вместе с гликогеном. На длинной дистанции результат тот же, что при обычном дефиците калорий.</p>
+    <p>При одинаковом дефиците калорий низкоуглеводные и обычные диеты дают сопоставимый результат. Главное — дефицит, а не соотношение макронутриентов.</p>
+  </div>
+
+  <!-- ЧТО ДЕЛАТЬ -->
+  <div class="action-section">
+    <div class="section-label">Что делать</div>
+    <h2>Пошаговый план</h2>
+    <div class="divider"></div>
+    <p style="color: var(--dark);">Делай по порядку — не прыгай сразу к последнему шагу.</p>
+
+    <div class="action-steps">
+      <div class="action-step">
+        <div class="action-step-num">1</div>
+        <div>
+          <h3>5–7 дней взвешивай всю еду и записывай</h3>
+          <p>Масло, соусы, молоко в кофе — всё. Почти всегда находится 200–400 скрытых ккал, которые перекрывают дефицит.</p>
+        </div>
+      </div>
+      <div class="action-step">
+        <div class="action-step-num">2</div>
+        <div>
+          <h3>Проверь белок — минимум 2 г на кг веса</h3>
+          <p>На сушке белок важнее чем при наборе. Он защищает мышцы от разрушения и хорошо насыщает — легче держать дефицит.</p>
+        </div>
+      </div>
+      <div class="action-step">
+        <div class="action-step-num">3</div>
+        <div>
+          <h3>Смотри на среднее за неделю — не на один день</h3>
+          <p>Взвешивайся каждое утро, считай среднее за 7 дней. Если оно снижается хотя бы на 200–300 г — всё идёт правильно, просто медленно.</p>
+        </div>
+      </div>
+      <div class="action-step">
+        <div class="action-step-num">4</div>
+        <div>
+          <h3>Вес стоит 2 недели при правильном подсчёте — убирай 150–200 ккал</h3>
+          <p>Убери перекус или уменьши порцию крупы. Жди ещё 2 недели. Не убирай больше 200 ккал за раз — высокий дефицит ускоряет потерю мышц.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СОВЕТЫ -->
+  <div class="tips-section">
+    <div class="section-label">Практика</div>
+    <h2>Что помогает худеть и сохранять мышцы</h2>
+    <div class="divider"></div>
+    <ul class="tips-list">
+      <li class="tip-item">
+        <div class="tip-icon">⚖️</div>
+        <div class="tip-content">
+          <h3>Взвешивай еду до приготовления</h3>
+          <p>Крупы и мясо нужно взвешивать в сухом и сыром виде. Варёный рис весит в 3 раза больше сухого — если взвешивать после варки, считаешь треть реальных калорий.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🚶</div>
+        <div class="tip-content">
+          <h3>Добавь ходьбу вместо урезания еды</h3>
+          <p>30 минут быстрой ходьбы сжигают 150–200 ккал и не создают стресса для организма. Это лучше, чем урезать ещё 200 ккал из питания и страдать от голода.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">💪</div>
+        <div class="tip-content">
+          <h3>Продолжай силовые тренировки</h3>
+          <p>На дефиците силовые тренировки — главный инструмент сохранения мышц. Исследования показывают: без силовой нагрузки при дефиците теряется значительно больше мышечной массы.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">😴</div>
+        <div class="tip-content">
+          <h3>Спи 7–9 часов</h3>
+          <p>При недосыпании во время диеты потеря мышечной массы увеличивается, а потеря жира снижается — даже при одинаковом дефиците калорий.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🔄</div>
+        <div class="tip-content">
+          <h3>Меняй одно и жди 2 недели</h3>
+          <p>Не меняй одновременно калории, белок и тренировки. Одно изменение — 2 недели наблюдений — смотришь на результат. Иначе непонятно что сработало.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Проверь скрытые калории с весами, убедись что белка хватает, смотри на среднее за неделю — не на один день. Если всё в порядке, а вес стоит 2 недели — убирай 150–200 ккал и жди ещё 2 недели.</p>
+    <div class="final-pills">
+      <div class="pill">Взвешивай еду</div>
+      <div class="pill">2 г белка на кг</div>
+      <div class="pill">Среднее за неделю</div>
+      <div class="pill">−150–200 ккал за раз</div>
+      <div class="pill">Силовые на дефиците</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Как считать калории точнее — в <b>«Как правильно считать калории»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Практические приёмы для держания дефицита — в <b>«Фишки при сушке»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Недосып замедляет жиросжигание — подробнее в <b>«Почему важен сон»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

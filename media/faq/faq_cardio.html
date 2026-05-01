@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нужно ли кардио</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 580px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper { max-width: 820px; margin: 0 auto; padding: 56px 20px 100px; }
+
+  .intro-card {
+    background: var(--dark); border-radius: 24px;
+    padding: 36px 40px; margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: var(--dark); font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* По целям */
+  .goal-list { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+
+  .goal-item {
+    background: #fff; border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    display: flex; overflow: hidden;
+  }
+
+  .goal-icon-col {
+    background: var(--dark);
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 18px; flex-shrink: 0; font-size: 1.8rem;
+  }
+
+  .goal-body { padding: 24px 26px; flex: 1; }
+  .goal-body h3 { color: var(--dark); margin-bottom: 8px; }
+  .goal-body p  { font-size: 0.92rem; color: #3a4e3b; margin-bottom: 8px; }
+
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px; margin-top: 10px;
+    font-size: 0.9rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* Таблица форматов */
+  .cardio-table {
+    width: 100%; border-collapse: collapse;
+    margin-top: 16px; background: #fff;
+    border-radius: 14px; overflow: hidden; font-size: 0.88rem;
+  }
+
+  .cardio-table th {
+    background: var(--dark); color: var(--mint);
+    font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 11px 14px; text-align: left;
+  }
+
+  .cardio-table td {
+    padding: 10px 14px; color: #3a4e3b;
+    border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .cardio-table tr:last-child td { border-bottom: none; }
+  .cardio-table td:first-child { font-weight: 700; color: var(--dark); }
+
+  /* Сравнение форматов */
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 20px;
+  }
+
+  @media(max-width: 520px) { .compare-grid { grid-template-columns: 1fr; } }
+
+  .compare-card {
+    background: #fff; border-radius: 16px;
+    padding: 20px; border: 1.5px solid rgba(42,103,44,0.1);
+  }
+
+  .compare-card h3 { font-size: 0.95rem; margin-bottom: 10px; }
+
+  .compare-row {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 0.87rem; color: #3a4e3b; margin-bottom: 6px;
+  }
+
+  .compare-row:last-child { margin-bottom: 0; }
+  .compare-row .ico { flex-shrink: 0; }
+
+  /* Миф */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px; padding: 28px 32px; margin: 52px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* Ответ на главный вопрос */
+  .answer-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin-top: 24px;
+  }
+
+  @media(max-width: 520px) { .answer-grid { grid-template-columns: 1fr; } }
+
+  .answer-card {
+    background: #fff; border-radius: 18px;
+    padding: 22px; border: 1.5px solid rgba(42,103,44,0.1);
+  }
+
+  .answer-icon { font-size: 1.6rem; margin-bottom: 8px; display: block; }
+  .answer-card h3 { font-size: 0.95rem; margin-bottom: 6px; }
+  .answer-card p  { font-size: 0.87rem; color: #556b56; }
+
+  /* Финал */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 44px 36px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px; padding: 32px 36px;
+    background: #fff; border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; background: var(--cream);
+    border-radius: 12px; font-size: 0.92rem;
+    color: #3a4e3b; line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow { color: var(--green); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки</div>
+  <h1>Нужно ли <em>кардио</em></h1>
+  <p class="hero-sub">Зависит от цели. Разбираем когда кардио помогает, когда мешает и какой формат выбрать.</p>
+  <div class="hero-badge"><span>🏃</span> Читать 3 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Кардио — не обязательный элемент тренировочного процесса для большинства целей. Оно не сжигает жир «быстрее» и не является условием для похудения. Дефицит калорий — единственное условие снижения веса.</p>
+    <p><strong>Кардио — это инструмент увеличения расхода калорий. Полезно или нет — зависит от цели, объёма и формата.</strong></p>
+  </div>
+
+  <!-- ПО ЦЕЛЯМ -->
+  <div class="section-label">По целям</div>
+  <h2>Кардио под каждую цель</h2>
+  <div class="divider"></div>
+
+  <div class="goal-list">
+
+    <div class="goal-item">
+      <div class="goal-icon-col">📉</div>
+      <div class="goal-body">
+        <h3>Сушка — помогает держать дефицит без урезания еды</h3>
+        <p>На сушке кардио даёт дополнительный расход калорий без снижения порций. Это удобно: вместо того чтобы убирать 300 ккал из рациона, можно добавить 40 минут ходьбы.</p>
+        <p>Ходьба — лучший формат при сушке. Не создаёт дополнительного стресса для организма, не повышает аппетит и не мешает восстановлению после силовых.</p>
+        <div class="note-box">
+          8 000–10 000 шагов в день сжигают дополнительно 200–400 ккал в зависимости от веса. Это один из наиболее эффективных инструментов для создания дефицита без потери мышц.
+        </div>
+      </div>
+    </div>
+
+    <div class="goal-item">
+      <div class="goal-icon-col">💪</div>
+      <div class="goal-body">
+        <h3>Набор массы — мешает при большом объёме</h3>
+        <p>Кардио увеличивает суммарный расход энергии. При наборе нужен профицит — если добавить много кардио, профицит уменьшается или исчезает и рост мышц замедляется.</p>
+        <p>При наборе допустимо лёгкое кардио в малом объёме — для здоровья сердечно-сосудистой системы. Больше не нужно.</p>
+        <div class="note-box">
+          При наборе: не более 2 сессий в неделю по 20–30 минут лёгкой интенсивности. И обязательно восполняй дополнительные калории едой.
+        </div>
+      </div>
+    </div>
+
+    <div class="goal-item">
+      <div class="goal-icon-col">⚡</div>
+      <div class="goal-body">
+        <h3>Сила — почти не нужно</h3>
+        <p>При тренировке на силу восстановление нервной системы важнее, чем при тренировке на массу. Большой объём кардио замедляет это восстановление и снижает силовые показатели.</p>
+        <p>Если цель — сила, кардио сводится к минимуму: 1–2 лёгкие прогулки в неделю для общего здоровья.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ФОРМАТЫ -->
+  <div class="section-gap">
+    <div class="section-label">Форматы</div>
+    <h2>Какое кардио выбрать</h2>
+    <div class="divider"></div>
+    <p>Два основных формата с разными эффектами. Для большинства целей лучше подходит первый.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h3>🚶 Низкая интенсивность (LISS)</h3>
+        <div class="compare-row"><span class="ico">✅</span><span>Не мешает восстановлению после силовых</span></div>
+        <div class="compare-row"><span class="ico">✅</span><span>Не повышает аппетит</span></div>
+        <div class="compare-row"><span class="ico">✅</span><span>Можно делать каждый день</span></div>
+        <div class="compare-row"><span class="ico">✅</span><span>Подходит при наборе и сушке</span></div>
+        <div class="compare-row"><span class="ico">⏱</span><span>30–60 минут за сессию</span></div>
+      </div>
+      <div class="compare-card">
+        <h3>🔥 Высокая интенсивность (HIIT)</h3>
+        <div class="compare-row"><span class="ico">✅</span><span>Больше калорий за меньшее время</span></div>
+        <div class="compare-row"><span class="ico">❌</span><span>Замедляет восстановление после силовых</span></div>
+        <div class="compare-row"><span class="ico">❌</span><span>Повышает аппетит</span></div>
+        <div class="compare-row"><span class="ico">❌</span><span>Не рекомендуется при наборе</span></div>
+        <div class="compare-row"><span class="ico">⏱</span><span>15–25 минут за сессию</span></div>
+      </div>
+    </div>
+
+    <table class="cardio-table">
+      <thead>
+        <tr>
+          <th>Формат</th>
+          <th>Пульс</th>
+          <th>Расход ккал</th>
+          <th>Лучшие варианты</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ходьба быстрым шагом</td>
+          <td>55–65% от макс.</td>
+          <td>150–250 ккал/ч</td>
+          <td>Сушка, набор</td>
+        </tr>
+        <tr>
+          <td>Велосипед / эллипс</td>
+          <td>60–70% от макс.</td>
+          <td>250–400 ккал/ч</td>
+          <td>Сушка</td>
+        </tr>
+        <tr>
+          <td>Лёгкий бег</td>
+          <td>65–75% от макс.</td>
+          <td>300–500 ккал/ч</td>
+          <td>Сушка</td>
+        </tr>
+        <tr>
+          <td>HIIT / интервалы</td>
+          <td>80–95% от макс.</td>
+          <td>400–600 ккал/ч</td>
+          <td>Только сушка, редко</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note-box" style="margin-top: 14px;">
+      Максимальный пульс (приблизительно): 220 − возраст. Для 25 лет: 220 − 25 = 195 уд/мин. 65% от этого = 127 уд/мин.
+    </div>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Частое заблуждение</div>
+    <h3>«Кардио сжигает мышцы»</h3>
+    <p>Умеренное кардио низкой интенсивности не разрушает мышцы при достаточном потреблении белка (2.0–2.2 г/кг) и нормальном питании. Мышцы разрушаются при дефиците белка и слишком большом дефиците калорий — кардио само по себе здесь не причина.</p>
+    <p><b>«Кардио нужно делать натощак — так сжигается больше жира»</b> — суточный баланс калорий не зависит от времени кардио. Кардио натощак не даёт преимущества перед кардио после еды при одинаковом объёме нагрузки.</p>
+  </div>
+
+  <!-- КОГДА ДОБАВЛЯТЬ -->
+  <div class="section-gap">
+    <div class="section-label">Практика</div>
+    <h2>Когда и сколько добавлять</h2>
+    <div class="divider"></div>
+
+    <div class="answer-grid">
+      <div class="answer-card">
+        <span class="answer-icon">🆕</span>
+        <h3>Первые 2–3 месяца тренировок</h3>
+        <p>Только силовые. Тело адаптируется к нагрузке. Добавлять кардио в этот период — лишняя нагрузка на восстановление без значимого эффекта.</p>
+      </div>
+      <div class="answer-card">
+        <span class="answer-icon">📉</span>
+        <h3>На сушке</h3>
+        <p>2–4 сессии в неделю по 30–45 минут низкой интенсивности. Или просто 8 000–10 000 шагов в день — это проще контролировать.</p>
+      </div>
+      <div class="answer-card">
+        <span class="answer-icon">💪</span>
+        <h3>При наборе</h3>
+        <p>1–2 лёгкие сессии в неделю по 20–30 минут. Только для поддержания работы сердечно-сосудистой системы. Компенсируй дополнительными калориями.</p>
+      </div>
+      <div class="answer-card">
+        <span class="answer-icon">📅</span>
+        <h3>Когда делать</h3>
+        <p>Лучше в отдельный день от силовой или после неё. Перед силовой тренировкой кардио снижает производительность в подходах.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>На сушке — 2–4 сессии ходьбы в неделю или 8–10 тысяч шагов в день. При наборе — не более 2 лёгких сессий. При тренировке на силу — минимум. Первые 2–3 месяца — только силовые.</p>
+    <div class="final-pills">
+      <div class="pill">Ходьба при сушке</div>
+      <div class="pill">Минимум при наборе</div>
+      <div class="pill">После силовой, не до</div>
+      <div class="pill">Низкая интенсивность</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как держать дефицит без срывов — в <b>«Фишки при сушке»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Почему вес стоит на сушке даже с дефицитом — в <b>«Вес стоит на сушке»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как питаться под свою цель — в <b>«Как питаться для результата»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
