@@ -70,7 +70,7 @@ TECH_IMAGES: Dict[str, str] = {
     # "pullup_wide":    "media/tech/pullup_wide.jpg",
     # "ohp_barbell":    "media/tech/ohp_barbell.jpg",
     # ── Домашние упражнения (раскомментируй и положи файл) ──────────────────
-    # "pushup_wide":       "media/tech/pushup_wide.jpg",
+    "pushup_wide":       "media/tech/pushup_wide.jpg",
     # "pushup_narrow":     "media/tech/pushup_narrow.jpg",
     # "pushup_elevated":   "media/tech/pushup_elevated.jpg",
     # "pike_pushup":       "media/tech/pike_pushup.jpg",
@@ -272,6 +272,37 @@ TECH_GIFS = {
     # Кор
     "bicycle_crunch":    "media/tech/bicycle_crunch.mp4",
     "russian_twist":     "media/tech/russian_twist.mp4",
+    # ── Новые упражнения ────────────────────────────────────────────────────
+    # Спина
+    "australian_pullup":        "media/tech/australian_pullup.mp4",
+    "rear_delt_plate":          "media/tech/rear_delt_plate.mp4",
+    "plate_row":                "media/tech/plate_row.mp4",
+    # Ноги
+    "lateral_lunge_plate":      "media/tech/lateral_lunge_plate.mp4",
+    "lateral_lunge_dumbbell":   "media/tech/lateral_lunge_dumbbell.mp4",
+    "lateral_lunge_bw":         "media/tech/lateral_lunge_bw.mp4",
+    "squat_explosive_bw":       "media/tech/squat_explosive_bw.mp4",
+    "lunge_plate":              "media/tech/lunge_plate.mp4",
+    "reverse_lunge_plate":      "media/tech/reverse_lunge_plate.mp4",
+    "reverse_lunge_dumbbell":   "media/tech/reverse_lunge_dumbbell.mp4",
+    "reverse_lunge_bw":         "media/tech/reverse_lunge_bw.mp4",
+    "pistol_squat":             "media/tech/pistol_squat.mp4",
+    "sumo_squat_bw":            "media/tech/sumo_squat_bw.mp4",
+    "rdl_plate":                "media/tech/rdl_plate.mp4",
+    # Плечи
+    "lateralraise_plate":       "media/tech/lateralraise_plate.mp4",
+    "ohp_plate":                "media/tech/ohp_plate.mp4",
+    # Грудь / трицепс
+    "pushup_knee":              "media/tech/pushup_knee.mp4",
+    "pushup_elevated_knee":     "media/tech/pushup_elevated_knee.mp4",
+    "diamond_pushup_knee":      "media/tech/diamond_pushup_knee.mp4",
+    "deep_pushup":              "media/tech/deep_pushup.mp4",
+    "pushup_hands_elevated":    "media/tech/pushup_hands_elevated.mp4",
+    "triceps_ext_bw":           "media/tech/triceps_ext_bw.mp4",
+    "triceps_ext_knee":         "media/tech/triceps_ext_knee.mp4",
+    # Бицепс
+    "biceps_dumbbell_sitting":  "media/tech/biceps_dumbbell_sitting.mp4",
+    "biceps_plate":             "media/tech/biceps_plate.mp4",
     # ── Домашние упражнения (раскомментируй и положи файл) ──────────────────
     # "pushup_wide":         "media/tech/pushup_wide.mp4",
     # "pushup_narrow":       "media/tech/pushup_narrow.mp4",
@@ -382,6 +413,37 @@ EXERCISE_NAMES = {
     "hanging_leg_raise":      "Подъёмы ног в висе",
     "leg_raise_lying":        "Подъёмы ног лёжа",
     "elbow_leg_raise":        "Подъёмы ног в упоре на локтях",
+    # ── НОВЫЕ УПРАЖНЕНИЯ ─────────────────────────────────────────────────────
+    # Спина
+    "australian_pullup":      "Австралийские подтягивания",
+    "rear_delt_plate":        "Махи с блином на заднюю дельту",
+    "plate_row":              "Тяга блина в наклоне",
+    # Ноги
+    "lateral_lunge_plate":    "Боковые выпады с блином",
+    "lateral_lunge_dumbbell": "Боковые выпады с гантелями",
+    "lateral_lunge_bw":       "Боковые выпады (свой вес)",
+    "squat_explosive_bw":     "Взрывные приседания (свой вес)",
+    "lunge_plate":            "Выпады с блином",
+    "reverse_lunge_plate":    "Обратные выпады с блином",
+    "reverse_lunge_dumbbell": "Обратные выпады с гантелями",
+    "reverse_lunge_bw":       "Обратные выпады (свой вес)",
+    "pistol_squat":           "Приседания на одной ноге (пистолет)",
+    "sumo_squat_bw":          "Приседания ноги врозь-вместе",
+    "rdl_plate":              "Румынская тяга с блином",
+    # Плечи
+    "lateralraise_plate":     "Махи блином в стороны",
+    "ohp_plate":              "Жим блина стоя",
+    # Грудь / трицепс
+    "pushup_knee":            "Отжимания с колен",
+    "pushup_elevated_knee":   "Отжимания с колен (руки на возвышении)",
+    "diamond_pushup_knee":    "Алмазные отжимания с колен",
+    "deep_pushup":            "Глубокие отжимания",
+    "pushup_hands_elevated":  "Отжимания (руки на возвышении)",
+    "triceps_ext_bw":         "Разгибание на трицепс (свой вес)",
+    "triceps_ext_knee":       "Разгибание на трицепс с колен",
+    # Бицепс
+    "biceps_dumbbell_sitting": "Сгибания с гантелью сидя",
+    "biceps_plate":           "Сгибания с блином (бицепс)",
 }
 
 # =========================
@@ -401,12 +463,12 @@ EXERCISE_ALTERNATIVES: Dict[str, Tuple[str, List[str], List[str]]] = {
     "leg_extension":            ("Квадрицепс",    ["legpress", "hack_squat"],                                  ["squat_bw", "lunge_bw"]),
     # ── ЯГОДИЦЫ / ВЫПАДЫ ─────────────────────────────────────────────────────
     # Выпады = ягодицы + квадрицепс → замены только из той же категории
-    "bulgarian":                ("Ягодицы/Квадрицепс", ["lunge_barbell", "lunge_dumbbell", "legpress"],        ["lunge_bw", "lunge_walking", "squat_bw"]),
-    "bulgarian_dumbbell":       ("Ягодицы/Квадрицепс", ["bulgarian", "lunge_dumbbell", "legpress"],            ["lunge_bw", "lunge_walking", "squat_bw"]),
-    "lunge_barbell":            ("Ягодицы/Квадрицепс", ["bulgarian", "lunge_dumbbell", "legpress"],            ["lunge_bw", "lunge_walking"]),
-    "lunge_dumbbell":           ("Ягодицы/Квадрицепс", ["bulgarian_dumbbell", "lunge_barbell", "legpress"],    ["lunge_bw", "lunge_walking"]),
-    "lunge_walking":            ("Ягодицы/Квадрицепс", ["lunge_dumbbell", "bulgarian_dumbbell"],               ["lunge_bw", "bulgarian_dumbbell"]),
-    "lunge_bw":                 ("Ягодицы/Квадрицепс", ["lunge_dumbbell", "bulgarian", "legpress"],            ["lunge_walking", "squat_bw", "bulgarian"]),
+    "bulgarian":                ("Выпады",        ["lunge_barbell", "lunge_dumbbell", "lunge_plate", "legpress"],  ["lunge_bw", "lunge_walking", "squat_bw"]),
+    "bulgarian_dumbbell":       ("Выпады",        ["bulgarian", "lunge_dumbbell", "lunge_plate", "legpress"],      ["lunge_bw", "lunge_walking", "squat_bw"]),
+    "lunge_barbell":            ("Выпады",        ["bulgarian", "lunge_dumbbell", "lunge_plate", "legpress"],      ["lunge_bw", "lunge_walking"]),
+    "lunge_dumbbell":           ("Выпады",        ["bulgarian_dumbbell", "lunge_barbell", "lunge_plate", "legpress"], ["lunge_bw", "lunge_walking"]),
+    "lunge_walking":            ("Выпады",        ["lunge_dumbbell", "lunge_plate", "bulgarian_dumbbell"],         ["lunge_bw", "bulgarian_dumbbell"]),
+    "lunge_bw":                 ("Выпады",        ["lunge_dumbbell", "lunge_plate", "bulgarian", "legpress"],      ["lunge_walking", "squat_bw", "bulgarian"]),
     # Ягодичный мост = изоляция ягодиц → замены только на ягодичные упражнения
     "glute_bridge":             ("Ягодицы",       ["glute_bridge_single", "cable_kickback", "legcurl"],        ["glute_bridge_bodyweight", "glute_bridge_single", "cable_kickback"]),
     "glute_bridge_single":      ("Ягодицы",       ["glute_bridge", "cable_kickback"],                          ["glute_bridge_bodyweight", "glute_bridge"]),
@@ -450,20 +512,25 @@ EXERCISE_ALTERNATIVES: Dict[str, Tuple[str, List[str], List[str]]] = {
     "bodyweight_hands_up_pushup":("Грудь",        ["pushup_wide", "bench_dumbbell"],                           ["pushup_elevated", "explosive_pushup"]),
     "chair_dips_pushup":        ("Трицепс",       ["dips", "triceps_cable"],                                   ["narrow_pushup", "diamond_pushup"]),
     # ── СПИНА — ШИРОЧАЙШИЕ ───────────────────────────────────────────────────
-    "latpulldown_wide":         ("Широчайшие",    ["pullup_wide", "latpulldown_narrow", "barbell_row"],        ["pullup_wide", "pullup_chinup"]),
-    "latpulldown_narrow":       ("Широчайшие",    ["pullup_narrow", "latpulldown_wide", "dumbbell_row"],       ["pullup_narrow", "pullup_chinup"]),
-    "pullup_wide":              ("Широчайшие",    ["latpulldown_wide", "tbar_row", "barbell_row"],             ["pullup_chinup", "pullup_narrow"]),
-    "pullup_chinup":            ("Широчайшие",    ["latpulldown_narrow", "barbell_row"],                       ["pullup_wide", "pullup_narrow"]),
-    "pullup_narrow":            ("Широчайшие",    ["latpulldown_narrow", "dumbbell_row"],                      ["pullup_chinup", "pullup_wide"]),
+    # Все замены нагружают широчайшие как основную мышцу
+    "latpulldown_wide":         ("Широчайшие",    ["pullup_wide", "pullup_chinup", "latpulldown_narrow", "australian_pullup"], ["pullup_wide", "pullup_chinup", "pullup_narrow", "australian_pullup"]),
+    "latpulldown_narrow":       ("Широчайшие",    ["pullup_narrow", "pullup_chinup", "latpulldown_wide", "australian_pullup"], ["pullup_narrow", "pullup_chinup", "pullup_wide"]),
+    "pullup_wide":              ("Широчайшие",    ["latpulldown_wide", "pullup_chinup", "pullup_narrow"],                      ["pullup_chinup", "pullup_narrow", "australian_pullup"]),
+    "pullup_chinup":            ("Широчайшие",    ["latpulldown_narrow", "pullup_wide", "pullup_narrow"],                      ["pullup_wide", "pullup_narrow", "australian_pullup"]),
+    "pullup_narrow":            ("Широчайшие",    ["latpulldown_narrow", "pullup_chinup", "pullup_wide"],                      ["pullup_chinup", "pullup_wide", "australian_pullup"]),
+    "australian_pullup":        ("Широчайшие",    ["latpulldown_wide", "pullup_wide", "pullup_chinup"],                        ["pullup_wide", "pullup_chinup", "pullup_narrow"]),
     # ── СПИНА — ГОРИЗОНТАЛЬНЫЕ ТЯГИ ──────────────────────────────────────────
-    "rowtrain":                 ("Спина середина",["barbell_row", "tbar_row", "dumbbell_row"],                 ["dumbbell_row", "pullup_chinup"]),
-    "dumbbell_row":             ("Спина середина",["rowtrain", "barbell_row", "tbar_row"],                     ["pullup_chinup", "pullup_wide"]),
-    "barbell_row":              ("Спина середина",["tbar_row", "rowtrain", "dumbbell_row"],                    ["dumbbell_row", "pullup_wide"]),
-    "tbar_row":                 ("Спина середина",["barbell_row", "rowtrain", "dumbbell_row"],                 ["dumbbell_row", "pullup_wide"]),
-    # face_pull / задняя дельта → замены только на заднюю дельту
-    "face_pull":                ("Задняя дельта", ["rear_delt_machine", "rear_delt"],                          ["rear_delt"]),
-    "rear_delt":                ("Задняя дельта", ["face_pull", "rear_delt_machine"],                          ["face_pull"]),
-    "rear_delt_machine":        ("Задняя дельта", ["face_pull", "rear_delt"],                                  ["rear_delt"]),
+    # Все нагружают середину спины (ромбовидные, трапеции, задняя дельта)
+    "rowtrain":                 ("Спина середина", ["barbell_row", "tbar_row", "dumbbell_row", "plate_row"],  ["dumbbell_row", "plate_row", "australian_pullup"]),
+    "dumbbell_row":             ("Спина середина", ["rowtrain", "barbell_row", "tbar_row", "plate_row"],      ["australian_pullup", "plate_row"]),
+    "barbell_row":              ("Спина середина", ["tbar_row", "rowtrain", "dumbbell_row", "plate_row"],     ["dumbbell_row", "plate_row"]),
+    "tbar_row":                 ("Спина середина", ["barbell_row", "rowtrain", "dumbbell_row"],               ["dumbbell_row", "plate_row"]),
+    "plate_row":                ("Спина середина", ["barbell_row", "dumbbell_row", "rowtrain"],               ["dumbbell_row", "australian_pullup"]),
+    # ── ЗАДНЯЯ ДЕЛЬТА ─────────────────────────────────────────────────────────
+    "face_pull":                ("Задняя дельта", ["rear_delt_machine", "rear_delt", "rear_delt_plate"],      ["rear_delt", "rear_delt_plate"]),
+    "rear_delt":                ("Задняя дельта", ["face_pull", "rear_delt_machine", "rear_delt_plate"],      ["rear_delt_plate"]),
+    "rear_delt_machine":        ("Задняя дельта", ["face_pull", "rear_delt", "rear_delt_plate"],              ["rear_delt", "rear_delt_plate"]),
+    "rear_delt_plate":          ("Задняя дельта", ["face_pull", "rear_delt_machine", "rear_delt"],            ["rear_delt", "face_pull"]),
     # ── ПЛЕЧИ ────────────────────────────────────────────────────────────────
     "ohp_barbell":              ("Плечи",         ["ohp_dumbbell", "ohp_dumbbell_sitting", "ohp_machine", "arnold_press"], ["ohp_dumbbell", "pike_pushup"]),
     "ohp_dumbbell":             ("Плечи",         ["ohp_barbell", "arnold_press", "ohp_machine"],              ["ohp_dumbbell_sitting", "pike_pushup"]),
@@ -495,6 +562,32 @@ EXERCISE_ALTERNATIVES: Dict[str, Tuple[str, List[str], List[str]]] = {
     "hanging_leg_raise":        ("Пресс низ",     ["elbow_leg_raise", "leg_raise_lying", "cable_crunch"],      ["leg_raise_lying", "elbow_leg_raise"]),
     "leg_raise_lying":          ("Пресс низ",     ["hanging_leg_raise", "elbow_leg_raise"],                    ["elbow_leg_raise", "ab_crunch"]),
     "elbow_leg_raise":          ("Пресс низ",     ["hanging_leg_raise", "leg_raise_lying"],                    ["leg_raise_lying", "ab_crunch"]),
+    # ── НОВЫЕ — НОГИ ─────────────────────────────────────────────────────────
+    "lateral_lunge_plate":      ("Ягодицы/Приводящие", ["lateral_lunge_dumbbell", "lunge_dumbbell", "leg_adduction"], ["lateral_lunge_bw", "lateral_lunge_dumbbell", "lunge_bw"]),
+    "lateral_lunge_dumbbell":   ("Ягодицы/Приводящие", ["lateral_lunge_plate", "lunge_dumbbell", "leg_adduction"],    ["lateral_lunge_bw", "lunge_bw"]),
+    "lateral_lunge_bw":         ("Ягодицы/Приводящие", ["lateral_lunge_dumbbell", "lunge_bw", "leg_adduction"],       ["lateral_lunge_dumbbell", "lunge_bw"]),
+    "squat_explosive_bw":       ("Квадрицепс",    ["squat_bw", "squat_barbell", "goblet"],                            ["squat_bw", "pistol_squat"]),
+    "lunge_plate":              ("Выпады",         ["lunge_dumbbell", "lunge_barbell", "legpress"],               ["lunge_bw", "lunge_walking"]),
+    "reverse_lunge_plate":      ("Обратные выпады", ["reverse_lunge_dumbbell", "reverse_lunge_bw"],               ["reverse_lunge_bw", "reverse_lunge_dumbbell"]),
+    "reverse_lunge_dumbbell":   ("Обратные выпады", ["reverse_lunge_plate", "reverse_lunge_bw"],                  ["reverse_lunge_bw", "reverse_lunge_plate"]),
+    "reverse_lunge_bw":         ("Обратные выпады", ["reverse_lunge_dumbbell", "reverse_lunge_plate"],            ["reverse_lunge_dumbbell", "lateral_lunge_bw"]),
+    "pistol_squat":             ("Квадрицепс",    ["squat_barbell", "hack_squat", "legpress"],                         ["squat_bw", "squat_explosive_bw"]),
+    "sumo_squat_bw":            ("Квадрицепс",    ["squat_bw", "squat_explosive_bw", "legpress"],                ["squat_bw", "squat_explosive_bw", "lateral_lunge_bw"]),
+    "rdl_plate":                ("Бицепс бедра",  ["rdl_barbell", "rdl_dumbbell", "legcurl"],                         ["rdl_dumbbell", "good_morning"]),
+    # ── НОВЫЕ — ПЛЕЧИ ────────────────────────────────────────────────────────
+    "lateralraise_plate":       ("Плечи боков.",  ["lateralraise_dumbbell", "front_raise"],                           ["lateralraise_dumbbell", "front_raise"]),
+    "ohp_plate":                ("Плечи",         ["ohp_dumbbell", "ohp_barbell", "ohp_machine"],                     ["ohp_dumbbell", "pike_pushup"]),
+    # ── НОВЫЕ — ГРУДЬ / ТРИЦЕПС ──────────────────────────────────────────────
+    "pushup_knee":              ("Грудь",         ["bench_dumbbell", "pushup_wide"],                                  ["pushup_elevated_knee", "pushup_wide", "pushup_hands_elevated"]),
+    "pushup_elevated_knee":     ("Грудь верх",    ["incline_press_dumbbell", "pushup_knee"],                          ["pushup_knee", "pushup_hands_elevated"]),
+    "diamond_pushup_knee":      ("Грудь/Трицепс", ["diamond_pushup", "narrow_pushup"],                                ["narrow_pushup", "triceps_ext_knee"]),
+    "deep_pushup":              ("Грудь",         ["bench_dumbbell", "chest_fly", "pushup_wide"],                     ["pushup_wide", "pushup_knee"]),
+    "pushup_hands_elevated":    ("Грудь",         ["bench_dumbbell", "pushup_wide"],                                  ["pushup_knee", "pushup_elevated_knee"]),
+    "triceps_ext_bw":           ("Трицепс",       ["triceps_cable", "narrow_pushup", "chair_dips_pushup"],            ["narrow_pushup", "triceps_ext_knee", "diamond_pushup_knee"]),
+    "triceps_ext_knee":         ("Трицепс",       ["triceps_cable", "narrow_pushup"],                                 ["triceps_ext_bw", "diamond_pushup_knee", "narrow_pushup"]),
+    # ── НОВЫЕ — БИЦЕПС ───────────────────────────────────────────────────────
+    "biceps_dumbbell_sitting":  ("Бицепс",        ["biceps_dumbbell", "biceps_barbell", "concentration_curl"],        ["biceps_dumbbell", "concentration_curl", "biceps_plate"]),
+    "biceps_plate":             ("Бицепс",        ["biceps_barbell", "biceps_dumbbell", "hammer"],                    ["biceps_dumbbell_sitting", "biceps_dumbbell", "concentration_curl"]),
 }
 
 
@@ -587,7 +680,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -694,6 +787,12 @@ class MeasureFlow(StatesGroup):
 class PostFlow(StatesGroup):
     waiting_content = State()
     waiting_confirm = State()
+    waiting_button_text = State()   # ожидание текста кнопки
+    waiting_button_url = State()    # ожидание URL кнопки
+
+
+class AdminFlow(StatesGroup):
+    find_user_input = State()       # ожидание ID или username для поиска
 
 
 class NutritionLog(StatesGroup):
@@ -2475,6 +2574,531 @@ TECH = {
         )
     },
     # ── ПРЕСС / КОР ────────────────────────────────────────
+
+    # ══════════════════════════════════════════════════════
+    # НОВЫЕ УПРАЖНЕНИЯ
+    # ══════════════════════════════════════════════════════
+
+    # ── СПИНА ─────────────────────────────────────────────
+    "australian_pullup": {
+        "title": "Австралийские подтягивания",
+        "mp4": "media/tech/australian_pullup.mp4",
+        "text": (
+            "📚 Австралийские подтягивания (широчайшие + середина спины)\n\n"
+            "✅ Настройка\n"
+            "• Перекладина или гриф на уровне пояса — примерно на высоте бёдер.\n"
+            "• Лечь под перекладину, взяться прямым хватом чуть шире плеч.\n"
+            "• Тело — прямая линия от пяток до головы, пятки на полу.\n\n"
+            "✅ Как делать\n"
+            "1) Напряги спину и кор — тело держи жёстким, как доску.\n"
+            "2) Тяни грудь к перекладине, сводя лопатки.\n"
+            "3) Пауза в верхней точке — грудь касается или почти касается перекладины.\n"
+            "4) Медленно опускайся вниз — 2–3 сек, до полного выпрямления рук.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Таз провисает вниз → напряги ягодицы и пресс.\n"
+            "• Тянешь руками → думай «свожу лопатки».\n"
+            "• Неполная амплитуда → тяни до касания грудью.\n\n"
+            "💡 Прогрессия\n"
+            "Ноги согнуты (легче) → ноги прямые → ноги на возвышении (тяжелее).\n"
+            "Отличная замена подтягиваниям для начинающих."
+        )
+    },
+    "rear_delt_plate": {
+        "title": "Махи с блином на заднюю дельту",
+        "mp4": "media/tech/rear_delt_plate.mp4",
+        "text": (
+            "📚 Махи с блином на заднюю дельту\n\n"
+            "✅ Настройка\n"
+            "• Возьми блин двумя руками за края или одной рукой через центральное отверстие.\n"
+            "• Наклон корпуса 45–90° вперёд, спина прямая.\n"
+            "• Рука слегка согнута в локте — угол фиксирован на всё движение.\n\n"
+            "✅ Как делать\n"
+            "1) Поднимай руку в сторону — дугообразным движением.\n"
+            "2) В верхней точке рука параллельна полу или чуть выше.\n"
+            "3) Пауза 1 сек — почувствуй сокращение задней дельты.\n"
+            "4) Медленно опускай 2–3 сек.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Плечо тянется к уху → держи его опущенным.\n"
+            "• Раскачка корпуса → фиксируй угол наклона.\n"
+            "• Слишком тяжёлый блин → задняя дельта маленькая, берём лёгкий.\n\n"
+            "💡 Подсказка\n"
+            "Начни с блина 2.5–5 кг. Можно делать поочерёдно каждой рукой."
+        )
+    },
+    "plate_row": {
+        "title": "Тяга блина в наклоне",
+        "mp4": "media/tech/plate_row.mp4",
+        "text": (
+            "📚 Тяга блина в наклоне (середина спины)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин двумя руками за края или через центральное отверстие.\n"
+            "• Наклон корпуса 45°, спина прямая, колени слегка согнуты.\n"
+            "• Руки опущены вниз, блин свисает перед собой.\n\n"
+            "✅ Как делать\n"
+            "1) Начни движение с лопаток — тяни их к позвоночнику.\n"
+            "2) Тяни блин к животу, локти ведут назад вдоль тела.\n"
+            "3) Пауза 1 сек в верхней точке — лопатки максимально сведены.\n"
+            "4) Медленно опускай до полного выпрямления рук.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Раскачка корпуса → фиксируй угол наклона.\n"
+            "• Тянешь руками → думай «локти назад».\n"
+            "• Поясница округляется → уменьши вес или амплитуду.\n\n"
+            "💡 Подсказка\n"
+            "Хорошая замена штанге и гантели когда нет грифа. Нейтральный хват удобен для плеч."
+        )
+    },
+
+    # ── НОГИ ──────────────────────────────────────────────
+    "lateral_lunge_plate": {
+        "title": "Боковые выпады с блином",
+        "mp4": "media/tech/lateral_lunge_plate.mp4",
+        "text": (
+            "📚 Боковые выпады с блином (приводящие + ягодицы + квадрицепс)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин двумя руками у груди или перед собой для баланса.\n"
+            "• Стой прямо, ноги вместе, взгляд вперёд.\n\n"
+            "✅ Как делать\n"
+            "1) Широкий шаг в сторону — рабочая нога.\n"
+            "2) Опускай таз к пятке рабочей ноги, колено над носком.\n"
+            "3) Опорная нога остаётся прямой и упирается в пол.\n"
+            "4) Оттолкнись рабочей ногой, вернись в исходное положение.\n"
+            "5) Чередуй стороны или делай все повторы на одну ногу.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Колено уходит внутрь → следи за направлением колена по носку.\n"
+            "• Опорная нога сгибается → держи её прямой.\n"
+            "• Короткий шаг → нет растяжения приводящих, убери смысл.\n\n"
+            "💡 Подсказка\n"
+            "Отличная замена тренажёру для приводящих. Начни без блина — освой баланс."
+        )
+    },
+    "lateral_lunge_dumbbell": {
+        "title": "Боковые выпады с гантелями",
+        "mp4": "media/tech/lateral_lunge_dumbbell.mp4",
+        "text": (
+            "📚 Боковые выпады с гантелями (приводящие + ягодицы + квадрицепс)\n\n"
+            "✅ Настройка\n"
+            "• Гантели в опущенных руках по бокам или у груди.\n"
+            "• Стой прямо, ноги вместе.\n\n"
+            "✅ Как делать\n"
+            "1) Широкий шаг в сторону, опускай таз к пятке рабочей ноги.\n"
+            "2) Колено над носком, спина прямая.\n"
+            "3) Опорная нога прямая, упирается в пол всей стопой.\n"
+            "4) Оттолкнись и вернись в исходное.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Корпус сильно наклоняется вперёд → держи грудь выше.\n"
+            "• Гантели качаются → контролируй положение рук.\n\n"
+            "💡 Подсказка\n"
+            "Гантели дают возможность взять больше веса чем блин — удобнее для прогрессии."
+        )
+    },
+    "lateral_lunge_bw": {
+        "title": "Боковые выпады (свой вес)",
+        "mp4": "media/tech/lateral_lunge_bw.mp4",
+        "text": (
+            "📚 Боковые выпады (приводящие + ягодицы)\n\n"
+            "✅ Настройка\n"
+            "• Руки перед собой для баланса или на поясе.\n"
+            "• Стой прямо, ноги вместе.\n\n"
+            "✅ Как делать\n"
+            "1) Широкий шаг в сторону, таз уходит к пятке рабочей ноги.\n"
+            "2) Колено рабочей ноги над носком.\n"
+            "3) Опорная нога прямая.\n"
+            "4) Оттолкнись и вернись. Чередуй стороны.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Слишком маленький шаг → нет растяжения приводящих.\n"
+            "• Колено завалилось внутрь → тяни его наружу.\n\n"
+            "💡 Прогрессия\n"
+            "Свой вес → с гантелями → с блином → с паузой внизу."
+        )
+    },
+    "squat_explosive_bw": {
+        "title": "Взрывные приседания (свой вес)",
+        "mp4": "media/tech/squat_explosive_bw.mp4",
+        "text": (
+            "📚 Взрывные приседания (квадрицепс + ягодицы + взрывная сила)\n\n"
+            "✅ Настройка\n"
+            "• Стопы на ширине плеч, носки слегка наружу.\n"
+            "• Руки перед собой или за головой.\n\n"
+            "✅ Как делать\n"
+            "1) Медленно опускайся до параллели — 2 сек.\n"
+            "2) Взрывное выталкивание вверх — максимально быстро.\n"
+            "3) Можно оторвать пятки от пола в верхней точке (прыжок).\n"
+            "4) Мягкое приземление на слегка согнутые ноги — сразу в следующий присед.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Нет медленной фазы вниз → теряется контроль.\n"
+            "• Колени внутрь при взлёте → разводи наружу.\n"
+            "• Жёсткое приземление → амортизируй коленями.\n\n"
+            "💡 Подсказка\n"
+            "Развивает взрывную силу и скорость. Хорошо в конце тренировки ног как финишер."
+        )
+    },
+    "lunge_plate": {
+        "title": "Выпады с блином",
+        "mp4": "media/tech/lunge_plate.mp4",
+        "text": (
+            "📚 Выпады с блином (ноги + ягодицы)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин двумя руками у груди или над головой для усложнения.\n"
+            "• Стань прямо, взгляд вперёд.\n\n"
+            "✅ Как делать\n"
+            "1) Широкий шаг вперёд — переднее колено не за носком.\n"
+            "2) Заднее колено опускается почти до пола.\n"
+            "3) Оттолкнись передней ногой и вернись.\n"
+            "4) Блин держи стабильно — не давай ему раскачиваться.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Короткий шаг → колено выходит далеко за носок.\n"
+            "• Корпус наклоняется → держи грудь вертикально.\n\n"
+            "💡 Подсказка\n"
+            "Блин над головой — отличный вариант для проработки стабилизаторов корпуса."
+        )
+    },
+    "reverse_lunge_plate": {
+        "title": "Обратные выпады с блином",
+        "mp4": "media/tech/reverse_lunge_plate.mp4",
+        "text": (
+            "📚 Обратные выпады с блином (ягодицы + квадрицепс)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин у груди или за головой.\n"
+            "• Стань прямо, ноги на ширине бёдер.\n\n"
+            "✅ Как делать\n"
+            "1) Шаг назад — одна нога уходит назад, колено опускается к полу.\n"
+            "2) Переднее бедро параллельно полу, колено над носком.\n"
+            "3) Оттолкнись передней ногой и вернись в исходное.\n"
+            "4) Чередуй ноги или делай все на одну сторону.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Переднее колено за носком → сделай шаг длиннее.\n"
+            "• Потеря баланса → замедлись, держи корпус прямо.\n\n"
+            "💡 Плюс обратных выпадов\n"
+            "Меньше нагрузки на колено чем прямые выпады — безопаснее для суставов."
+        )
+    },
+    "reverse_lunge_dumbbell": {
+        "title": "Обратные выпады с гантелями",
+        "mp4": "media/tech/reverse_lunge_dumbbell.mp4",
+        "text": (
+            "📚 Обратные выпады с гантелями (ягодицы + квадрицепс)\n\n"
+            "✅ Настройка\n"
+            "• Гантели в опущенных руках по бокам.\n"
+            "• Стань прямо, ноги вместе.\n\n"
+            "✅ Как делать\n"
+            "1) Шаг назад — колено опускается к полу.\n"
+            "2) Переднее бедро параллельно полу.\n"
+            "3) Оттолкнись и вернись. Чередуй ноги.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Гантели качаются → держи руки прямыми вдоль тела.\n"
+            "• Наклон корпуса → грудь смотрит вперёд.\n\n"
+            "💡 Подсказка\n"
+            "Можно делать с шагом на место или ходьбой назад."
+        )
+    },
+    "reverse_lunge_bw": {
+        "title": "Обратные выпады (свой вес)",
+        "mp4": "media/tech/reverse_lunge_bw.mp4",
+        "text": (
+            "📚 Обратные выпады (ягодицы + квадрицепс)\n\n"
+            "✅ Как делать\n"
+            "1) Шаг назад, колено заднее почти касается пола.\n"
+            "2) Переднее бедро параллельно полу, колено над носком.\n"
+            "3) Оттолкнись передней ногой, вернись. Чередуй ноги.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Колено переднее уходит за носок → шаг назад длиннее.\n"
+            "• Потеря равновесия → руки вперёд для баланса.\n\n"
+            "💡 Прогрессия\n"
+            "Свой вес → с гантелями → с блином → болгарский вариант."
+        )
+    },
+    "pistol_squat": {
+        "title": "Приседания на одной ноге (пистолет)",
+        "mp4": "media/tech/pistol_squat.mp4",
+        "text": (
+            "📚 Пистолет — приседание на одной ноге (квадрицепс + ягодицы + баланс)\n\n"
+            "✅ Настройка\n"
+            "• Встань на одну ногу, вторую вытяни прямо вперёд.\n"
+            "• Руки вперёд для баланса.\n\n"
+            "✅ Как делать\n"
+            "1) Медленно приседай на опорной ноге, вытянутая нога идёт вперёд.\n"
+            "2) Опускайся как можно ниже — идеально до касания ягодицей пятки.\n"
+            "3) Колено опорной ноги над носком, не заваливается внутрь.\n"
+            "4) Выталкивайся вверх силой ноги.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Потеря баланса → держись за опору при освоении.\n"
+            "• Колено завалилось → укрепи ягодицы, работай над мобильностью.\n"
+            "• Пятка отрывается → работай над гибкостью голеностопа.\n\n"
+            "💡 Прогрессия\n"
+            "Приседание с опорой → на тумбу (неполная амплитуда) → полный пистолет."
+        )
+    },
+    "sumo_squat_bw": {
+        "title": "Приседания ноги врозь-вместе",
+        "mp4": "media/tech/sumo_squat_bw.mp4",
+        "text": (
+            "📚 Приседания ноги врозь-вместе (квадрицепс + ягодицы + кардио)\n\n"
+            "✅ Как делать\n"
+            "1) Исходное положение — стоя, ноги вместе.\n"
+            "2) Прыжком или шагом разведи ноги широко в стороны — присядь.\n"
+            "3) Зафиксируй положение внизу — бёдра параллельно полу.\n"
+            "4) Прыжком или шагом сведи ноги обратно вместе — встань.\n"
+            "5) Повтори без паузы.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Колени внутрь при разведении → тяни их наружу.\n"
+            "• Жёсткое приземление → амортизируй стопами и коленями.\n"
+            "• Не доседаешь → бёдра должны быть параллельно полу.\n\n"
+            "💡 Варианты\n"
+            "Медленный (шагами) — для освоения техники и новичков.\n"
+            "Быстрый (прыжками) — кардио-нагрузка, повышает ЧСС.\n"
+            "Хорошо работает как финишер в конце тренировки ног."
+        )
+    },
+    "rdl_plate": {
+        "title": "Румынская тяга с блином",
+        "mp4": "media/tech/rdl_plate.mp4",
+        "text": (
+            "📚 Румынская тяга с блином (бицепс бедра + ягодицы)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин двумя руками перед бёдрами.\n"
+            "• Стопы на ширине бёдер, колени слегка согнуты.\n"
+            "• Спина прямая, лопатки слегка сведены.\n\n"
+            "✅ Как делать\n"
+            "1) Таз назад, блин скользит вниз по ногам.\n"
+            "2) Спина прямая на протяжении всего движения.\n"
+            "3) Опускайся до натяжения в бёдрах — не до пола.\n"
+            "4) Возвращайся: таз вперёд, сожми ягодицы наверху.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Блин отходит от ног → тяни его ближе.\n"
+            "• Спина округляется → уменьши амплитуду.\n"
+            "• Колени слишком согнуты → это уже присед, не тяга.\n\n"
+            "💡 Подсказка\n"
+            "Хороший вариант когда нет штанги или гантелей. Блин удобно держать двумя руками."
+        )
+    },
+
+    # ── ПЛЕЧИ ─────────────────────────────────────────────
+    "lateralraise_plate": {
+        "title": "Махи блином в стороны",
+        "mp4": "media/tech/lateralraise_plate.mp4",
+        "text": (
+            "📚 Махи блином в стороны (средняя дельта)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин одной рукой за край или через отверстие.\n"
+            "• Стой прямо, небольшой наклон вперёд 5–10°.\n"
+            "• Локоть слегка согнут и зафиксирован.\n\n"
+            "✅ Как делать\n"
+            "1) Поднимай руку в сторону — до уровня плеча.\n"
+            "2) Мизинец чуть выше большого пальца в верхней точке.\n"
+            "3) Пауза 1 сек — почувствуй дельту.\n"
+            "4) Медленно опускай 2–3 сек.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Раскачка корпуса → снизь вес.\n"
+            "• Подъём выше плеча → трапеции забирают нагрузку.\n\n"
+            "💡 Подсказка\n"
+            "Делай поочерёдно каждой рукой. Блин 2.5–5 кг — уже ощутимо."
+        )
+    },
+    "ohp_plate": {
+        "title": "Жим блина стоя",
+        "mp4": "media/tech/ohp_plate.mp4",
+        "text": (
+            "📚 Жим блина стоя (плечи + трицепс)\n\n"
+            "✅ Настройка\n"
+            "• Держи блин двумя руками за края на уровне груди.\n"
+            "• Стань прямо, стопы на ширине плеч.\n"
+            "• Пресс напряжён, поясница нейтральна.\n\n"
+            "✅ Как делать\n"
+            "1) Жми блин вертикально вверх — до почти прямых рук.\n"
+            "2) Медленно опускай к груди — 2–3 сек.\n"
+            "3) Плечи держи опущенными, не тяни к ушам.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Прогиб в пояснице → напряги пресс.\n"
+            "• Блин уходит вперёд → держи строго над плечами.\n\n"
+            "💡 Подсказка\n"
+            "Хороший вариант когда нет гантелей. Блин требует стабилизации — включает больше мышц."
+        )
+    },
+
+    # ── ГРУДЬ / ТРИЦЕПС ───────────────────────────────────
+    "pushup_knee": {
+        "title": "Отжимания с колен",
+        "mp4": "media/tech/pushup_knee.mp4",
+        "text": (
+            "📚 Отжимания с колен (грудь + трицепс)\n\n"
+            "✅ Настройка\n"
+            "• Встань на колени, ладони чуть шире плеч.\n"
+            "• Тело — прямая линия от колен до головы.\n"
+            "• Бёдра не отводи назад — корпус держи прямым.\n\n"
+            "✅ Как делать\n"
+            "1) Медленно опускай грудь к полу — 2–3 сек.\n"
+            "2) Локти 45° к корпусу, не в стороны.\n"
+            "3) Грудь почти касается пола.\n"
+            "4) Выжимай вверх до выпрямления рук.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Таз уходит назад → выпрями линию от колен до головы.\n"
+            "• Локти в стороны → нагрузка уходит с груди на плечи.\n\n"
+            "💡 Прогрессия\n"
+            "С колен → обычные → с поднятыми ногами."
+        )
+    },
+    "pushup_elevated_knee": {
+        "title": "Отжимания с колен (руки на возвышении)",
+        "mp4": "media/tech/pushup_elevated_knee.mp4",
+        "text": (
+            "📚 Отжимания с колен, руки на возвышении (верх груди)\n\n"
+            "✅ Настройка\n"
+            "• Руки на скамье, стуле или ступени — ладони чуть шире плеч.\n"
+            "• Колени на полу, тело — прямая линия от колен до плеч.\n\n"
+            "✅ Как делать\n"
+            "1) Опускай грудь к возвышению — 2–3 сек.\n"
+            "2) Локти 45° к корпусу.\n"
+            "3) Выжимай вверх.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Таз провисает → напряги корпус.\n"
+            "• Неполная амплитуда → опускайся до касания груди.\n\n"
+            "💡 Подсказка\n"
+            "Чем выше возвышение — тем легче. Начни с высокой поверхности, постепенно снижай."
+        )
+    },
+    "diamond_pushup_knee": {
+        "title": "Алмазные отжимания с колен",
+        "mp4": "media/tech/diamond_pushup_knee.mp4",
+        "text": (
+            "📚 Алмазные отжимания с колен (трицепс + грудь)\n\n"
+            "✅ Настройка\n"
+            "• Колени на полу, ладони под грудью — большие и указательные пальцы образуют ромб.\n"
+            "• Тело — прямая линия от колен до головы.\n\n"
+            "✅ Как делать\n"
+            "1) Медленно опускай грудь к рукам — 2–3 сек.\n"
+            "2) Локти идут строго назад вдоль корпуса.\n"
+            "3) Выжимай вверх.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Локти в стороны → вся нагрузка уходит с трицепса.\n"
+            "• Бёдра уходят назад → держи прямую линию от колен.\n\n"
+            "💡 Прогрессия\n"
+            "С колен → обычные алмазные → с паузой внизу 2 сек."
+        )
+    },
+    "deep_pushup": {
+        "title": "Глубокие отжимания",
+        "mp4": "media/tech/deep_pushup.mp4",
+        "text": (
+            "📚 Глубокие отжимания (грудь — максимальная амплитуда)\n\n"
+            "✅ Настройка\n"
+            "• Ладони на двух возвышениях — книги, блины, гантели, брусья.\n"
+            "• Тело — прямая линия от пяток до головы.\n"
+            "• Возвышения позволяют опустить грудь ниже уровня ладоней.\n\n"
+            "✅ Как делать\n"
+            "1) Опускайся максимально глубоко — грудь ниже уровня ладоней.\n"
+            "2) Пауза внизу 1 сек — максимальное растяжение грудных.\n"
+            "3) Выжимай вверх.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Нестабильные опоры → убедись что они не скользят.\n"
+            "• Боль в плечах → уменьши глубину.\n\n"
+            "💡 Подсказка\n"
+            "Глубина — главный смысл. Даже небольшое увеличение амплитуды значительно усиливает нагрузку на грудь."
+        )
+    },
+    "pushup_hands_elevated": {
+        "title": "Отжимания (руки на возвышении)",
+        "mp4": "media/tech/pushup_hands_elevated.mp4",
+        "text": (
+            "📚 Отжимания с руками на возвышении (грудь)\n\n"
+            "✅ Настройка\n"
+            "• Руки на скамье, стуле или ступени — чуть шире плеч.\n"
+            "• Ноги на полу, тело — прямая линия.\n\n"
+            "✅ Как делать\n"
+            "1) Опускай грудь к возвышению — 2–3 сек.\n"
+            "2) Локти 45° к корпусу.\n"
+            "3) Выжимай вверх до выпрямления рук.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Таз выше уровня плеч → выпрями линию тела.\n\n"
+            "💡 Подсказка\n"
+            "Легче обычных отжиманий — хорошо для восстановления или начинающих.\n"
+            "Также акцентирует нагрузку на нижнюю часть груди."
+        )
+    },
+    "triceps_ext_bw": {
+        "title": "Разгибание на трицепс (свой вес)",
+        "mp4": "media/tech/triceps_ext_bw.mp4",
+        "text": (
+            "📚 Разгибание на трицепс с собственным весом\n\n"
+            "✅ Настройка\n"
+            "• Встань перед стеной или упрись ладонями в скамью на уровне плеч.\n"
+            "• Тело под углом к полу — чем круче угол, тем тяжелее.\n"
+            "• Руки узко — ладони на ширине плеч или уже.\n\n"
+            "✅ Как делать\n"
+            "1) Сгибай локти — голова движется вниз к опоре.\n"
+            "2) Локти идут строго назад, не в стороны.\n"
+            "3) Разгибай руки — выжимай тело обратно.\n"
+            "4) Плечи зафиксированы — двигаются только предплечья.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Плечи двигаются → это уже жим, а не изоляция трицепса.\n"
+            "• Локти в стороны → нагрузка уходит с трицепса.\n\n"
+            "💡 Прогрессия\n"
+            "У стены (легко) → у скамьи → у пола (тяжело)."
+        )
+    },
+    "triceps_ext_knee": {
+        "title": "Разгибание на трицепс с колен",
+        "mp4": "media/tech/triceps_ext_knee.mp4",
+        "text": (
+            "📚 Разгибание на трицепс с колен (трицепс)\n\n"
+            "✅ Настройка\n"
+            "• Встань на колени, упрись ладонями в пол.\n"
+            "• Руки узко — ладони под плечами или чуть уже.\n"
+            "• Тело — прямая линия от колен до головы.\n\n"
+            "✅ Как делать\n"
+            "1) Сгибай только локти — голова идёт вниз к полу.\n"
+            "2) Плечи неподвижны — только предплечья работают.\n"
+            "3) Локти идут назад, не в стороны.\n"
+            "4) Разгибай руки — возвращайся в исходное.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Плечи двигаются → убери их, только предплечья.\n"
+            "• Таз уходит назад → держи тело прямым.\n\n"
+            "💡 Подсказка\n"
+            "Отличная замена французскому жиму без инвентаря. Легче чем от пола."
+        )
+    },
+
+    # ── БИЦЕПС ────────────────────────────────────────────
+    "biceps_dumbbell_sitting": {
+        "title": "Сгибания с гантелью сидя",
+        "mp4": "media/tech/biceps_dumbbell_sitting.mp4",
+        "text": (
+            "📚 Сгибания с гантелью сидя (бицепс — изоляция)\n\n"
+            "✅ Настройка\n"
+            "• Сядь на скамью, спина прямая.\n"
+            "• Гантели в опущенных руках, ладони смотрят вперёд.\n"
+            "• Локти прижаты к корпусу — не двигаются.\n\n"
+            "✅ Как делать\n"
+            "1) Сгибай обе руки одновременно или поочерёдно.\n"
+            "2) Поднимай до пика — сожми бицепс.\n"
+            "3) Медленно опускай до полного выпрямления — 2–3 сек.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Локти уезжают вперёд → нагрузка уходит.\n"
+            "• Помогаешь корпусом → сидя это сложнее, чем стоя — читинг исключён.\n\n"
+            "💡 Плюс сидя\n"
+            "Нет возможности раскачиваться корпусом — чище изоляция бицепса, чем стоя."
+        )
+    },
+    "biceps_plate": {
+        "title": "Сгибания с блином (бицепс)",
+        "mp4": "media/tech/biceps_plate.mp4",
+        "text": (
+            "📚 Сгибания с блином — бицепс\n\n"
+            "✅ Настройка\n"
+            "• Держи блин двумя руками за края горизонтально.\n"
+            "• Стань прямо, руки опущены, локти у корпуса.\n\n"
+            "✅ Как делать\n"
+            "1) Сгибай локти — поднимай блин к плечам.\n"
+            "2) Пауза в верхней точке — сожми бицепс.\n"
+            "3) Медленно опускай до полного выпрямления.\n"
+            "4) Локти зафиксированы у корпуса — не гуляют.\n\n"
+            "⚠️ Частые ошибки\n"
+            "• Раскачка корпуса → снизь вес блина.\n"
+            "• Локти уезжают вперёд → фиксируй у рёбер.\n\n"
+            "💡 Подсказка\n"
+            "Нейтральный хват задействует брахиалис — делает руку визуально шире.\n"
+            "Хорошая замена штанге если нет грифа."
+        )
+    },
 }
 
 # =========================
@@ -2800,12 +3424,17 @@ def _activity_factor(freq: int, place: str) -> float:
         return 1.45 if is_gym else 1.40
     if f == 4:
         return 1.55 if is_gym else 1.50
-    return 1.65 if is_gym else 1.55
+    if f == 5:
+        # 5 тренировок = Высокая (не Очень высокая)
+        return 1.60 if is_gym else 1.55
+    # 6+ = Очень высокая
+    return 1.725
 
 
 def freq_to_activity_factor(freq: int, place: str = "") -> float:
     """Автоматически вычисляет activity_factor по количеству тренировок в неделю.
-    0 → низкая (1.20), 1-2 → лёгкая (1.35), 3-4 → умеренная (1.45/1.55), 5+ → высокая (1.65)."""
+    0 → минимальная (1.20), 1-2 → низкая (1.35), 3 → средняя (1.45),
+    4-5 → высокая (1.55-1.60), 6+ → очень высокая (1.725)."""
     pl = (place or "").lower()
     is_gym = ("зал" in pl) or (pl == "gym")
     f = int(freq or 0)
@@ -2813,9 +3442,13 @@ def freq_to_activity_factor(freq: int, place: str = "") -> float:
         return 1.20
     if f <= 2:
         return 1.35
-    if f <= 4:
+    if f == 3:
         return 1.45 if is_gym else 1.40
-    return 1.65 if is_gym else 1.55
+    if f <= 5:
+        # 4-5 тренировок = Высокая (по описанию в боте)
+        return 1.60 if is_gym else 1.55
+    # 6+ = Очень высокая (тяжёлые тренировки / физработа)
+    return 1.725
 
 
 def _activity_label(factor) -> str:
@@ -2847,7 +3480,7 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
     if "мас" in g:
         target = tdee * 1.10
     elif "суш" in g:
-        target = tdee * 0.82
+        target = tdee * 0.85  # дефицит ~15% — безопасный максимум по науке
     elif "сил" in g:
         target = tdee * 1.05
     elif "вынос" in g:
@@ -2868,12 +3501,12 @@ def calc_macros(calories: int, weight_kg: float, goal: str):
     elif "сил" in g:
         protein = int(round(weight_kg * 1.9))
     else:
-        protein = int(round(weight_kg * 1.8))
+        protein = int(round(weight_kg * 2.0))  # 2.0 г/кг — оптимум для роста (Morton et al., 2018)
 
     if "вынос" in g:
-        fat = int(round(weight_kg * 0.7))
+        fat = int(round(weight_kg * 0.9))  # минимум 0.8-1.0 г/кг для гормонального фона
     else:
-        fat = int(round(weight_kg * 0.8))
+        fat = int(round(weight_kg * 1.0))  # 1.0 г/кг — рекомендуемый минимум по науке
 
     carbs_kcal = max(calories - (protein * 4 + fat * 9), 0)
     carbs = int(round(carbs_kcal / 4))
@@ -3431,9 +4064,18 @@ async def init_db():
             post_media_file_id TEXT,
             post_text TEXT,
             status TEXT,
-            created_at TEXT
+            created_at TEXT,
+            btn_text TEXT,
+            btn_url TEXT
         )
         """)
+        # Добавляем колонки кнопки если их нет (для существующих БД)
+        for _col in [("btn_text", "TEXT"), ("btn_url", "TEXT")]:
+            try:
+                await conn.execute(f"ALTER TABLE posts ADD COLUMN {_col[0]} {_col[1]}")
+            except Exception:
+                pass
+
         await conn.execute("""
         CREATE TABLE IF NOT EXISTS post_sends (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3891,7 +4533,8 @@ async def create_post_draft(admin_id: int, media_type: str, media_file_id: Optio
 async def get_post(post_id: int):
     async with db() as conn:
         async with conn.execute("""
-            SELECT id, admin_id, post_media_type, post_media_file_id, post_text, status, created_at
+            SELECT id, admin_id, post_media_type, post_media_file_id, post_text, status, created_at,
+                   btn_text, btn_url
             FROM posts WHERE id=?
         """, (post_id,)) as cur:
             row = await cur.fetchone()
@@ -3899,7 +4542,8 @@ async def get_post(post_id: int):
         return {}
     return {
         "id": row[0], "admin_id": row[1], "media_type": row[2],
-        "media_file_id": row[3], "text": row[4], "status": row[5], "created_at": row[6]
+        "media_file_id": row[3], "text": row[4], "status": row[5], "created_at": row[6],
+        "btn_text": row[7], "btn_url": row[8]
     }
 
 
@@ -3931,12 +4575,27 @@ EXERCISE_TECH_MAP = [
     ("болгарские выпады", "bulgarian"),
     ("болгарские приседания", "bulgarian"),
     ("болгар", "bulgarian"),
+    # ── СПЕЦИФИЧНЫЕ ВЫПАДЫ — строго выше общих "выпады" ─────────────────────
+    ("боковые выпады с гантелями", "lateral_lunge_dumbbell"),
+    ("боковые выпады с блином", "lateral_lunge_plate"),
+    ("боковые выпады (свой вес)", "lateral_lunge_bw"),
+    ("боковые выпады", "lateral_lunge_bw"),
+    ("обратные выпады с гантелями", "reverse_lunge_dumbbell"),
+    ("обратные выпады с блином", "reverse_lunge_plate"),
+    ("обратные выпады (свой вес)", "reverse_lunge_bw"),
+    ("обратные выпады", "reverse_lunge_bw"),
+    ("выпады с блином", "lunge_plate"),
     ("выпады ходьбой", "lunge_walking"),
     ("выпады со штангой", "lunge_barbell"),
     ("выпады с гантелями (ходьба)", "lunge_walking"),
     ("выпады с гантелями", "lunge_dumbbell"),
     ("выпады (свой вес)", "lunge_bw"),
     ("выпады", "lunge_bw"),
+    # ── СПЕЦИФИЧНЫЕ ПРИСЕДАНИЯ — строго выше общих "присед/приседани" ────────
+    ("приседания ноги врозь-вместе", "sumo_squat_bw"),
+    ("взрывные приседания (свой вес)", "squat_explosive_bw"),
+    ("приседания на одной ноге (пистолет)", "pistol_squat"),
+    ("пистолет", "pistol_squat"),
     ("присед со штангой", "squat_barbell"),
     ("присед сумо", "squat_sumo"),
     ("присед с паузой", "squat_barbell"),
@@ -3976,6 +4635,7 @@ EXERCISE_TECH_MAP = [
     # ── НИЖНЯЯ ТЯГА ─────────────────────────────────────────────────────────
     ("румынская тяга с гантелями", "rdl_dumbbell"),
     ("румынская тяга со штангой", "rdl_barbell"),
+    ("румынская тяга с блином", "rdl_plate"),
     ("румынская тяга", "rdl_barbell"),
     ("становая тяга сумо", "deadlift_sumo"),
     ("становая тяга", "deadlift"),
@@ -4015,6 +4675,11 @@ EXERCISE_TECH_MAP = [
     ("разведения гантелей лёжа", "chest_fly"),
     ("разведения на грудь", "chest_fly"),
     ("кроссовер", "crossover_chest"),
+    # ── ФРАНЦУЗСКИЙ ЖИМ — СТРОГО ВЫШЕ "жим лёжа" ───────────────────────────
+    ("французский жим лёжа (штанга)", "french_press_barbell"),
+    ("французский жим лёжа (гантели)", "french_press_dumbbell"),
+    ("французский жим лёжа", "french_press_barbell"),
+    ("французский жим", "french_press_barbell"),
     ("жим штанги лёжа", "bench_barbell"),
     ("жим лёжа", "bench_barbell"),
 
@@ -4035,6 +4700,12 @@ EXERCISE_TECH_MAP = [
     ("отжимания в стойке у стены", "wall_pushup"),
     ("отжимания у стены", "wall_pushup"),
     ("отжимания широким хватом", "pushup_wide"),
+    # ── СПЕЦИФИЧНЫЕ ОТЖИМАНИЯ — строго выше общих "отжима" ──────────────────
+    ("алмазные отжимания с колен", "diamond_pushup_knee"),
+    ("отжимания с колен (руки на возвышении)", "pushup_elevated_knee"),
+    ("отжимания (руки на возвышении)", "pushup_hands_elevated"),
+    ("отжимания с колен", "pushup_knee"),
+    ("глубокие отжимания", "deep_pushup"),
     ("отжимания с ногами на возвышенности", "pushup_elevated"),
     ("отжимания с ногами на возвышении", "pushup_elevated"),
     ("отжимания с ногами на возвышен", "pushup_elevated"),
@@ -4061,6 +4732,8 @@ EXERCISE_TECH_MAP = [
     ("подтягивания (узкий", "pullup_narrow"),
     ("подтягивания обратным хватом", "pullup_chinup"),
     ("подтягивания (обратный хват)", "pullup_chinup"),
+    ("австралийские подтягивания", "australian_pullup"),
+    ("австралийск", "australian_pullup"),
     ("горизонтальные подтягивания", "rowtrain"),
     ("подтягивания", "pullup_wide"),
 
@@ -4111,10 +4784,57 @@ EXERCISE_TECH_MAP = [
     ("разгибание в блоке на трицепс", "triceps_cable"),
     ("разведение в блоке на трицепс", "triceps_cable"),
     ("разгибания на верхнем блоке", "triceps_cable"),
-    ("французский жим лёжа (штанга)", "french_press_barbell"),
-    ("французский жим лёжа (гантели)", "french_press_dumbbell"),
-    ("французский жим лёжа", "french_press_barbell"),
-    ("французский жим", "french_press_barbell"),
+
+    # ── НОВЫЕ УПРАЖНЕНИЯ ────────────────────────────────────────────────────
+    # Спина
+    ("австралийские подтягивания", "australian_pullup"),
+    ("австралийск", "australian_pullup"),
+    ("махи с блином на заднюю дельту", "rear_delt_plate"),
+    ("махи блином на заднюю дельту", "rear_delt_plate"),
+    ("тяга блина в наклоне", "plate_row"),
+    ("тяга блинов в наклоне", "plate_row"),
+    # Ноги
+    ("боковые выпады с блином", "lateral_lunge_plate"),
+    ("боковые выпады с гантелями", "lateral_lunge_dumbbell"),
+    ("боковые выпады (свой вес)", "lateral_lunge_bw"),
+    ("боковые выпады", "lateral_lunge_bw"),
+    ("взрывные приседания (свой вес)", "squat_explosive_bw"),
+    ("взрывные приседания", "squat_explosive_bw"),
+    ("выпады с блином", "lunge_plate"),
+    ("обратные выпады с блином", "reverse_lunge_plate"),
+    ("обратные выпады с гантелями", "reverse_lunge_dumbbell"),
+    ("обратные выпады (свой вес)", "reverse_lunge_bw"),
+    ("обратные выпады", "reverse_lunge_bw"),
+    ("приседания на одной ноге", "pistol_squat"),
+    ("пистолет (присед)", "pistol_squat"),
+    ("приседания ноги врозь и обратно", "sumo_squat_bw"),
+    ("приседания ноги врозь-вместе", "sumo_squat_bw"),
+    ("squat in-out", "sumo_squat_bw"),
+    ("румынская тяга с блином", "rdl_plate"),
+    # Плечи
+    ("махи блином в стороны", "lateralraise_plate"),
+    ("махи блинами на плечи", "lateralraise_plate"),
+    ("жим блина стоя", "ohp_plate"),
+    ("жим блина", "ohp_plate"),
+    # Грудь / трицепс
+    ("отжимания на коленях со своим весом", "pushup_knee"),
+    ("отжимания с колен", "pushup_knee"),
+    ("отжимания с упором на возвышенность (руки на возвышенности) и с коленей", "pushup_elevated_knee"),
+    ("отжимания (руки на возвышении) с колен", "pushup_elevated_knee"),
+    ("алмазные отжимания на коленях", "diamond_pushup_knee"),
+    ("глубокие отжимания", "deep_pushup"),
+    ("отжимания с упором на возвышенность (руки на возвышенности)", "pushup_hands_elevated"),
+    ("отжимания (руки на возвышении)", "pushup_hands_elevated"),
+    ("разгибание рук на трицепс с собственным весом", "triceps_ext_bw"),
+    ("разгибание на трицепс (свой вес)", "triceps_ext_bw"),
+    ("разгибание на трицепс с упором на колени", "triceps_ext_knee"),
+    ("разгибание на трицепс с колен", "triceps_ext_knee"),
+    # Бицепс
+    ("сгибание рук с гантелью сидя", "biceps_dumbbell_sitting"),
+    ("сгибания с гантелью сидя", "biceps_dumbbell_sitting"),
+    ("поднятие блина на бицепс", "biceps_plate"),
+    ("сгибания с блином (бицепс)", "biceps_plate"),
+    ("сгибания с блином", "biceps_plate"),
 ]
 
 
@@ -4346,43 +5066,46 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     # Тяжёлая база: присед, становая, жим штанги, жим стоя, подтягивания
     _BASE_KEYWORDS = ["присед", "станов", "жим штанг", "жим ног", "подтяг", "deadlift", "squat", "bench",
                       "жим лёжа", "жим стоя", "жим под угл"]
-    # Средние: тяги, гантельные жимы, блок
+    # Средние: тяги, гантельные жимы, блок — крупные мышцы, но не база
     _MID_KEYWORDS = ["гантел", "выпад", "болгар", "goblet", "lunge", "dumbbell",
                      "тяга", "тяг блока", "тяг в наклон", "тяг верхн"]
     # Изоляция на малые мышцы (бицепс, трицепс, икры)
-    _SMALL_ISO_KEYWORDS = ["бицепс", "трицепс", "hammer", "concentration", "bicep",
-                           "french", "трице", "сгибани", "разгибани", "икр", "носки"]
+    _SMALL_ISO_KEYWORDS = [
+        # Бицепс
+        "бицепс", "bicep", "hammer", "молотк", "concentration", "сгибани",
+        # Трицепс
+        "трицепс", "трице", "french", "французск", "разгибани",
+        # Плечи — изоляция (дельты)
+        "разведения гантелей в стороны", "разведения гантел", "разведени",
+        "подъём перед собой", "подъёмы перед собой",
+        "задняя дельта", "face pull", "тяга к лицу", "тяга резинки к лицу",
+        # Грудь — изоляция
+        "разведения на грудь", "кроссовер", "chest fly",
+        # Ноги — изоляция
+        "сгибания ног", "разгибания ног", "сведения ног", "отведения ног",
+        "икр", "носки",
+        # Кор / пресс
+        "планк", "пресс", "скручив", "велосипед", "русск",
+        "подъём ног", "подъёмы ног", "висе", "молитва", "кранч",
+    ]
 
     def _rest_for(ex_name: str) -> str:
         n = ex_name.lower()
         is_base = any(k in n for k in _BASE_KEYWORDS)
-        is_mid  = any(k in n for k in _MID_KEYWORDS)
         is_small_iso = any(k in n for k in _SMALL_ISO_KEYWORDS)
 
         if is_strength_goal:
-            # Для силы: база 3–5 мин, средние 2–3 мин, изоляция 2–3 мин
-            if is_base:
+            # База и крупные мышцы: 3–5 мин, малая изоляция: 2–3 мин
+            if is_small_iso:
+                return "2–3 мин"
+            else:
                 return "3–5 мин"
-            elif is_mid:
-                return "2–3 мин"
-            else:
-                return "2–3 мин"
-        elif is_cut_goal:
-            # Для сушки: база 2–3 мин, средние 1.5–2 мин, изоляция 1.5 мин
-            if is_base:
-                return "2–3 мин"
-            elif is_mid:
-                return "1.5–2 мин"
-            else:
-                return "1.5 мин"
         else:
-            # Для массы: база 2–3 мин, средние 1.5–2 мин, малая изоляция 1.5 мин, крупная изоляция 1.5 мин
-            if is_base:
-                return "2–3 мин"
-            elif is_mid:
-                return "1.5–2 мин"
+            # Масса и сушка: база и крупные мышцы 3 мин, малая изоляция 2 мин
+            if is_small_iso:
+                return "2 мин"
             else:
-                return "1.5 мин"
+                return "3 мин"
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
@@ -4416,33 +5139,37 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
         day_note = ""
 
     lines = []
-    # Заголовок строго: 🏋️ День N: фокус (или 🏋️ Фулбади для fullbody)
     is_fullbody = ("фулбади" in t or "fullbody" in t)
     if is_fullbody:
-        lines.append("🏋️ Фулбади")
-        lines.append("📌 всё тело")
+        lines.append("🏋️ Фулбади — всё тело")
     else:
         lines.append(f"🏋️ День {day_num}: {day_type}")
         if day_note:
             lines.append(f"📌 {day_note}")
     lines.append("")
-    lines.append("⚠️ Перед тренировкой разомнись 5–10 минут")
-    lines.append("📚 — техника выполнения упражнения")
-    lines.append("🔄 — заменить упражнение под себя")
+
+    # Памятка
+    lines.append("⚠️ Разомнись 5–10 мин перед началом")
+    lines.append("")
+    lines.append("💡 Чувтсвуешь, что не восстановился? Отдохни ещё немного. Главное — чтобы в следующем подходе, ты смог повторить то же число повторений.")
+    lines.append("")
+    lines.append("📚 — техника   🔄 — заменить упражнение")
     lines.append("")
 
+    # Упражнения
     ex_full = parse_exercises_full(day_text)
     for idx, (name, sets_reps) in enumerate(ex_full):
         is_done = idx in done
-        mark = "✅" if is_done else "🔸"
+        mark = "✅" if is_done else "▪️"
         rest = _rest_for(name)
         if sets_reps:
-            lines.append(f"{mark} {name} {sets_reps}  ⏱ {rest}")
+            lines.append(f"{mark} {name}")
+            lines.append(f"   {sets_reps}  •  ⏱ {rest}")
         else:
-            lines.append(f"{mark} {name}  ⏱ {rest}")
+            lines.append(f"{mark} {name}  •  ⏱ {rest}")
 
     lines.append("")
-    lines.append("🏁 После тренировки — заминка и растяжка 5–10 минут")
+    lines.append("🏁 После — заминка и растяжка 5–10 мин")
     lines.append("")
 
     bar = workout_progress_bar(done_count, total)
@@ -4881,10 +5608,11 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
     limits_line = (limits or "").strip() or "нет"
 
     intro = (
-        f"🏋️ Тренировки ({where})\n"
+        f"🏋️ <b>Тренировки ({where})</b>\n\n"
         f"Система: {system}\n"
         f"Частота: {f}×/нед • {weekday_schedule(f)}\n"
-        f"Цель: {goal} • Уровень: {'новичок' if is_novice else 'средний+'}\n"
+        f"Цель: {goal}\n"
+        f"Уровень: {'новичок' if is_novice else 'средний+'}\n"
         f"Огр.: {limits_line}\n\n"
         f"Вес подбери так, чтобы последние 2–3 повторения давались с трудом — то есть близко к отказу.\n"
         "Выбери день кнопкой 👇"
@@ -5409,8 +6137,7 @@ def nutrition_examples_kb():
             InlineKeyboardButton(text="⬆️ Увеличить калории", callback_data="nutr:cal:plus"),
             InlineKeyboardButton(text="⬇️ Уменьшить калории", callback_data="nutr:cal:minus"),
         ],
-        [InlineKeyboardButton(text="❓ Вес не меняется — что делать?", callback_data="nutr:weight_stall")],
-        [InlineKeyboardButton(text="💡 Фишки в питании", callback_data="nutr:tips")],
+        [InlineKeyboardButton(text="❓ Вопросы в питании", callback_data="nutr:questions")],
         [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
@@ -5452,7 +6179,7 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
     d_c = c - b_c - l_c
 
     summary = (
-        "🍽 Питание — твой расчёт\n\n"
+        "🍽 <b>Питание — твой расчёт</b>\n\n"
         f"⚡️ Калории: {calories} ккал/день\n"
         f"💪 Белок: {p} г\n"
         f"🥑 Жиры: {f} г\n"
@@ -5475,6 +6202,24 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
 # =========================
 # МЕНЮ / START
 # =========================
+# =========================
+# HTML-СТАТЬИ ДЛЯ FAQ
+# Положи файлы в папку media/faq/ рядом с bot.py
+# Если файл не найден — бот отправит только текст (graceful fallback)
+# =========================
+FAQ_HTML_PATHS = {
+    "faq:weight":      "media/faq/faq_weight.html",
+    "faq:muscle":      "media/faq/faq_muscle.html",
+    "faq:plateau":     "media/faq/faq_plateau.html",
+    "faq:progression": "media/faq/faq_progression.html",
+    "faq:diet":        "media/faq/faq_diet.html",
+    "faq:motivation":  "media/faq/faq_motivation.html",
+    "faq:sleep":       "media/faq/faq_sleep.html",
+    "faq:technique":      "media/faq/faq_technique.html",
+    "faq:technique_how":  "media/faq/faq_technique_how.html",
+    "faq:cardio":         "media/faq/faq_cardio.html",
+}
+
 FAQ_QUESTIONS = {
     "faq:weight": {
         "q": "⚖️ Почему не меняется вес?",
@@ -5536,27 +6281,15 @@ FAQ_QUESTIONS = {
         )
     },
     "faq:plateau": {
-        "q": "📉 Почему прекратился прогресс (плато)?",
+        "q": "📉 Прогресс встал — что делать?",
         "a": (
-            "📉 Плато — как из него выйти\n\n"
-            "Тело привыкло к нагрузке и перестало на неё реагировать.\n"
-            "Это нормально — случается через 6–10 недель одинаковой работы.\n\n"
-            "─── Три шага выхода ───\n\n"
-            "1. Смени программу\n"
-            "Нажми «Сменить план тренировок» — новые упражнения дадут новый стимул.\n"
-            "Тело снова начнёт адаптироваться и расти.\n\n"
-            "2. Разгрузочная неделя\n"
-            "Снизь рабочие веса на 30% и тренируйся только на технику.\n"
-            "После неё обычно идёт прорыв — это проверенный приём.\n\n"
-            "3. Проверь питание\n"
-            "Незаметно выросли калории? Неделю записывай всё что ешь.\n"
-            "Чаще всего находится лишние 200–400 ккал.\n\n"
-            "─── Пример ───\n\n"
-            "Присед 80 кг × 5 не движется 4 недели?\n"
-            "→ Снизь до 70 кг, добавь паузу 2 сек внизу.\n"
-            "→ Через 2 недели 82.5 кг пойдут значительно легче.\n\n"
-            "Плато 2–3 недели — норма, не паникуй.\n"
-            "Больше месяца без движения — пора менять подход."
+            "📉 Прогресс остановился\n\n"
+            "Веса не растут, тело не меняется несколько недель — это адаптация к нагрузке.\n\n"
+            "В статье ты узнаешь:\n"
+            "• почему это происходит и какие четыре причины чаще всего стоят за остановкой\n"
+            "• как сделать разгрузочную неделю и почему после неё результаты улучшаются\n"
+            "• как понять, что проблема в питании, а не в тренировках\n"
+            "• по каким срокам ориентироваться — когда ждать, а когда менять подход"
         )
     },
     "faq:progression": {
@@ -5591,76 +6324,39 @@ FAQ_QUESTIONS = {
         )
     },
     "faq:diet": {
-        "q": "🍽 Как правильно питаться для результата?",
+        "q": "🍽 Как питаться для результата?",
         "a": (
-            "🍽 Питание — что реально работает\n\n"
-            "Два правила дают 90% результата:\n"
-            "попадай в свою норму калорий + ешь достаточно белка.\n\n"
-            "─── Калории ───\n\n"
-            "Похудение: минус 300–400 ккал от нормы.\n"
-            "Набор массы: плюс 200–300 ккал от нормы.\n"
-            "Твоя норма — в разделе «Питание».\n\n"
-            "─── Белок ───\n\n"
-            "Нужно 1.8–2 г на кг веса тела.\n"
-            "При 70 кг → 126–140 г белка в день.\n\n"
-            "Легко набрать:\n"
-            "• 3 яйца = 18 г белка\n"
-            "• Куриное бедро 200 г = 54 г белка\n"
-            "• Творог 200 г = 35 г белка\n"
-            "Итого: ~107 г — и это без особых усилий.\n\n"
-            "─── Чего не надо делать ───\n\n"
-            "• Убирать жиры — нужно минимум 0.7 г/кг, иначе гормональные сбои\n"
-            "• Убирать углеводы — они дают энергию для тренировок\n"
-            "• Есть «чисто» 100% времени — важна стабильность, не идеальность\n\n"
-            "─── Первый шаг ───\n\n"
-            "Добавь белковый продукт к каждому приёму пищи.\n"
-            "Одно это изменение даёт заметный результат за 3–4 недели."
+            "🍽 Питание под твою цель\n\n"
+            "Не знаешь сколько есть, что есть и почему вес не двигается — это сюда.\n\n"
+            "В статье ты узнаешь:\n"
+            "• сколько калорий и белка нужно конкретно под набор или сушку\n"
+            "• конкретные приёмы пищи с цифрами — что и сколько есть\n"
+            "• почему нельзя убирать жиры и углеводы полностью\n"
+            "• один простой первый шаг, который даёт результат за 3–4 недели"
         )
     },
     "faq:motivation": {
-        "q": "😔 Как не бросить и сохранить мотивацию?",
+        "q": "😔 Нет мотивации — что делать?",
         "a": (
-            "😔 Мотивация пропала — что делать\n\n"
-            "Ждать мотивацию бесполезно.\n"
-            "Привычка строится не на желании, а на повторении.\n\n"
-            "─── Три простых шага ───\n\n"
-            "1. Снизь требования\n"
-            "Не можешь час — иди на 30 минут.\n"
-            "Не можешь 3 раза — ходи 2.\n"
-            "Главное — не прерывать цепочку совсем.\n\n"
-            "2. Записывай результаты\n"
-            "Рост в цифрах виден через 3–4 недели.\n"
-            "Как: упражнение → кг × повторы.\n"
-            "Пример: «Жим: 60×8 (прошлый раз 60×7) ✅»\n\n"
-            "3. Пропустил тренировку?\n"
-            "Ничего страшного. Просто иди на следующую.\n"
-            "1–2 пропущенных тренировки не ломают результат.\n\n"
-            "─── Реальные сроки ───\n\n"
-            "Видимые изменения: 8–12 недель при регулярной работе.\n"
-            "Силовой рост: уже через 3–4 недели веса начнут расти."
+            "😔 Мотивация пропала\n\n"
+            "Не хочется идти на тренировку, легко придумать причину пропустить — это сюда.\n\n"
+            "В статье ты узнаешь:\n"
+            "• почему мотивация пропадает и почему ждать её бесполезно\n"
+            "• три конкретных шага, которые помогают не бросить даже в плохой период\n"
+            "• через сколько недель появляются первые видимые результаты\n"
+            "• что делать если пропустил тренировку и не хочется возвращаться"
         )
     },
     "faq:sleep": {
-        "q": "😴 Почему важен сон и восстановление?",
+        "q": "😴 Почему важен сон?",
         "a": (
-            "😴 Сон — самый дешёвый инструмент роста\n\n"
-            "Мышцы растут не на тренировке, а после — во сне.\n"
-            "Тренировка даёт стимул. Сон — это когда идёт рост.\n\n"
-            "─── Как сон влияет ───\n\n"
-            "• 6 часов: восстановление замедляется, кортизол растёт\n"
-            "• 7–9 часов: оптимально для прогресса\n"
-            "• Хронический недосып: жир копится, мышцы уходят\n\n"
-            "─── Признаки плохого восстановления ───\n\n"
-            "• Веса стоят несколько недель\n"
-            "• Быстро устаёшь на тренировке\n"
-            "• Раздражительность, плохое настроение\n"
-            "• Частые простуды\n\n"
-            "─── Что сделать прямо сейчас ───\n\n"
-            "1. Ложись в одно и то же время (±30 мин)\n"
-            "2. Убери телефон за 30 мин до сна\n"
-            "3. Прохладная комната (18–20°C) — засыпание быстрее\n\n"
-            "Попробуй 2 недели с 8 часами сна —\n"
-            "почти всегда веса снова начинают расти."
+            "😴 Сон и восстановление\n\n"
+            "Тренируешься регулярно, но прогресс медленный — возможно, дело в сне.\n\n"
+            "В статье ты узнаешь:\n"
+            "• что именно происходит в теле во время сна и почему без него рост замедляется\n"
+            "• сколько часов нужно и что меняется при 6 часах против 8\n"
+            "• 6 конкретных действий, которые улучшают качество сна\n"
+            "• почему белок перед сном ускоряет восстановление мышц"
         )
     },
     "faq:technique": {
@@ -5684,26 +6380,28 @@ FAQ_QUESTIONS = {
             "Правило: чисто с лёгким весом > криво с тяжёлым."
         )
     },
+    "faq:technique_how": {
+        "q": "🎯 Как поставить технику?",
+        "a": (
+            "🎯 Как поставить технику\n\n"
+            "Делаешь упражнение, но не чувствуешь нужную мышцу, или болят суставы — это сюда.\n\n"
+            "В статье ты узнаешь:\n"
+            "• три шага освоения техники — с чего начинать и как проверять себя\n"
+            "• ключевые точки техники для 8 базовых упражнений: присед, тяга, жим, подтягивания и другие\n"
+            "• пять частых ошибок и как они влияют на результат и суставы\n"
+            "• как использовать кнопку 📚 в боте — там видео и инструкция к каждому упражнению"
+        )
+    },
     "faq:cardio": {
         "q": "🏃 Нужно ли кардио?",
         "a": (
             "🏃 Кардио — нужно или нет\n\n"
-            "Не обязательно, но полезно. Зависит от цели.\n\n"
-            "─── Для похудения ───\n\n"
-            "Помогает сжечь калории без урезания еды.\n"
-            "Формат: 2–3 раза в неделю по 25–35 мин.\n"
-            "Лучший вариант: ходьба быстрым шагом, велосипед, эллипс.\n"
-            "Пульс: 60–70% от максимума.\n"
-            "Пример для 30 лет: (220-30) × 0.65 = 124 уд/мин.\n\n"
-            "─── Для набора массы ───\n\n"
-            "Много кардио — тело начинает жечь мышцы.\n"
-            "Максимум: 1–2 раза по 20 мин — только для здоровья сердца.\n\n"
-            "─── Совет новичку ───\n\n"
-            "Первые 2–3 месяца — только силовые.\n"
-            "Привыкни к нагрузке, освой технику.\n"
-            "Потом добавляй кардио по желанию.\n\n"
-            "Бонус: прогулка 20–30 мин после тяжёлой тренировки\n"
-            "улучшает кровоток и снижает боли в мышцах."
+            "Не знаешь, делать ли кардио и как оно влияет на твою цель — это сюда.\n\n"
+            "В статье ты узнаешь:\n"
+            "• нужно ли кардио при наборе и при похудении — и в каком объёме\n"
+            "• какой формат и пульс дают результат без потери мышц\n"
+            "• когда лучше добавлять кардио, а когда оно мешает прогрессу\n"
+            "• почему ходьба эффективнее длинных пробежек для большинства целей"
         )
     },
 }
@@ -5712,22 +6410,15 @@ FAQ_QUESTIONS = {
 def faq_kb():
     rows = [
         [
-            InlineKeyboardButton(text="⚖️ Вес не меняется", callback_data="faq:weight"),
-            InlineKeyboardButton(text="💪 Мышцы не растут", callback_data="faq:muscle"),
-        ],
-        [
             InlineKeyboardButton(text="📉 Прогресс встал", callback_data="faq:plateau"),
-            InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="faq:progression"),
-        ],
-        [
             InlineKeyboardButton(text="🍽 Как питаться", callback_data="faq:diet"),
+        ],
+        [
             InlineKeyboardButton(text="😔 Нет мотивации", callback_data="faq:motivation"),
-        ],
-        [
             InlineKeyboardButton(text="😴 Сон и отдых", callback_data="faq:sleep"),
-            InlineKeyboardButton(text="🏋️ Зачем техника", callback_data="faq:technique"),
         ],
         [
+            InlineKeyboardButton(text="🎯 Как поставить технику", callback_data="faq:technique_how"),
             InlineKeyboardButton(text="🏃 Нужно ли кардио", callback_data="faq:cardio"),
         ],
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
@@ -5744,9 +6435,10 @@ def faq_back_kb():
 
 async def open_faq(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
     text = (
-        "❓ Ответы на вопросы\n\n"
-        "Разбираем причины, по которым нет результата.\n"
-        "Выбери тему — дам конкретный ответ без воды."
+        "❓ <b>Ответы на вопросы</b>\n\n"
+        "Большинство проблем в тренировках и питании — следствие одних и тех же причин: нет прогрессии нагрузки, не хватает калорий или белка, недостаточно восстановления.\n\n"
+        "Выбери тему — получишь статью с конкретным разбором и практическими шагами.\n\n"
+        "📌 Дополнительные статьи есть в разделе <b>Тренировки → Вопросы</b> и <b>Питание → Вопросы</b>."
     )
     if callback:
         await clean_edit(callback, user_id, text, reply_markup=faq_kb())
@@ -5760,9 +6452,45 @@ async def cb_faq_question(callback: CallbackQuery, bot: Bot):
     if not item:
         await callback.answer("Вопрос не найден", show_alert=True)
         return
-    await clean_edit(callback, callback.from_user.id, item["a"], reply_markup=faq_back_kb())
-    await callback.answer()
 
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+
+    html_path = FAQ_HTML_PATHS.get(key, "")
+    has_html = bool(html_path and os.path.exists(html_path))
+
+    # Удаляем предыдущее главное сообщение бота
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if has_html:
+        # Отправляем HTML как документ — текст ответа в caption (лимит 1024 символа)
+        try:
+            doc = FSInputFile(html_path)
+            caption_text = item["a"]
+            if len(caption_text) > 1020:
+                cut = caption_text[:1020]
+                last_nl = cut.rfind(chr(10))
+                caption_text = (cut[:last_nl] if last_nl > 500 else cut) + chr(10) + "…"
+            m = await bot.send_document(
+                chat_id=chat_id,
+                document=doc,
+                caption=caption_text,
+                reply_markup=faq_back_kb(),
+            )
+            await set_last_bot_msg_id(uid, m.message_id)
+            await callback.answer()
+            return
+        except Exception as e:
+            logger.warning(f"[cb_faq_question] не удалось отправить html {html_path}: {e}")
+
+    # Fallback — только текст (если файла нет или ошибка)
+    await clean_edit(callback, uid, item["a"], reply_markup=faq_back_kb())
+    await callback.answer()
 
 async def show_main_menu(bot: Bot, chat_id: int, user_id: int):
     u = await get_user(user_id)
@@ -5810,6 +6538,10 @@ async def cmd_start(message: Message, bot: Bot):
     await ensure_user(uid, message.from_user.username or "")
     await try_delete_user_message(bot, message)
 
+    # Deep link — обрабатываем параметр после /start
+    # Пример ссылки: https://t.me/zelbeta_bot?start=open
+    deep_link = message.text.split()[-1] if message.text and len(message.text.split()) > 1 else ""
+
     # Проверяем: профиль заполнен, но подписки нет
     u = await get_user(uid)
     profile_complete = bool(
@@ -5817,6 +6549,35 @@ async def cmd_start(message: Message, bot: Bot):
         and u.get("weight") and u.get("freq")
     )
     subscription_active = await is_access_active(uid)
+
+    # Параметр open — из кнопки в рассылке
+    if deep_link == "open":
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text="✅ Я на месте. Кнопки снизу 👇",
+            reply_markup=control_reply_kb()
+        )
+        if subscription_active:
+            # Есть подписка — открываем главное меню
+            await show_main_menu(bot, message.chat.id, uid)
+        else:
+            # Нет подписки — показываем оффер с тарифами
+            open_text = (
+                "👋 Ты уже заполнил профиль — осталось открыть доступ.\n\n"
+                "Что умеет бот:\n\n"
+                "✅ составит программу под твою цель\n"
+                "✅ покажет технику упражнений\n"
+                "✅ поможет отслеживать прогресс\n\n"
+                "Чтобы продолжить, выбери доступ 👇"
+            ) if profile_complete else (
+                "👋 Привет! Чтобы начать — заполни профиль.\n\n"
+                "Это займёт 1 минуту, после чего получишь готовую программу 👇"
+            )
+            await _send_with_image(
+                bot, message.chat.id, uid,
+                open_text, "restart", reply_markup=build_program_tariff_kb()
+            )
+        return
 
     if profile_complete and not subscription_active:
         await bot.send_message(
@@ -5976,113 +6737,130 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
     elif key == "progress_tip":
         u = await get_user(uid)
         place = (u.get("place") or "").strip().lower()
-        if place in ("дома", "дом"):
-            text = (
-                "📈 <b>Как становиться сильнее, тренируясь дома</b>\n\n"
-            "Прогрессия — это когда каждую неделю ты делаешь чуть больше, чем раньше.Без этого мышцы и сила перестают расти.\n\n"
-            "Вот рабочий метод, чтобы прогессировать в дома\n\n"
-            "1️⃣ <b>Выбери упражнение</b>\n\n"
-            "Например: отжимания, подтягивания, приседания.\n\n"
-            "2️⃣ <b>Сделай 3 подхода</b>\n\n"
-            "Сделай столько повторений, сколько можешь, но с хорошей техникой.\n\n"
-            "Пример на отжиманиях:\n"
-            "12 повторений\n"
-            "10 повторений\n"
-            "8  повторений\n\n"
-            "3️⃣ <b>На следующей тренировке попробуй сделать больше</b>\n\n"
-            "Добавь 1–2 повторения в любом подходе.\n\n"
-            "Пример:\n"
-            "13 повторений\n"
-            "11 повторений\n"
-            "9  повторений\n\n"
-            "4️⃣ <b> Твоя цель — постепенно увеличить общее количество повторений</b>\n\n"
-            "Пример:\n"
-            "14 повторений\n"
-            "12 повторений\n"
-            "10 повторений\n\n"
-            "5️⃣ <b>Когда становится слишком легко — усложни упражнение</b>\n\n"
-            "Можно:\n"
-            "• добавить рюкзак с весом\n"
-            "• делать медленнее\n"
-            "• делать больше подходов\n"
-            "• выбрать более сложный вариант упражнения\n\n"
-            "Например: обычные отжимания → отжимания с рюкзаком.\n\n"
-            "📌 Главное правило: На каждой тренировке старайся сделать хотя бы немного больше, чем в прошлый раз. Больше повторений, больше подходов или сложнее упражнение. Так ты будешь становиться сильнее. 💪\n\n"
+        goal  = (u.get("goal")  or "").strip().lower()
+
+        # Выбираем HTML-файл и caption по месту и цели
+        if place in ("дома", "bodyweight"):
+            html_path = "media/faq/faq_homeworkout.html"
+            caption = (
+                "📈 Как прогрессировать дома\n\n"
+                "Тренируешься с собственным весом, но непонятно как расти без штанги.\n\n"
+                "В статье ты узнаешь:\n"
+                "• почему широкий диапазон повторений работает так же хорошо как тяжёлые веса\n"
+                "• как работает двойная прогрессия без железа — шаг за шагом\n"
+                "• четыре уровня сложности для каждого упражнения — от простого к сложному\n"
+                "• когда переходить к следующему уровню, а когда оставаться на текущем"
+            )
+        elif goal in ("strength", "сила"):
+            html_path = "media/faq/faq_strength.html"
+            caption = (
+                "📈 Как прогрессировать на силу\n\n"
+                "Силовые не растут или застряли на одном весе уже несколько тренировок.\n\n"
+                "В статье ты узнаешь:\n"
+                "• чем тренировка на силу отличается от тренировки на массу\n"
+                "• как работает линейная прогрессия и когда она перестаёт работать\n"
+                "• что такое волновая нагрузка и как на неё переходить\n"
+                "• почему постоянная работа на максимуме снижает, а не повышает результат"
             )
         else:
-            text = (
-                "📈 <b>Как становиться сильнее на тренировках</b>\n\n"
-            "Прогрессия — это когда каждую неделю ты делаешь чуть больше, чем раньше.Без этого мышцы и сила перестают расти.\n\n"
-            "Вот рабочий метод, чтобы прогессировать в зале\n\n"
-            "1️⃣ <b>Выбери упражнение и вес</b>\n\n"
-            "Возьми вес, с которым ты можешь сделать 6–8 повторений.\n\n"
-            "2️⃣ <b>Сделай 3 подхода</b>\n\n"
-            "Пример на жиме штанги:\n"
-            "80 кг × 8 повторений\n"
-            "80 кг × 7 повторений\n"
-            "80 кг × 6повторений\n\n"
-            "3️⃣ <b>На следующей тренировке попробуй сделать больше</b>\n\n"
-            "Добавь 1 повторение где получится.\n\n"
-            "Пример:\n"
-            "80 кг × 9 повторений\n"
-            "80 кг × 8 повторений\n"
-            "80 кг × 7 повторений\n\n"
-            "4️⃣ <b>Продолжай так на каждой тренировке</b>\n\n"
-            "Твоя цель — дойти до 10 повторений во всех подходах.\n\n"
-            "Пример:\n"
-            "80 кг × 10\n"
-            "80 кг × 10\n"
-            "80 кг × 10\n\n"
-            "5️⃣ <b>После этого увеличь вес</b>\n\n"
-            "Добавь 2,5–5 кг и снова начинай с 6–8 повторений.\n\n"
-            "Пример:\n"
-            "82.5 кг × 8\n"
-            "82.5 кг × 7\n"
-            "82.5 кг × 6\n\n"
-            "Под конец небольшое правило: Каждую тренировку = либо делай больше повторений, либо добавляй больше вес. Так ты будешь становиться сильнее.\n\n"
+            # mass, cut и всё остальное → двойная прогрессия в зале
+            html_path = "media/faq/faq_progression.html"
+            caption = (
+                "📈 Как прогрессировать в зале\n\n"
+                "Ходишь в зал, но веса не растут и мышцы не меняются — непонятно что не так.\n\n"
+                "В статье ты узнаешь:\n"
+                "• почему без прогрессии нагрузки мышцы перестают расти\n"
+                "• как работает двойная прогрессия — самый практичный метод для гипертрофии\n"
+                "• когда добавлять вес, а когда оставаться на том же\n"
+                "• почему менять упражнения каждую неделю мешает прогрессу"
             )
+
         back_kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nav:workout_questions")],
         ])
-        await clean_edit(callback, uid, text, reply_markup=back_kb)
+
+        # Удаляем предыдущее сообщение бота
+        last_id = await get_last_bot_msg_id(uid)
+        if last_id:
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=last_id)
+            except Exception:
+                pass
+
+        if os.path.exists(html_path):
+            try:
+                doc = FSInputFile(html_path)
+                m = await bot.send_document(
+                    chat_id=chat_id,
+                    document=doc,
+                    caption=caption,
+                    reply_markup=back_kb,
+                )
+                await set_last_bot_msg_id(uid, m.message_id)
+                await callback.answer()
+                return
+            except Exception as e:
+                logger.warning(f"[progress_tip] не удалось отправить html {html_path}: {e}")
+
+        # Fallback — только текст
+        await clean_edit(callback, uid, caption, reply_markup=back_kb)
+
     elif key == "workout_questions":
-        questions_text = "❓ <b>Вопросы в тренировках</b>\n\nВыбери вопрос:"
+        questions_text = (
+            "❓ <b>Вопросы в тренировках</b>\n\n"
+            "Прогресс замедляется, когда нагрузка перестаёт расти или рабочий вес подобран неправильно. "
+            "Разбираем оба вопроса с конкретными цифрами и примерами.\n\n"
+            "Выбери тему — получишь статью с пошаговым планом."
+        )
         questions_kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="nav:progress_tip")],
-            [InlineKeyboardButton(text="⚖️ Как подобрать вес", callback_data="nav:select_weight")],
+            [
+                InlineKeyboardButton(text="📈 Как прогрессировать", callback_data="nav:progress_tip"),
+                InlineKeyboardButton(text="⚖️ Как подобрать вес", callback_data="nav:select_weight"),
+            ],
             [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
         ])
         await clean_edit(callback, uid, questions_text, reply_markup=questions_kb)
+
     elif key == "select_weight":
-        weight_text = (
-            "🏋🏻 <b>Как подобрать рабочий вес</b>\n\n"
-            "<b>Шаг 1 — Узнай свой максимум</b>\n\n"
-            "Твой максимум — это самый тяжёлый вес, который ты можешь поднять 1 раз с правильной техникой. "
-            "Не хочешь рисковать и проверять максимум?\n\n"
-            "Используй простую формулу:\n"
-            "<i>Вес на штанге × (1 + количество повторений ÷ 30)</i>\n\n"
-            "Пример: ты жмёшь 60 кг на 10 повторений.\n\n"
-            "60 × (1 + 10 ÷ 30) = 80 кг — это твой примерный максимум.\n\n"
-            "<b>Шаг 2 — Возьми нужный процент от максимума</b>\n\n"
-            "Сила — 80–95% от максимума, 1–5 повторений\n"
-            "Масса — 60–80% от максимума, 6–20 повторений\n"
-            "Сушка — 60–75% от максимума, 8–15 повторений\n\n"
-            "Пример с максимумом 80 кг:\n\n"
-            "— На силу берёшь 64–76 кг\n"
-            "— На массу берёшь 48–64 кг\n"
-            "— На сушку берёшь 48–60 кг\n\n"
-            "<b>Шаг 3 — Проверь по ощущениям</b>\n\n"
-            "Близость к отказу важнее точного процента. Вес подобран правильно если:\n\n"
-            "— Последние 2–3 повторения даются с трудом ✅\n"
-            "— Технику держишь до конца ✅\n"
-            "— Ещё 1–2 повторения сделать уже не можешь ✅\n\n"
-            "Если можешь легко сделать ещё 5 повторений — вес слишком лёгкий. "
-            "Если техника разваливается в середине подхода — слишком тяжёлый."
+        html_path = "media/faq/faq_working_weight.html"
+        caption = (
+            "⚖️ Как подобрать рабочий вес\n\n"
+            "Берёшь вес наугад — слишком легко или техника разваливается.\n\n"
+            "В статье ты узнаешь:\n"
+            "• как посчитать примерный максимум без проверки на практике\n"
+            "• какой процент от максимума брать под масс, сушку и силу\n"
+            "• как ощущения в подходе точнее любой формулы\n"
+            "• на сколько добавлять вес в базовых и изолирующих упражнениях"
         )
         back_kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nav:workout_questions")],
         ])
-        await clean_edit(callback, uid, weight_text, reply_markup=back_kb)
+
+        # Удаляем предыдущее сообщение бота
+        last_id = await get_last_bot_msg_id(uid)
+        if last_id:
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=last_id)
+            except Exception:
+                pass
+
+        if os.path.exists(html_path):
+            try:
+                doc = FSInputFile(html_path)
+                m = await bot.send_document(
+                    chat_id=chat_id,
+                    document=doc,
+                    caption=caption,
+                    reply_markup=back_kb,
+                )
+                await set_last_bot_msg_id(uid, m.message_id)
+                await callback.answer()
+                return
+            except Exception as e:
+                logger.warning(f"[select_weight] не удалось отправить html {html_path}: {e}")
+
+        # Fallback — только текст
+        await clean_edit(callback, uid, caption, reply_markup=back_kb)
     elif key == "upgrade":
         await open_upgrade(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
     elif key == "upgrade_after_profile":
@@ -6293,6 +7071,9 @@ async def _do_rebuild_plan(callback: CallbackQuery, bot: Bot):
     varied_id = uid + shift * 100
 
     u = await get_user(uid)
+    # Сбрасываем ручную надбавку калорий — activity_factor возвращается к дефолту
+    default_factor = freq_to_activity_factor(int(u.get("freq") or 3), u.get("place") or "")
+    await update_user(uid, activity_factor=default_factor)
     intro, plan_struct = generate_workout_plan(
         u["goal"], u["place"], u["exp"], int(u["freq"] or 3),
         limits=u.get("limits") or "",
@@ -6361,11 +7142,13 @@ async def cb_do_rebuild(callback: CallbackQuery, state: FSMContext, bot: Bot):
         if fsm_key in data:
             pending_fields[db_key] = data[fsm_key]
 
-    # Если изменился freq, но не задан явный activity_factor — пересчитываем автоматически
-    if "freq" in pending_fields and "activity_factor" not in pending_fields:
-        u = await get_user(uid)
-        place = pending_fields.get("place") or u.get("place") or ""
-        pending_fields["activity_factor"] = freq_to_activity_factor(int(pending_fields["freq"]), place)
+    # Всегда сбрасываем activity_factor к дефолту при пересборке —
+    # чтобы ручная надбавка +/- калорий не переживала обновление профиля.
+    if "activity_factor" not in pending_fields:
+        u_now = await get_user(uid)
+        freq_val = int(pending_fields.get("freq") or u_now.get("freq") or 3)
+        place_val = pending_fields.get("place") or u_now.get("place") or ""
+        pending_fields["activity_factor"] = freq_to_activity_factor(freq_val, place_val)
 
     if pending_fields:
         await update_user(uid, **pending_fields)
@@ -7379,14 +8162,15 @@ def measures_kb():
 
 
 async def get_workouts_done_last_7_days(user_id: int) -> int:
-    """Считает уникальные дни тренировок за последние 7 дней (включая сегодня)."""
-    since = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
-    today = datetime.now().strftime("%Y-%m-%d")
+    """Считает уникальные дни тренировок с начала текущей недели (пн–вс)."""
+    today = datetime.now().date()
+    week_start = today - timedelta(days=today.weekday())  # понедельник
+    week_end = week_start + timedelta(days=6)             # воскресенье
     async with db() as conn:
         async with conn.execute("""
             SELECT COUNT(DISTINCT completed_date) FROM workout_completions
             WHERE user_id=? AND completed_date >= ? AND completed_date <= ?
-        """, (user_id, since, today)) as cur:
+        """, (user_id, week_start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"))) as cur:
             row = await cur.fetchone()
     return int(row[0]) if row else 0
 
@@ -8032,13 +8816,9 @@ async def open_measures(user_id: int, chat_id: int, bot: Bot, state: FSMContext,
 
     await state.set_state(MeasureFlow.choose_type)
     text = (
-        "📏 Замеры\n\n"
-        "Вес на весах — не всегда честный показатель.\n"
-        "Тело может меняться, а весы стоять на месте: уходит жир, растут мышцы.\n\n"
-        "Замеры показывают реальную картину:\n"
-        "по ним сразу видно, есть прогресс или нет.\n\n"
-        "Если объёмы не меняются несколько недель — значит, что-то нужно скорректировать в тренировках или питании.\n\n"
-        "Записывай замеры раз в 1–2 недели и смотри на динамику 👇"
+        "📏 <b>Замеры</b>\n\n"
+        "Выбери параметр, введи значение — бот сохранит с датой. Через 1–2 недели повтори и сравни.\n\n"
+        "Так видно реальный прогресс: даже если вес стоит, объёмы могут меняться 👇"
     )
     if callback:
         await send_section(
@@ -8071,7 +8851,7 @@ async def open_diary(user_id: int, chat_id: int, bot: Bot, state: FSMContext, ca
         "— Дата ставится автоматически\n\n"
         "Почему не все упражнения?\n\n"
         "Дневник содержит базовые упражнения — жим, присед, тягу, подтягивания. Прогресс в базе отражает общий прогресс точнее всего.\n\n"
-        "Записывай каждую тренировку — через 4–8 недель увидишь рост в цифрах."
+        "<i>Записывай каждую тренировку — через 4–8 недель увидишь рост в цифрах.</i>"
     )
     if callback:
         await send_section(
@@ -8098,7 +8878,7 @@ async def diary_pick_ex(callback: CallbackQuery, state: FSMContext, bot: Bot):
     text = (
         f"🗓 {today}\n"
         f"✅ {exercise}\n\n"
-        "Напиши подходы: весxповторы\n"
+        "Напиши подходы: вес×повторы\n"
         "Пример: 60x8, 60x8, 60x7"
     )
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -8493,86 +9273,254 @@ async def cb_nutr_example(callback: CallbackQuery, bot: Bot):
     await callback.answer()
 
 
-async def cb_nutr_tips(callback: CallbackQuery, bot: Bot):
-    """Фишки в питании — структурированный гайд."""
+async def cb_nutr_questions(callback: CallbackQuery, bot: Bot):
+    """Меню вопросов в питании."""
     text = (
-        "💡 Фишки в питании\n\n"
-        "────────────────────\n"
-        "1. Как быстро добрать калории\n"
-        "────────────────────\n"
-        "• Добавь масло к крупе — 1 ст. л. подсолнечного = +90 ккал.\n"
-        "• Хлеб ржаной к обеду — 2 ломтика (~120 ккал, просто и дёшево).\n"
-        "• Кефир или молоко вместо воды к еде — стакан 200 мл = +80–110 ккал.\n"
-        "• Банан между приёмами — 1 шт. = ~90 ккал, сытно и быстро.\n"
-        "• Шейк: молоко 300 мл + банан + овсянка 40 г = ~400 ккал за 3 мин.\n"
-        "• Паста с яйцами: гречка / макароны + 2 яйца = белок + углеводы.\n"
-        "• Увеличь порцию крупы на 20–30 г — это ещё +60–100 ккал без лишней готовки.\n\n"
-        "────────────────────\n"
-        "2. Как добрать белок\n"
-        "────────────────────\n"
-        "• Творог 2–5% на ночь — 200 г = ~35 г белка. Самый дешёвый источник.\n"
-        "• Кефир 1% — 300 мл = ~10 г белка, но выпить легко.\n"
-        "• Яйца — 2 яйца = ~12 г белка, и везде доступны.\n"
-        "• Тунец консервированный — 1 банка 185 г = ~40 г белка, без готовки.\n"
-        "• Куриное бедро вместо грудки — чуть жирнее, зато дешевле и сочнее.\n\n"
-        "────────────────────\n"
-        "3. Если еда не лезет\n"
-        "────────────────────\n"
-        "• Ешь чаще, но меньше — 4–5 раз по 300–400 ккал легче, чем 3 раза по 700.\n"
-        "• Пей калории: молоко, кефир, коктейли. Жидкость не «давит» так, как еда.\n"
-        "• Убери воду за 30 мин до еды — желудок не будет переполнен.\n"
-        "• Приготовь сразу на день — когда еда уже готова, съесть проще.\n"
-        "• Калорийная каша: овсянка на молоке + масло + банан = ~500 ккал за один завтрак.\n\n"
-        "────────────────────\n"
-        "4. Примеры быстрых доборов\n"
-        "────────────────────\n"
-        "→ +200 ккал легко:\n"
-        "   2 ломтика хлеба (50 г) + 1 ч.л. масла = ~210 ккал\n\n"
-        "→ +300 ккал и 25г белка:\n"
-        "   Творог 200г + банан = ~290 ккал, 35г белка\n\n"
-        "→ +400 ккал быстрый шейк:\n"
-        "   Молоко 300мл + банан + овсянка 40г = ~410 ккал, 15г белка"
+        "❓ <b>Вопросы в питании</b>\n\n"
+        "Питание — частая причина отсутствия результата. Вес стоит не потому что \"плохой метаболизм\", "
+        "а потому что калорий или белка больше или меньше чем нужно.\n\n"
+        "Выбери тему — получишь статью с конкретным разбором и пошаговым планом."
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📈 Вес стоит на массе", callback_data="nutr:weight_stall_mass"),
+            InlineKeyboardButton(text="📉 Вес стоит на сушке", callback_data="nutr:weight_stall_cut"),
+        ],
+        [
+            InlineKeyboardButton(text="🔢 Как считать калории", callback_data="nutr:calories_how"),
+            InlineKeyboardButton(text="💪 Фишки при наборе", callback_data="nutr:tips_mass"),
+        ],
+        [
+            InlineKeyboardButton(text="🔥 Фишки при сушке", callback_data="nutr:tips_cut"),
+        ],
         [InlineKeyboardButton(text="⬅️ Назад к питанию", callback_data="nutr:back")],
-        [InlineKeyboardButton(text="🛒 Моя корзина", callback_data="nutr:basket")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
     await clean_edit(callback, callback.from_user.id, text, reply_markup=kb)
     await callback.answer()
 
 
-async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
-    await open_nutrition(callback.from_user.id, callback.message.chat.id, bot, callback=callback)
+async def cb_nutr_tips_mass(callback: CallbackQuery, bot: Bot):
+    """Фишки при массанаборе — HTML-статья."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    html_path = "media/faq/faq_nutrition_tips_mass.html"
+    caption = (
+        "💪 Фишки при массанаборе\n\n"
+        "Набираешь массу, но есть столько сложно — желудок не справляется.\n\n"
+        "В статье ты узнаешь:\n"
+        "• как набирать калории через жидкие приёмы — без ощущения переедания\n"
+        "• почему жиры эффективнее углеводов для набора объёма\n"
+        "• как белок перед сном увеличивает синтез мышц ночью\n"
+        "• почему 4–5 приёмов лучше 3 при высоком калораже"
+    )
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nutr:questions")],
+    ])
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if os.path.exists(html_path):
+        try:
+            doc = FSInputFile(html_path)
+            m = await bot.send_document(
+                chat_id=chat_id,
+                document=doc,
+                caption=caption,
+                reply_markup=back_kb,
+            )
+            await set_last_bot_msg_id(uid, m.message_id)
+            await callback.answer()
+            return
+        except Exception as e:
+            logger.warning(f"[nutr_tips_mass] не удалось отправить html {html_path}: {e}")
+
+    await clean_edit(callback, uid, caption, reply_markup=back_kb)
     await callback.answer()
 
 
-async def cb_nutr_weight_stall(callback: CallbackQuery, bot: Bot):
-    """Объяснение что делать если вес не меняется."""
-    text = (
-        "❓ Вес меняется неправильно — что делать?\n\n"
-        "В разделе питания есть кнопки ⬆️ и ⬇️ для коррекции калорий.\n"
-        "Каждое нажатие меняет твою норму примерно на 150 ккал.\n\n"
-        "─── Когда нажимать ⬆️ Увеличить калории ───\n\n"
-        "• Вес не растёт 2+ недели при цели «набор массы»\n"
-        "• Вес снижается слишком быстро (больше 1 кг в неделю)\n"
-        "• Постоянно нет сил на тренировках\n\n"
-        "Нажми ⬆️ один раз → подожди 10–14 дней → смотри на вес.\n"
-        "Если нужно — нажми ещё раз. Не торопись.\n\n"
-        "─── Когда нажимать ⬇️ Уменьшить калории ───\n\n"
-        "• Вес не снижается 2+ недели при цели «похудение»\n"
-        "• Вес растёт слишком быстро при наборе (больше 1 кг в неделю)\n\n"
-        "Нажми ⬇️ один раз → подожди 10–14 дней → смотри на вес.\n"
-        "Не убирай больше 300 ккал за раз — начнут уходить мышцы.\n\n"
-        "─── Правило ───\n\n"
-        "Меняй по одному шагу (≈150 ккал) за раз.\n"
-        "Жди 2 недели после каждого изменения.\n"
-        "Вес колеблется изо дня в день — смотри на среднее за неделю."
+async def cb_nutr_tips_cut(callback: CallbackQuery, bot: Bot):
+    """Фишки при сушке — HTML-статья."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    html_path = "media/faq/faq_nutrition_tips_cut.html"
+    caption = (
+        "🔥 Фишки при сушке\n\n"
+        "Держать дефицит неделями сложно — голод и тяга к еде мешают.\n\n"
+        "В статье ты узнаешь:\n"
+        "• почему высокий белок снижает голод без ограничений\n"
+        "• как объёмные продукты помогают насытиться при низких калориях\n"
+        "• почему ходьба эффективнее урезания еды при застревании на плато\n"
+        "• в какое время лучше распределять калории чтобы не срываться вечером"
     )
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад к рациону", callback_data="nutr:back")],
+        [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nutr:questions")],
     ])
-    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if os.path.exists(html_path):
+        try:
+            doc = FSInputFile(html_path)
+            m = await bot.send_document(
+                chat_id=chat_id,
+                document=doc,
+                caption=caption,
+                reply_markup=back_kb,
+            )
+            await set_last_bot_msg_id(uid, m.message_id)
+            await callback.answer()
+            return
+        except Exception as e:
+            logger.warning(f"[nutr_tips_cut] не удалось отправить html {html_path}: {e}")
+
+    await clean_edit(callback, uid, caption, reply_markup=back_kb)
+    await callback.answer()
+
+
+async def cb_nutr_weight_stall_mass(callback: CallbackQuery, bot: Bot):
+    """Вес стоит на массе — HTML-статья."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    html_path = "media/faq/faq_weight_stall_mass.html"
+    caption = (
+        "📈 Вес стоит на массе — что делать?\n\n"
+        "Тренируешься, ешь, но вес не растёт неделями — знакомо.\n\n"
+        "В статье ты узнаешь:\n"
+        "• почему люди переоценивают количество съеденного на 30–40%\n"
+        "• сколько калорий и белка нужно для реального роста мышц\n"
+        "• как добавлять калории правильно — шаг за шагом без лишнего жира\n"
+        "• почему без прогрессии в тренировках еда уходит в жир, а не в мышцы"
+    )
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nutr:questions")],
+    ])
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if os.path.exists(html_path):
+        try:
+            doc = FSInputFile(html_path)
+            m = await bot.send_document(
+                chat_id=chat_id,
+                document=doc,
+                caption=caption,
+                reply_markup=back_kb,
+            )
+            await set_last_bot_msg_id(uid, m.message_id)
+            await callback.answer()
+            return
+        except Exception as e:
+            logger.warning(f"[nutr_weight_stall_mass] не удалось отправить html {html_path}: {e}")
+
+    await clean_edit(callback, uid, caption, reply_markup=back_kb)
+    await callback.answer()
+
+
+async def cb_nutr_weight_stall_cut(callback: CallbackQuery, bot: Bot):
+    """Вес стоит на сушке — HTML-статья."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    html_path = "media/faq/faq_weight_stall_cut.html"
+    caption = (
+        "📉 Вес стоит на сушке — что делать?\n\n"
+        "Соблюдаешь диету, но весы не двигаются — это не быстрый метаболизм.\n\n"
+        "В статье ты узнаешь:\n"
+        "• почему скрытые калории перекрывают весь дефицит\n"
+        "• когда вес стоит из-за воды, а жир на самом деле уходит\n"
+        "• сколько белка нужно на сушке чтобы не терять мышцы\n"
+        "• почему убирать углеводы не эффективнее обычного дефицита"
+    )
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nutr:questions")],
+    ])
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if os.path.exists(html_path):
+        try:
+            doc = FSInputFile(html_path)
+            m = await bot.send_document(
+                chat_id=chat_id,
+                document=doc,
+                caption=caption,
+                reply_markup=back_kb,
+            )
+            await set_last_bot_msg_id(uid, m.message_id)
+            await callback.answer()
+            return
+        except Exception as e:
+            logger.warning(f"[nutr_weight_stall_cut] не удалось отправить html {html_path}: {e}")
+
+    await clean_edit(callback, uid, caption, reply_markup=back_kb)
+    await callback.answer()
+
+
+async def cb_nutr_calories_how(callback: CallbackQuery, bot: Bot):
+    """Как считать калории — отправляем HTML-статью."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    html_path = "media/faq/faq_calories_how.html"
+    caption = (
+        "🔢 Как считать калории\n\n"
+        "Думаешь что ешь правильно, но результата нет — скорее всего дело в подсчёте.\n\n"
+        "В статье ты узнаешь:\n"
+        "• почему без весов ошибка в оценке еды достигает 47%\n"
+        "• четыре шага от нуля до точного подсчёта за 15 минут в день\n"
+        "• что взвешивать до готовки, а что после — и почему это важно\n"
+        "• пять частых ошибок из-за которых подсчёт не даёт результата"
+    )
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="nutr:questions")],
+    ])
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    if os.path.exists(html_path):
+        try:
+            doc = FSInputFile(html_path)
+            m = await bot.send_document(
+                chat_id=chat_id,
+                document=doc,
+                caption=caption,
+                reply_markup=back_kb,
+            )
+            await set_last_bot_msg_id(uid, m.message_id)
+            await callback.answer()
+            return
+        except Exception as e:
+            logger.warning(f"[nutr_calories_how] не удалось отправить html {html_path}: {e}")
+
+    await clean_edit(callback, uid, caption, reply_markup=back_kb)
+    await callback.answer()
+
+
+async def cb_nutr_back(callback: CallbackQuery, bot: Bot):
+    await open_nutrition(callback.from_user.id, callback.message.chat.id, bot, callback=callback)
     await callback.answer()
 
 
@@ -8659,46 +9607,161 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
 
 
 # =========================
-# ПОСТЫ С КАРТИНКАМИ (АДМИН)
+# АДМИН-ПАНЕЛЬ
 # =========================
+def admin_main_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 Создать рассылку", callback_data="admin:post_new")],
+        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin:stats")],
+        [InlineKeyboardButton(text="👤 Найти пользователя", callback_data="admin:find_user")],
+    ])
+
+
 def admin_posts_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Создать пост", callback_data="post:new")],
-        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+        [InlineKeyboardButton(text="📢 Создать рассылку", callback_data="admin:post_new")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")],
     ])
 
 
-def post_confirm_kb(post_id: int):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")],
-    ])
+def post_confirm_kb(post_id: int, has_button: bool = False):
+    rows = []
+    if has_button:
+        rows.append([InlineKeyboardButton(text="🔗 Изменить кнопку", callback_data=f"post:set_btn:{post_id}")])
+        rows.append([InlineKeyboardButton(text="🗑 Удалить кнопку", callback_data=f"post:del_btn:{post_id}")])
+    else:
+        rows.append([InlineKeyboardButton(text="🔗 Добавить кнопку", callback_data=f"post:set_btn:{post_id}")])
+    rows.append([InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")])
+    rows.append([InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-async def cmd_posts(message: Message, state: FSMContext):
+async def cmd_admin(message: Message, state: FSMContext, bot: Bot):
+    """Команда /admin — открывает панель управления."""
     if message.from_user.id != ADMIN_ID:
         return
     await state.clear()
-    await message.answer("🗞 Посты (админ):", reply_markup=admin_posts_kb())
+    await try_delete_user_message(bot, message)
+
+    # Считаем статистику
+    async with db() as conn:
+        async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+            row = await cur.fetchone()
+            total_users = row[0] if row else 0
+        async with conn.execute("SELECT COUNT(*) FROM access WHERE paid=1") as cur:
+            row = await cur.fetchone()
+            paid_users = row[0] if row else 0
+
+    text = (
+        f"⚙️ <b>Админ-панель</b>\n\n"
+        f"👥 Пользователей: {total_users}\n"
+        f"💳 С подпиской: {paid_users}\n\n"
+        f"Выбери действие:"
+    )
+    await clean_send(bot, message.chat.id, message.from_user.id, text, reply_markup=admin_main_kb())
 
 
-async def cb_post_new(callback: CallbackQuery, state: FSMContext):
+async def cb_admin_main(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Возврат в главное меню админки."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    async with db() as conn:
+        async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+            row = await cur.fetchone()
+            total_users = row[0] if row else 0
+        async with conn.execute("SELECT COUNT(*) FROM access WHERE paid=1") as cur:
+            row = await cur.fetchone()
+            paid_users = row[0] if row else 0
+
+    text = (
+        f"⚙️ <b>Админ-панель</b>\n\n"
+        f"👥 Пользователей: {total_users}\n"
+        f"💳 С подпиской: {paid_users}\n\n"
+        f"Выбери действие:"
+    )
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=admin_main_kb())
+    await callback.answer()
+
+
+async def cb_admin_stats(callback: CallbackQuery, bot: Bot):
+    """Подробная статистика."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+
+    async with db() as conn:
+        async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+            total_users = (await cur.fetchone())[0]
+        async with conn.execute("SELECT COUNT(*) FROM users WHERE created_at >= ?", (week_ago,)) as cur:
+            new_week = (await cur.fetchone())[0]
+        async with conn.execute("SELECT COUNT(*) FROM access WHERE paid=1") as cur:
+            paid_users = (await cur.fetchone())[0]
+        async with conn.execute("SELECT tariff, COUNT(*) FROM access WHERE paid=1 GROUP BY tariff") as cur:
+            tariff_rows = await cur.fetchall()
+        async with conn.execute("SELECT COUNT(*) FROM workout_completions WHERE completed_date=?", (today,)) as cur:
+            workouts_today = (await cur.fetchone())[0]
+
+    tariff_lines = ""
+    for tariff, count in tariff_rows:
+        name = TARIFFS.get(tariff or "", {}).get("title", tariff or "—")
+        tariff_lines += f"  • {name}: {count}\n"
+
+    text = (
+        f"📊 <b>Статистика</b>\n\n"
+        f"👥 Всего пользователей: {total_users}\n"
+        f"🆕 Новых за неделю: {new_week}\n\n"
+        f"💳 С активной подпиской: {paid_users}\n"
+        f"{tariff_lines}\n"
+        f"🏋️ Тренировок сегодня: {workouts_today}"
+    )
+
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")],
+    ])
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
+    await callback.answer()
+
+
+async def cb_admin_post_new(callback: CallbackQuery, state: FSMContext):
+    """Начало создания рассылки."""
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("Нет доступа", show_alert=True)
         return
 
     await state.clear()
-    txt = (
-        "📝 Создание поста\n\n"
-        "Пришли текст\n"
-        "или фото/видео с подписью.\n\n"
-        "Потом покажу превью."
+    bot_url = BOT_PUBLIC_URL.rstrip("/") if BOT_PUBLIC_URL else "https://t.me/zelbeta_bot"
+    open_link = f"{bot_url}?start=open"
+    text = (
+        "📢 <b>Создание рассылки</b>\n\n"
+        "Отправь текст, фото или видео с подписью.\n\n"
+        "Поддерживается HTML-форматирование:\n"
+        "<code>&lt;b&gt;жирный&lt;/b&gt;</code>, <code>&lt;i&gt;курсив&lt;/i&gt;</code>\n\n"
+        "После создания можно добавить кнопку со ссылкой.\n\n"
+        f"💡 Готовая ссылка для кнопки \"Открыть бот\":\n"
+        f"<code>{open_link}</code>\n"
+        "Она откроет бота: с подпиской → меню, без → тарифы."
     )
-    await callback.message.answer(txt, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+    await callback.message.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")]
     ]))
     await state.set_state(PostFlow.waiting_content)
     await callback.answer()
+
+
+# Старая команда /posts для обратной совместимости
+async def cmd_posts(message: Message, state: FSMContext, bot: Bot):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await cmd_admin(message, state, bot)
+
+
+async def cb_post_new(callback: CallbackQuery, state: FSMContext):
+    await cb_admin_post_new(callback, state)
 
 
 async def cb_post_cancel(callback: CallbackQuery, state: FSMContext):
@@ -8706,7 +9769,9 @@ async def cb_post_cancel(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
     await state.clear()
-    await callback.message.answer("Ок.", reply_markup=admin_posts_kb())
+    await clean_edit(callback, callback.from_user.id,
+                     "❌ Рассылка отменена.",
+                     reply_markup=admin_main_kb())
     await callback.answer()
 
 
@@ -8736,12 +9801,12 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
     await state.update_data(post_id=post_id)
     await state.set_state(PostFlow.waiting_confirm)
 
-    preview_title = f"✅ Превью (id={post_id})\n\n"
+    preview_title = f"👁 <b>Превью рассылки</b>\n\n"
     chat_id = message.chat.id
     uid = message.from_user.id
 
-    caption = (preview_title + (text or "")).strip()
-    if len(caption) > 1024:
+    caption = (text or "").strip()
+    if len(caption) > 1020:
         caption = caption[:1020] + "…"
 
     last_id = await get_last_bot_msg_id(uid)
@@ -8752,16 +9817,298 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
             pass
 
     if media_type == "photo":
-        m = await bot.send_photo(chat_id=chat_id, photo=media_file_id, caption=caption, reply_markup=post_confirm_kb(post_id))
+        m = await bot.send_photo(chat_id=chat_id, photo=media_file_id,
+                                  caption=caption or None, reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, m.message_id)
     elif media_type == "video":
-        m = await bot.send_video(chat_id=chat_id, video=media_file_id, caption=caption, reply_markup=post_confirm_kb(post_id))
+        m = await bot.send_video(chat_id=chat_id, video=media_file_id,
+                                  caption=caption or None, reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, m.message_id)
     else:
-        mid = await clean_send(bot, chat_id, uid, preview_title + text, reply_markup=post_confirm_kb(post_id))
+        mid = await clean_send(bot, chat_id, uid, preview_title + text,
+                                reply_markup=post_confirm_kb(post_id))
         await set_last_bot_msg_id(uid, mid)
 
     await try_delete_user_message(bot, message)
+
+
+async def cb_post_set_btn(callback: CallbackQuery, state: FSMContext):
+    """Начало добавления кнопки к рассылке — выбор типа."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    post_id = int(callback.data.split(":")[2])
+    await state.update_data(post_id=post_id)
+    await callback.message.answer(
+        "🔗 <b>Добавление кнопки</b>\n\nВыбери тип кнопки:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📲 Открыть бота", callback_data=f"post:btn_type:open:{post_id}")],
+            [InlineKeyboardButton(text="🌐 Ссылка (URL)", callback_data=f"post:btn_type:url:{post_id}")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")],
+        ])
+    )
+    await callback.answer()
+
+
+async def cb_post_btn_type(callback: CallbackQuery, state: FSMContext):
+    """Выбран тип кнопки."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    parts = callback.data.split(":")
+    btn_type = parts[2]   # "open" или "url"
+    post_id = int(parts[3])
+    await state.update_data(post_id=post_id, btn_type=btn_type)
+
+    if btn_type == "open":
+        # Сразу сохраняем — кнопка без URL, откроет бота через callback
+        await state.update_data(btn_text="📲 Открыть бота")
+        await state.set_state(PostFlow.waiting_button_text)
+        await callback.message.answer(
+            "Введи текст кнопки (или оставь стандартный — отправь точку <b>.</b>):\n\n"
+            "Стандартный: <b>📲 Открыть бота</b>",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")]
+            ])
+        )
+    else:
+        # URL — просим текст кнопки
+        await state.set_state(PostFlow.waiting_button_text)
+        await callback.message.answer(
+            "Введи текст кнопки:",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")]
+            ])
+        )
+    await callback.answer()
+
+
+async def post_waiting_button_text(message: Message, state: FSMContext, bot: Bot):
+    """Получаем текст кнопки."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    data = await state.get_data()
+    btn_type = data.get("btn_type", "url")
+    post_id = data.get("post_id")
+    raw = (message.text or "").strip()
+
+    # Точка = использовать дефолтный текст
+    if raw == ".":
+        btn_text = data.get("btn_text", "📲 Открыть бота")
+    elif not raw:
+        await message.answer("Текст кнопки не может быть пустым.")
+        return
+    else:
+        btn_text = raw
+
+    await state.update_data(btn_text=btn_text)
+
+    if btn_type == "open":
+        # Кнопка "открыть бота" — сохраняем с btn_url="__open__"
+        async with db() as conn:
+            await conn.execute(
+                "UPDATE posts SET btn_text=?, btn_url=? WHERE id=?",
+                (btn_text, "__open__", post_id)
+            )
+            await conn.commit()
+        await state.set_state(PostFlow.waiting_confirm)
+        await message.answer(
+            f"✅ Кнопка добавлена: <b>{btn_text}</b>\n"
+            "При нажатии бот сразу откроется — меню или тарифы.",
+            reply_markup=post_confirm_kb(post_id, has_button=True)
+        )
+        await try_delete_user_message(bot, message)
+    else:
+        # URL — просим ссылку
+        await state.set_state(PostFlow.waiting_button_url)
+        await message.answer(
+            f"Текст кнопки: <b>{btn_text}</b>\n\nТеперь введи URL (начинается с https://):",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="❌ Отмена", callback_data="post:cancel")]
+            ])
+        )
+
+
+async def post_waiting_button_url(message: Message, state: FSMContext, bot: Bot):
+    """Получаем URL кнопки и сохраняем."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    url = (message.text or "").strip()
+    if not url.startswith("http"):
+        await message.answer("URL должен начинаться с https:// или http://")
+        return
+    data = await state.get_data()
+    post_id = data.get("post_id")
+    btn_text = data.get("btn_text", "Подробнее")
+    # Сохраняем кнопку в draft через update_data
+    await state.update_data(btn_url=url)
+    await state.set_state(PostFlow.waiting_confirm)
+
+    # Обновляем пост в БД с кнопкой
+    async with db() as conn:
+        await conn.execute(
+            "UPDATE posts SET btn_text=?, btn_url=? WHERE id=?",
+            (btn_text, url, post_id)
+        )
+        await conn.commit()
+
+    post = await get_post(post_id)
+    caption = (post.get("text") or "").strip()
+    if len(caption) > 1020:
+        caption = caption[:1020] + "…"
+
+    await message.answer(
+        f"✅ Кнопка добавлена: <b>{btn_text}</b>\n{url}\n\nОтправь рассылку или измени кнопку.",
+        reply_markup=post_confirm_kb(post_id, has_button=True)
+    )
+    await try_delete_user_message(bot, message)
+
+
+async def cb_post_del_btn(callback: CallbackQuery, state: FSMContext):
+    """Удаляем кнопку из рассылки."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    post_id = int(callback.data.split(":")[2])
+    async with db() as conn:
+        await conn.execute("UPDATE posts SET btn_text=NULL, btn_url=NULL WHERE id=?", (post_id,))
+        await conn.commit()
+    await state.set_state(PostFlow.waiting_confirm)
+    await callback.message.edit_reply_markup(reply_markup=post_confirm_kb(post_id, has_button=False))
+    await callback.answer("Кнопка удалена")
+
+
+async def cb_broadcast_open(callback: CallbackQuery, bot: Bot):
+    """Кнопка в рассылке — открыть бота без /start."""
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+    await ensure_user(uid, callback.from_user.username or "")
+
+    subscription_active = await is_access_active(uid)
+    u = await get_user(uid)
+    profile_complete = bool(
+        u.get("goal") and u.get("sex") and u.get("height")
+        and u.get("weight") and u.get("freq")
+    )
+
+    await callback.answer()
+
+    if subscription_active:
+        # Есть подписка — открываем главное меню
+        await bot.send_message(chat_id=chat_id, text="✅ Я на месте. Кнопки снизу 👇",
+                               reply_markup=control_reply_kb())
+        await show_main_menu(bot, chat_id, uid)
+    elif profile_complete:
+        # Профиль есть, подписки нет — оффер с тарифами
+        await bot.send_message(chat_id=chat_id, text="✅ Я на месте. Кнопки снизу 👇",
+                               reply_markup=control_reply_kb())
+        text = (
+            "👋 Ты уже заполнил профиль — осталось открыть доступ.\n\n"
+            "Что умеет бот:\n\n"
+            "✅ составит программу под твою цель\n"
+            "✅ покажет технику упражнений\n"
+            "✅ поможет отслеживать прогресс\n\n"
+            "Чтобы продолжить, выбери доступ 👇"
+        )
+        await _send_with_image(bot, chat_id, uid, text, "restart",
+                               reply_markup=build_program_tariff_kb())
+    else:
+        # Нет профиля — приветствие с кнопкой заполнить
+        await bot.send_message(chat_id=chat_id, text="✅ Я на месте. Кнопки снизу 👇",
+                               reply_markup=control_reply_kb())
+        welcome_text = (
+            "<b>👋 Привет! Я твой персональный тренер.</b>\n\n"
+            "Составлю программу под твою цель, помогу с питанием и буду вести дневник тренировок.\n\n"
+            "Чтобы начать — заполни профиль 👇"
+        )
+        await _send_with_image(bot, chat_id, uid, welcome_text, "welcome",
+                               reply_markup=welcome_kb())
+
+
+async def cb_admin_find_user(callback: CallbackQuery, state: FSMContext):
+    """Начало поиска пользователя."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    await state.set_state(AdminFlow.find_user_input)
+    await callback.message.answer(
+        "🔍 <b>Поиск пользователя</b>\n\n"
+        "Введи <b>ID</b> пользователя или <b>@username</b>:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data="admin:main")]
+        ])
+    )
+    await callback.answer()
+
+
+async def admin_find_user_input(message: Message, state: FSMContext, bot: Bot):
+    """Обрабатываем ввод для поиска пользователя."""
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    query = (message.text or "").strip().lstrip("@")
+    await state.clear()
+
+    user_row = None
+    async with db() as conn:
+        # Сначала пробуем по числовому ID
+        if query.isdigit():
+            async with conn.execute(
+                "SELECT u.user_id, u.goal, u.place, u.weight, u.freq, u.exp, "
+                "       a.paid, a.tariff, a.expires_at "
+                "FROM users u LEFT JOIN access a ON a.user_id=u.user_id "
+                "WHERE u.user_id=?", (int(query),)
+            ) as cur:
+                user_row = await cur.fetchone()
+        # Потом по username
+        if not user_row:
+            async with conn.execute(
+                "SELECT u.user_id, u.goal, u.place, u.weight, u.freq, u.exp, "
+                "       a.paid, a.tariff, a.expires_at "
+                "FROM users u LEFT JOIN access a ON a.user_id=u.user_id "
+                "WHERE u.username=?", (query,)
+            ) as cur:
+                user_row = await cur.fetchone()
+
+    await try_delete_user_message(bot, message)
+
+    if not user_row:
+        await message.answer(
+            f"❌ Пользователь <code>{query}</code> не найден.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔍 Найти ещё", callback_data="admin:find_user")],
+                [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")],
+            ])
+        )
+        return
+
+    uid, goal, place, weight, freq, exp, paid, tariff, expires_at = user_row
+
+    # Подписка
+    if paid:
+        sub_line = f"💳 Подписка: {tariff or '—'}"
+        if expires_at:
+            sub_line += f" до {expires_at[:10]}"
+    else:
+        sub_line = "💳 Подписка: нет"
+
+    text = (
+        f"👤 <b>Пользователь {uid}</b>\n\n"
+        f"🎯 Цель: {goal or '—'}\n"
+        f"🏠 Место: {place or '—'}\n"
+        f"⚖️ Вес: {weight or '—'} кг\n"
+        f"📅 Трен/нед: {freq or '—'}\n"
+        f"🏋️ Опыт: {exp or '—'}\n"
+        f"{sub_line}"
+    )
+
+    await message.answer(
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔍 Найти ещё", callback_data="admin:find_user")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")],
+        ])
+    )
 
 
 async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
@@ -8779,25 +10126,47 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
         await callback.answer("Уже отправлен", show_alert=True)
         return
 
-    await callback.message.answer("📤 Рассылаю…")
+    user_ids = await get_all_user_ids()
+    total = len(user_ids)
+
+    await clean_edit(callback, callback.from_user.id,
+                     f"📤 Рассылаю {total} пользователям…")
     await callback.answer()
 
-    user_ids = await get_all_user_ids()
     ok = 0
     fail = 0
 
     caption = (post.get("text") or "").strip()
-    if len(caption) > 1024:
+    if len(caption) > 1020:
         caption = caption[:1020] + "…"
+
+    # Кнопка рассылки
+    post_reply_markup = None
+    if post.get("btn_text") and post.get("btn_url"):
+        if post["btn_url"] == "__open__":
+            # Кнопка "открыть бота" — callback, бот сразу отвечает
+            post_reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=post["btn_text"], callback_data="broadcast:open")]
+            ])
+        else:
+            # Обычная URL-кнопка
+            post_reply_markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=post["btn_text"], url=post["btn_url"])]
+            ])
 
     for uid in user_ids:
         try:
             if post["media_type"] == "photo":
-                await bot.send_photo(chat_id=uid, photo=post["media_file_id"], caption=caption if caption else None)
+                await bot.send_photo(chat_id=uid, photo=post["media_file_id"],
+                                     caption=caption if caption else None,
+                                     reply_markup=post_reply_markup)
             elif post["media_type"] == "video":
-                await bot.send_video(chat_id=uid, video=post["media_file_id"], caption=caption if caption else None)
+                await bot.send_video(chat_id=uid, video=post["media_file_id"],
+                                     caption=caption if caption else None,
+                                     reply_markup=post_reply_markup)
             else:
-                await bot.send_message(chat_id=uid, text=post.get("text") or "")
+                await bot.send_message(chat_id=uid, text=post.get("text") or "",
+                                       reply_markup=post_reply_markup)
             ok += 1
         except Exception as e:
             fail += 1
@@ -8810,12 +10179,20 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
                     await conn.commit()
             except Exception:
                 pass
-
         await asyncio.sleep(0.03)
 
     await set_post_status(post_id, "sent")
-    await callback.message.answer(f"✅ Готово. Отправлено: {ok} • Ошибок: {fail}", reply_markup=admin_posts_kb())
     await state.clear()
+
+    result_text = (
+        f"✅ <b>Рассылка завершена</b>\n\n"
+        f"📨 Отправлено: {ok}\n"
+        f"❌ Ошибок: {fail}\n"
+        f"👥 Всего: {total}"
+    )
+    await clean_send(bot, callback.message.chat.id, callback.from_user.id,
+                     result_text, reply_markup=admin_main_kb())
+
 
 
 # =========================
@@ -8976,9 +10353,13 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_nutr_example, F.data.startswith("nutr:ex:"))
     dp.callback_query.register(cb_nutr_back, F.data == "nutr:back")
     dp.callback_query.register(cb_nutr_basket, F.data == "nutr:basket")
-    dp.callback_query.register(cb_nutr_tips, F.data == "nutr:tips")
+    dp.callback_query.register(cb_nutr_questions, F.data == "nutr:questions")
+    dp.callback_query.register(cb_nutr_tips_mass, F.data == "nutr:tips_mass")
+    dp.callback_query.register(cb_nutr_tips_cut, F.data == "nutr:tips_cut")
     dp.callback_query.register(cb_nutr_cal, F.data.startswith("nutr:cal:"))
-    dp.callback_query.register(cb_nutr_weight_stall, F.data == "nutr:weight_stall")
+    dp.callback_query.register(cb_nutr_weight_stall_mass, F.data == "nutr:weight_stall_mass")
+    dp.callback_query.register(cb_nutr_weight_stall_cut, F.data == "nutr:weight_stall_cut")
+    dp.callback_query.register(cb_nutr_calories_how, F.data == "nutr:calories_how")
 
     dp.callback_query.register(cb_faq_question, F.data.startswith("faq:"))
 
@@ -8990,11 +10371,23 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_workout_rebuild, F.data == "workout:rebuild")
 
     dp.message.register(cmd_testpay, Command("testpay"))
+    dp.message.register(cmd_admin, Command("admin"))
     dp.message.register(cmd_posts, Command("posts"))
+    dp.callback_query.register(cb_admin_main, F.data == "admin:main")
+    dp.callback_query.register(cb_admin_stats, F.data == "admin:stats")
+    dp.callback_query.register(cb_admin_post_new, F.data == "admin:post_new")
     dp.callback_query.register(cb_post_new, F.data == "post:new")
     dp.callback_query.register(cb_post_cancel, F.data == "post:cancel")
     dp.callback_query.register(cb_post_send, F.data.startswith("post:send:"))
+    dp.callback_query.register(cb_post_set_btn, F.data.startswith("post:set_btn:"))
+    dp.callback_query.register(cb_post_del_btn, F.data.startswith("post:del_btn:"))
+    dp.callback_query.register(cb_post_btn_type, F.data.startswith("post:btn_type:"))
+    dp.callback_query.register(cb_broadcast_open, F.data == "broadcast:open")
     dp.message.register(post_waiting_content, PostFlow.waiting_content)
+    dp.message.register(post_waiting_button_text, PostFlow.waiting_button_text)
+    dp.message.register(post_waiting_button_url, PostFlow.waiting_button_url)
+    dp.callback_query.register(cb_admin_find_user, F.data == "admin:find_user")
+    dp.message.register(admin_find_user_input, AdminFlow.find_user_input)
 
     dp.message.register(open_support_from_reply, F.text == "🆘 Поддержка")
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
