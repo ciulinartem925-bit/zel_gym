@@ -12,6 +12,7 @@ from typing import Optional, List, Tuple, Dict
 
 import aiosqlite
 from aiogram import Bot, Dispatcher, F
+from aiogram.exceptions import TelegramRetryAfter, TelegramForbiddenError
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, CallbackQuery,
@@ -680,7 +681,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -793,6 +794,7 @@ class PostFlow(StatesGroup):
 
 class AdminFlow(StatesGroup):
     find_user_input = State()       # ожидание ID или username для поиска
+    rename_post = State()           # ожидание нового названия рассылки
 
 
 class NutritionLog(StatesGroup):
@@ -4069,8 +4071,8 @@ async def init_db():
             btn_url TEXT
         )
         """)
-        # Добавляем колонки кнопки если их нет (для существующих БД)
-        for _col in [("btn_text", "TEXT"), ("btn_url", "TEXT")]:
+        # Добавляем колонки если их нет (для существующих БД)
+        for _col in [("btn_text", "TEXT"), ("btn_url", "TEXT"), ("title", "TEXT")]:
             try:
                 await conn.execute(f"ALTER TABLE posts ADD COLUMN {_col[0]} {_col[1]}")
             except Exception:
@@ -4545,6 +4547,31 @@ async def get_post(post_id: int):
         "media_file_id": row[3], "text": row[4], "status": row[5], "created_at": row[6],
         "btn_text": row[7], "btn_url": row[8]
     }
+
+
+async def get_all_posts(limit: int = 20):
+    """Возвращает последние посты (черновики и отправленные)."""
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT id, title, post_media_type, post_text, status, created_at "
+            "FROM posts ORDER BY id DESC LIMIT ?", (limit,)
+        ) as cur:
+            rows = await cur.fetchall()
+    return [
+        {"id": r[0], "title": r[1], "media_type": r[2],
+         "text": r[3], "status": r[4], "created_at": r[5]}
+        for r in rows
+    ]
+
+
+async def update_post_content(post_id: int, media_type: str, media_file_id: str, text: str):
+    """Обновляет контент черновика."""
+    async with db() as conn:
+        await conn.execute(
+            "UPDATE posts SET post_media_type=?, post_media_file_id=?, post_text=? WHERE id=?",
+            (media_type, media_file_id, text, post_id)
+        )
+        await conn.commit()
 
 
 async def set_post_status(post_id: int, status: str):
@@ -9612,6 +9639,7 @@ async def cb_tech_show(callback: CallbackQuery, bot: Bot):
 def admin_main_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📢 Создать рассылку", callback_data="admin:post_new")],
+        [InlineKeyboardButton(text="📋 Мои рассылки", callback_data="admin:posts_list")],
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin:stats")],
         [InlineKeyboardButton(text="👤 Найти пользователя", callback_data="admin:find_user")],
     ])
@@ -9727,6 +9755,180 @@ async def cb_admin_stats(callback: CallbackQuery, bot: Bot):
     await callback.answer()
 
 
+async def cb_admin_posts_list(callback: CallbackQuery, bot: Bot):
+    """Список всех рассылок."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    posts = await get_all_posts(20)
+
+    if not posts:
+        await clean_edit(callback, callback.from_user.id,
+                         "📋 Рассылок пока нет.",
+                         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                             [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")]
+                         ]))
+        await callback.answer()
+        return
+
+    rows = []
+    for p in posts:
+        status_icon = "✅" if p["status"] == "sent" else "📝"
+        title = p["title"] or (p["text"] or "")[:30] or f"Пост #{p['id']}"
+        if len(title) > 35:
+            title = title[:35] + "…"
+        label = f"{status_icon} {title}"
+        rows.append([InlineKeyboardButton(text=label, callback_data=f"admin:post_view:{p['id']}")])
+
+    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")])
+    await clean_edit(callback, callback.from_user.id,
+                     "📋 <b>Рассылки</b>\n\n✅ — отправлена  📝 — черновик",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    await callback.answer()
+
+
+async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Просмотр конкретной рассылки."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    post_id = int(callback.data.split(":")[3])
+    post = await get_post(post_id)
+    if not post:
+        await callback.answer("Пост не найден", show_alert=True)
+        return
+
+    status = "✅ Отправлена" if post["status"] == "sent" else "📝 Черновик"
+    title = post.get("title") or f"Пост #{post_id}"
+    media_type = post.get("media_type", "none")
+    btn_info = ""
+    if post.get("btn_text"):
+        btn_type = "Открыть бота" if post.get("btn_url") == "__open__" else post.get("btn_url", "")
+        btn_info = f"\n🔗 Кнопка: {post['btn_text']} → {btn_type}"
+
+    text = (
+        f"📋 <b>{title}</b>\n\n"
+        f"Статус: {status}\n"
+        f"Медиа: {media_type}\n"
+        f"Дата: {(post.get('created_at') or '')[:10]}"
+        f"{btn_info}"
+    )
+
+    rows = []
+    if post["status"] != "sent":
+        rows.append([InlineKeyboardButton(text="✏️ Изменить контент", callback_data=f"admin:post_edit:{post_id}")])
+        rows.append([InlineKeyboardButton(text="✏️ Изменить название", callback_data=f"admin:post_rename:{post_id}")])
+        rows.append([InlineKeyboardButton(text="🔗 Кнопка", callback_data=f"post:set_btn:{post_id}")])
+        rows.append([InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")])
+    rows.append([InlineKeyboardButton(text="🗑 Удалить", callback_data=f"admin:post_delete:{post_id}")])
+    rows.append([InlineKeyboardButton(text="⬅️ К списку", callback_data="admin:posts_list")])
+
+    uid = callback.from_user.id
+    chat_id = callback.message.chat.id
+
+    # Если есть медиа — отправляем отдельным сообщением
+    if media_type == "photo" and post.get("media_file_id"):
+        last_id = await get_last_bot_msg_id(uid)
+        if last_id:
+            try: await bot.delete_message(chat_id=chat_id, message_id=last_id)
+            except Exception: pass
+        m = await bot.send_photo(chat_id=chat_id, photo=post["media_file_id"],
+                                  caption=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+        await set_last_bot_msg_id(uid, m.message_id)
+    elif media_type == "video" and post.get("media_file_id"):
+        last_id = await get_last_bot_msg_id(uid)
+        if last_id:
+            try: await bot.delete_message(chat_id=chat_id, message_id=last_id)
+            except Exception: pass
+        m = await bot.send_video(chat_id=chat_id, video=post["media_file_id"],
+                                  caption=text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+        await set_last_bot_msg_id(uid, m.message_id)
+    else:
+        await clean_edit(callback, uid, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+
+    await callback.answer()
+
+
+async def cb_admin_post_edit(callback: CallbackQuery, state: FSMContext):
+    """Редактирование контента черновика."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    post_id = int(callback.data.split(":")[3])
+    await state.update_data(post_id=post_id, edit_mode=True)
+    await state.set_state(PostFlow.waiting_content)
+    await callback.message.answer(
+        "✏️ Отправь новый контент для рассылки (текст, фото или видео).\n"
+        "Старый контент будет заменён.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data=f"admin:post_view:{post_id}")]
+        ])
+    )
+    await callback.answer()
+
+
+async def cb_admin_post_rename(callback: CallbackQuery, state: FSMContext):
+    """Переименование рассылки."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    post_id = int(callback.data.split(":")[3])
+    await state.update_data(post_id=post_id)
+    await state.set_state(AdminFlow.rename_post)
+    await callback.message.answer(
+        "✏️ Введи новое название для этой рассылки:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отмена", callback_data=f"admin:post_view:{post_id}")]
+        ])
+    )
+    await callback.answer()
+
+
+async def admin_rename_post_input(message: Message, state: FSMContext, bot: Bot):
+    """Сохраняем новое название рассылки."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    data = await state.get_data()
+    post_id = data.get("post_id")
+    title = (message.text or "").strip()
+    if not title:
+        await message.answer("Название не может быть пустым.")
+        return
+    async with db() as conn:
+        await conn.execute("UPDATE posts SET title=? WHERE id=?", (title, post_id))
+        await conn.commit()
+    await state.clear()
+    await try_delete_user_message(bot, message)
+    await message.answer(
+        f"✅ Название изменено: <b>{title}</b>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="◀️ К рассылке", callback_data=f"admin:post_view:{post_id}")]
+        ])
+    )
+
+
+async def cb_admin_post_delete(callback: CallbackQuery, state: FSMContext):
+    """Удаление рассылки."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+    post_id = int(callback.data.split(":")[3])
+    async with db() as conn:
+        await conn.execute("DELETE FROM posts WHERE id=?", (post_id,))
+        await conn.execute("DELETE FROM post_sends WHERE post_id=?", (post_id,))
+        await conn.commit()
+    await state.clear()
+    await callback.answer("🗑 Рассылка удалена")
+    await clean_edit(callback, callback.from_user.id,
+                     "🗑 Рассылка удалена.",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                         [InlineKeyboardButton(text="📋 К списку", callback_data="admin:posts_list")],
+                         [InlineKeyboardButton(text="⬅️ Главное", callback_data="admin:main")],
+                     ]))
+
+
 async def cb_admin_post_new(callback: CallbackQuery, state: FSMContext):
     """Начало создания рассылки."""
     if callback.from_user.id != ADMIN_ID:
@@ -9797,8 +9999,14 @@ async def post_waiting_content(message: Message, state: FSMContext, bot: Bot):
             await message.answer("Нужно текст или медиа 🙂")
             return
 
-    post_id = await create_post_draft(ADMIN_ID, media_type, media_file_id, text)
-    await state.update_data(post_id=post_id)
+    data = await state.get_data()
+    edit_mode = data.get("edit_mode", False)
+    if edit_mode:
+        post_id = data.get("post_id")
+        await update_post_content(post_id, media_type, media_file_id or "", text)
+    else:
+        post_id = await create_post_draft(ADMIN_ID, media_type, media_file_id, text)
+    await state.update_data(post_id=post_id, edit_mode=False)
     await state.set_state(PostFlow.waiting_confirm)
 
     preview_title = f"👁 <b>Превью рассылки</b>\n\n"
@@ -10155,31 +10363,44 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
             ])
 
     for uid in user_ids:
-        try:
-            if post["media_type"] == "photo":
-                await bot.send_photo(chat_id=uid, photo=post["media_file_id"],
-                                     caption=caption if caption else None,
-                                     reply_markup=post_reply_markup)
-            elif post["media_type"] == "video":
-                await bot.send_video(chat_id=uid, video=post["media_file_id"],
-                                     caption=caption if caption else None,
-                                     reply_markup=post_reply_markup)
-            else:
-                await bot.send_message(chat_id=uid, text=post.get("text") or "",
-                                       reply_markup=post_reply_markup)
-            ok += 1
-        except Exception as e:
-            fail += 1
+        for attempt in range(3):  # до 3 попыток на каждого пользователя
             try:
-                async with db() as conn:
-                    await conn.execute("""
-                        INSERT INTO post_sends (post_id, user_id, status, error, created_at)
-                        VALUES (?, ?, 'fail', ?, ?)
-                    """, (post_id, uid, str(e)[:500], datetime.utcnow().isoformat()))
-                    await conn.commit()
-            except Exception:
-                pass
-        await asyncio.sleep(0.03)
+                if post["media_type"] == "photo":
+                    await bot.send_photo(chat_id=uid, photo=post["media_file_id"],
+                                         caption=caption if caption else None,
+                                         reply_markup=post_reply_markup)
+                elif post["media_type"] == "video":
+                    await bot.send_video(chat_id=uid, video=post["media_file_id"],
+                                         caption=caption if caption else None,
+                                         reply_markup=post_reply_markup)
+                else:
+                    await bot.send_message(chat_id=uid, text=post.get("text") or "",
+                                           reply_markup=post_reply_markup)
+                ok += 1
+                break  # успешно — выходим из цикла попыток
+            except TelegramRetryAfter as e:
+                # Telegram просит подождать — слушаемся и повторяем
+                await asyncio.sleep(e.retry_after + 1)
+            except TelegramForbiddenError:
+                # Пользователь заблокировал бота — не повторяем
+                fail += 1
+                break
+            except Exception as e:
+                if attempt == 2:
+                    # Последняя попытка — фиксируем ошибку
+                    fail += 1
+                    try:
+                        async with db() as conn:
+                            await conn.execute("""
+                                INSERT INTO post_sends (post_id, user_id, status, error, created_at)
+                                VALUES (?, ?, 'fail', ?, ?)
+                            """, (post_id, uid, str(e)[:500], datetime.utcnow().isoformat()))
+                            await conn.commit()
+                    except Exception:
+                        pass
+                else:
+                    await asyncio.sleep(1)
+        await asyncio.sleep(0.05)  # ~20 msg/sec — безопасный темп для Telegram
 
     await set_post_status(post_id, "sent")
     await state.clear()
@@ -10388,6 +10609,12 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(post_waiting_button_url, PostFlow.waiting_button_url)
     dp.callback_query.register(cb_admin_find_user, F.data == "admin:find_user")
     dp.message.register(admin_find_user_input, AdminFlow.find_user_input)
+    dp.callback_query.register(cb_admin_posts_list, F.data == "admin:posts_list")
+    dp.callback_query.register(cb_admin_post_view, F.data.startswith("admin:post_view:"))
+    dp.callback_query.register(cb_admin_post_edit, F.data.startswith("admin:post_edit:"))
+    dp.callback_query.register(cb_admin_post_rename, F.data.startswith("admin:post_rename:"))
+    dp.callback_query.register(cb_admin_post_delete, F.data.startswith("admin:post_delete:"))
+    dp.message.register(admin_rename_post_input, AdminFlow.rename_post)
 
     dp.message.register(open_support_from_reply, F.text == "🆘 Поддержка")
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
