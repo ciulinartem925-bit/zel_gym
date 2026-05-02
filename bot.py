@@ -9794,7 +9794,7 @@ async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bo
         await callback.answer("Нет доступа", show_alert=True)
         return
 
-    post_id = int(callback.data.split(":")[3])
+    post_id = int(callback.data.split(":")[2])
     post = await get_post(post_id)
     if not post:
         await callback.answer("Пост не найден", show_alert=True)
@@ -9808,12 +9808,26 @@ async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bo
         btn_type = "Открыть бота" if post.get("btn_url") == "__open__" else post.get("btn_url", "")
         btn_info = f"\n🔗 Кнопка: {post['btn_text']} → {btn_type}"
 
+    # Статистика отправок
+    send_stats_info = ""
+    if post["status"] == "sent":
+        async with db() as conn:
+            async with conn.execute(
+                "SELECT status, COUNT(*) FROM post_sends WHERE post_id=? GROUP BY status", (post_id,)
+            ) as cur:
+                rows_stats = await cur.fetchall()
+        stats = {r[0]: r[1] for r in rows_stats}
+        ok_count = stats.get("ok", 0)
+        fail_count = stats.get("fail", 0)
+        send_stats_info = f"\n\n📊 <b>Статистика последней отправки:</b>\n✅ Доставлено: {ok_count}\n❌ Не доставлено: {fail_count}"
+
     text = (
         f"📋 <b>{title}</b>\n\n"
         f"Статус: {status}\n"
         f"Медиа: {media_type}\n"
         f"Дата: {(post.get('created_at') or '')[:10]}"
         f"{btn_info}"
+        f"{send_stats_info}"
     )
 
     rows = []
@@ -9822,6 +9836,8 @@ async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bo
         rows.append([InlineKeyboardButton(text="✏️ Изменить название", callback_data=f"admin:post_rename:{post_id}")])
         rows.append([InlineKeyboardButton(text="🔗 Кнопка", callback_data=f"post:set_btn:{post_id}")])
         rows.append([InlineKeyboardButton(text="✅ Отправить всем", callback_data=f"post:send:{post_id}")])
+    else:
+        rows.append([InlineKeyboardButton(text="📤 Дослать не получившим", callback_data=f"post:send:{post_id}")])
     rows.append([InlineKeyboardButton(text="🗑 Удалить", callback_data=f"admin:post_delete:{post_id}")])
     rows.append([InlineKeyboardButton(text="⬅️ К списку", callback_data="admin:posts_list")])
 
@@ -9856,7 +9872,7 @@ async def cb_admin_post_edit(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("Нет доступа", show_alert=True)
         return
-    post_id = int(callback.data.split(":")[3])
+    post_id = int(callback.data.split(":")[2])
     await state.update_data(post_id=post_id, edit_mode=True)
     await state.set_state(PostFlow.waiting_content)
     await callback.message.answer(
@@ -9874,7 +9890,7 @@ async def cb_admin_post_rename(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("Нет доступа", show_alert=True)
         return
-    post_id = int(callback.data.split(":")[3])
+    post_id = int(callback.data.split(":")[2])
     await state.update_data(post_id=post_id)
     await state.set_state(AdminFlow.rename_post)
     await callback.message.answer(
@@ -9914,7 +9930,7 @@ async def cb_admin_post_delete(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != ADMIN_ID:
         await callback.answer("Нет доступа", show_alert=True)
         return
-    post_id = int(callback.data.split(":")[3])
+    post_id = int(callback.data.split(":")[2])
     async with db() as conn:
         await conn.execute("DELETE FROM posts WHERE id=?", (post_id,))
         await conn.execute("DELETE FROM post_sends WHERE post_id=?", (post_id,))
@@ -10330,15 +10346,21 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
     if not post:
         await callback.answer("Пост не найден", show_alert=True)
         return
-    if post.get("status") == "sent":
-        await callback.answer("Уже отправлен", show_alert=True)
-        return
+    # Получаем тех, кому рассылка уже успешно дошла
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT user_id FROM post_sends WHERE post_id=? AND status='ok'", (post_id,)
+        ) as cur:
+            already_sent = {row[0] for row in await cur.fetchall()}
 
-    user_ids = await get_all_user_ids()
+    all_user_ids = await get_all_user_ids()
+    user_ids = [uid for uid in all_user_ids if uid not in already_sent]
     total = len(user_ids)
+    skipped = len(already_sent)
 
+    skip_info = f" (пропущено уже получивших: {skipped})" if skipped else ""
     await clean_edit(callback, callback.from_user.id,
-                     f"📤 Рассылаю {total} пользователям…")
+                     f"📤 Рассылаю {total} пользователям…{skip_info}")
     await callback.answer()
 
     ok = 0
@@ -10377,6 +10399,15 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
                     await bot.send_message(chat_id=uid, text=post.get("text") or "",
                                            reply_markup=post_reply_markup)
                 ok += 1
+                try:
+                    async with db() as conn:
+                        await conn.execute("""
+                            INSERT INTO post_sends (post_id, user_id, status, error, created_at)
+                            VALUES (?, ?, 'ok', NULL, ?)
+                        """, (post_id, uid, datetime.utcnow().isoformat()))
+                        await conn.commit()
+                except Exception:
+                    pass
                 break  # успешно — выходим из цикла попыток
             except TelegramRetryAfter as e:
                 # Telegram просит подождать — слушаемся и повторяем
@@ -10409,7 +10440,8 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
         f"✅ <b>Рассылка завершена</b>\n\n"
         f"📨 Отправлено: {ok}\n"
         f"❌ Ошибок: {fail}\n"
-        f"👥 Всего: {total}"
+        f"👥 Адресатов: {total}"
+        + (f"\n⏭ Уже получили ранее: {skipped}" if skipped else "")
     )
     await clean_send(bot, callback.message.chat.id, callback.from_user.id,
                      result_text, reply_markup=admin_main_kb())
