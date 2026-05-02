@@ -681,7 +681,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -9818,11 +9818,20 @@ async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bo
         if last_total:
             all_delivered = last_ok == last_total
             status_line = "✅ Дошло до всех!" if all_delivered else f"⚠️ Дошло не до всех"
+            # Считаем уникальных получивших за все отправки
+            async with db() as conn:
+                async with conn.execute(
+                    "SELECT COUNT(DISTINCT user_id) FROM post_sends WHERE post_id=? AND status='ok'", (post_id,)
+                ) as cur:
+                    unique_ok = (await cur.fetchone())[0]
+                async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+                    total_users = (await cur.fetchone())[0]
             send_stats_info = (
                 f"\n\n📊 <b>Статистика последней отправки:</b>\n"
                 f"{status_line}\n"
                 f"✅ Доставлено: {last_ok} из {last_total}\n"
-                f"❌ Не доставлено: {last_fail}"
+                f"❌ Не доставлено: {last_fail}\n"
+                f"\n👥 Всего охвачено уникальных: {unique_ok} из {total_users}"
             )
         else:
             # Старые данные до обновления — считаем из post_sends
