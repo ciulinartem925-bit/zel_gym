@@ -681,7 +681,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -4536,7 +4536,7 @@ async def get_post(post_id: int):
     async with db() as conn:
         async with conn.execute("""
             SELECT id, admin_id, post_media_type, post_media_file_id, post_text, status, created_at,
-                   btn_text, btn_url
+                   btn_text, btn_url, last_send_ok, last_send_fail, last_send_total
             FROM posts WHERE id=?
         """, (post_id,)) as cur:
             row = await cur.fetchone()
@@ -4545,7 +4545,8 @@ async def get_post(post_id: int):
     return {
         "id": row[0], "admin_id": row[1], "media_type": row[2],
         "media_file_id": row[3], "text": row[4], "status": row[5], "created_at": row[6],
-        "btn_text": row[7], "btn_url": row[8]
+        "btn_text": row[7], "btn_url": row[8],
+        "last_send_ok": row[9], "last_send_fail": row[10], "last_send_total": row[11]
     }
 
 
