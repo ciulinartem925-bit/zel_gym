@@ -4072,7 +4072,7 @@ async def init_db():
         )
         """)
         # Добавляем колонки если их нет (для существующих БД)
-        for _col in [("btn_text", "TEXT"), ("btn_url", "TEXT"), ("title", "TEXT")]:
+        for _col in [("btn_text", "TEXT"), ("btn_url", "TEXT"), ("title", "TEXT"), ("last_send_ok", "INTEGER"), ("last_send_fail", "INTEGER"), ("last_send_total", "INTEGER")]:
             try:
                 await conn.execute(f"ALTER TABLE posts ADD COLUMN {_col[0]} {_col[1]}")
             except Exception:
@@ -9811,28 +9811,40 @@ async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bo
     # Статистика отправок
     send_stats_info = ""
     if post["status"] == "sent":
-        async with db() as conn:
-            async with conn.execute(
-                "SELECT status, COUNT(*) FROM post_sends WHERE post_id=? GROUP BY status", (post_id,)
-            ) as cur:
-                rows_stats = await cur.fetchall()
-            async with conn.execute("SELECT COUNT(*) FROM users") as cur:
-                total_users = (await cur.fetchone())[0]
-        stats = {r[0]: r[1] for r in rows_stats}
-        ok_count = stats.get("ok", 0)
-        fail_count = stats.get("fail", 0)
-        # Если ok_count=0, значит старая версия бота не писала успехи —
-        # тогда доставлено = все пользователи минус зафиксированные ошибки
-        if ok_count == 0 and fail_count > 0:
-            delivered = total_users - fail_count
+        last_ok = post.get("last_send_ok")
+        last_fail = post.get("last_send_fail")
+        last_total = post.get("last_send_total")
+        if last_total:
+            all_delivered = last_ok == last_total
+            status_line = "✅ Дошло до всех!" if all_delivered else f"⚠️ Дошло не до всех"
+            send_stats_info = (
+                f"\n\n📊 <b>Статистика последней отправки:</b>\n"
+                f"{status_line}\n"
+                f"✅ Доставлено: {last_ok} из {last_total}\n"
+                f"❌ Не доставлено: {last_fail}"
+            )
         else:
-            delivered = ok_count
-        send_stats_info = (
-            f"\n\n📊 <b>Статистика последней отправки:</b>\n"
-            f"✅ Доставлено: {delivered}\n"
-            f"❌ Не доставлено: {fail_count}\n"
-            f"👥 Всего пользователей: {total_users}"
-        )
+            # Старые данные до обновления — считаем из post_sends
+            async with db() as conn:
+                async with conn.execute(
+                    "SELECT status, COUNT(*) FROM post_sends WHERE post_id=? GROUP BY status", (post_id,)
+                ) as cur:
+                    rows_stats = await cur.fetchall()
+                async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+                    total_users = (await cur.fetchone())[0]
+            stats = {r[0]: r[1] for r in rows_stats}
+            fail_count = stats.get("fail", 0)
+            ok_count = stats.get("ok", 0)
+            if ok_count == 0 and fail_count > 0:
+                delivered = total_users - fail_count
+            else:
+                delivered = ok_count
+            send_stats_info = (
+                f"\n\n📊 <b>Статистика последней отправки:</b>\n"
+                f"✅ Доставлено: {delivered}\n"
+                f"❌ Не доставлено: {fail_count}\n"
+                f"👥 Всего пользователей: {total_users}"
+            )
 
     text = (
         f"📋 <b>{title}</b>\n\n"
@@ -10359,17 +10371,36 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
     if not post:
         await callback.answer("Пост не найден", show_alert=True)
         return
-    # Получаем тех, кому рассылка уже успешно дошла
+    # Определяем кому досылать:
+    # - если есть записи 'ok' (новый бот) — пропускаем тех у кого ok
+    # - если есть только 'fail' (старый бот) — шлём только тем у кого fail
+    # - если таблица пустая — шлём всем
     async with db() as conn:
         async with conn.execute(
             "SELECT user_id FROM post_sends WHERE post_id=? AND status='ok'", (post_id,)
         ) as cur:
-            already_sent = {row[0] for row in await cur.fetchall()}
+            ok_sent = {row[0] for row in await cur.fetchall()}
+        async with conn.execute(
+            "SELECT user_id FROM post_sends WHERE post_id=? AND status='fail'", (post_id,)
+        ) as cur:
+            fail_sent = {row[0] for row in await cur.fetchall()}
 
     all_user_ids = await get_all_user_ids()
-    user_ids = [uid for uid in all_user_ids if uid not in already_sent]
+
+    if ok_sent:
+        # Новый бот: пропускаем тех, кому уже доставлено
+        user_ids = [uid for uid in all_user_ids if uid not in ok_sent]
+        skipped = len(ok_sent)
+    elif fail_sent:
+        # Старый бот: шлём только тем, до кого не дошло
+        user_ids = [uid for uid in all_user_ids if uid in fail_sent]
+        skipped = len(all_user_ids) - len(fail_sent)
+    else:
+        # Нет данных — шлём всем
+        user_ids = all_user_ids
+        skipped = 0
+
     total = len(user_ids)
-    skipped = len(already_sent)
 
     skip_info = f" (пропущено уже получивших: {skipped})" if skipped else ""
     await clean_edit(callback, callback.from_user.id,
@@ -10447,6 +10478,13 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
         await asyncio.sleep(0.05)  # ~20 msg/sec — безопасный темп для Telegram
 
     await set_post_status(post_id, "sent")
+    # Сохраняем результат последней отправки
+    async with db() as conn:
+        await conn.execute(
+            "UPDATE posts SET last_send_ok=?, last_send_fail=?, last_send_total=? WHERE id=?",
+            (ok, fail, total, post_id)
+        )
+        await conn.commit()
     await state.clear()
 
     result_text = (
