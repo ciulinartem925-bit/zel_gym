@@ -9816,10 +9816,23 @@ async def cb_admin_post_view(callback: CallbackQuery, state: FSMContext, bot: Bo
                 "SELECT status, COUNT(*) FROM post_sends WHERE post_id=? GROUP BY status", (post_id,)
             ) as cur:
                 rows_stats = await cur.fetchall()
+            async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+                total_users = (await cur.fetchone())[0]
         stats = {r[0]: r[1] for r in rows_stats}
         ok_count = stats.get("ok", 0)
         fail_count = stats.get("fail", 0)
-        send_stats_info = f"\n\n📊 <b>Статистика последней отправки:</b>\n✅ Доставлено: {ok_count}\n❌ Не доставлено: {fail_count}"
+        # Если ok_count=0, значит старая версия бота не писала успехи —
+        # тогда доставлено = все пользователи минус зафиксированные ошибки
+        if ok_count == 0 and fail_count > 0:
+            delivered = total_users - fail_count
+        else:
+            delivered = ok_count
+        send_stats_info = (
+            f"\n\n📊 <b>Статистика последней отправки:</b>\n"
+            f"✅ Доставлено: {delivered}\n"
+            f"❌ Не доставлено: {fail_count}\n"
+            f"👥 Всего пользователей: {total_users}"
+        )
 
     text = (
         f"📋 <b>{title}</b>\n\n"
