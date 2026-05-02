@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как питаться для результата</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 580px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper { max-width: 820px; margin: 0 auto; padding: 56px 20px 100px; }
+
+  .intro-card {
+    background: var(--dark); border-radius: 24px;
+    padding: 36px 40px; margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: var(--dark); font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* Три кита */
+  .pillar-list { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+
+  .pillar-item {
+    background: #fff; border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    display: flex; overflow: hidden;
+  }
+
+  .pillar-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 0.72rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    writing-mode: vertical-rl; text-orientation: mixed;
+    transform: rotate(180deg); padding: 22px 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; min-width: 42px;
+  }
+
+  .pillar-body { padding: 24px 26px; flex: 1; }
+  .pillar-body h3 { color: var(--dark); margin-bottom: 8px; }
+  .pillar-body p  { font-size: 0.92rem; color: #3a4e3b; margin-bottom: 8px; }
+
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px; margin-top: 10px;
+    font-size: 0.9rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* Таблица макро */
+  .macro-table {
+    width: 100%; border-collapse: collapse;
+    margin-top: 16px; background: #fff;
+    border-radius: 14px; overflow: hidden; font-size: 0.88rem;
+  }
+
+  .macro-table th {
+    background: var(--dark); color: var(--mint);
+    font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 11px 14px; text-align: left;
+  }
+
+  .macro-table td {
+    padding: 10px 14px; color: #3a4e3b;
+    border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .macro-table tr:last-child td { border-bottom: none; }
+  .macro-table td:first-child { font-weight: 700; color: var(--dark); }
+
+  /* Примеры еды — карточки */
+  .food-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-top: 16px;
+  }
+
+  @media(max-width: 520px) { .food-grid { grid-template-columns: 1fr; } }
+
+  .food-card {
+    background: var(--cream); border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .food-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 6px;
+  }
+
+  .food-item {
+    font-size: 0.87rem; color: #3a4e3b;
+    margin-bottom: 4px; display: flex; gap: 6px;
+  }
+
+  .food-item:last-child { margin-bottom: 0; }
+  .food-item b { color: var(--dark); }
+
+  /* Мифы */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px; padding: 28px 32px; margin: 52px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* Ошибки */
+  .mistake-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+
+  .mistake-row {
+    display: flex; gap: 14px; background: #fff;
+    border-radius: 14px; padding: 16px 20px;
+    border: 1.5px solid rgba(42,103,44,0.08); align-items: flex-start;
+  }
+
+  .m-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .m-dot.red    { background: #ef4444; }
+  .m-dot.yellow { background: #f59e0b; }
+
+  .m-title { font-weight: 700; font-size: 0.93rem; color: var(--dark); margin-bottom: 3px; }
+  .m-desc  { font-size: 0.87rem; color: #556b56; }
+
+  /* Финал */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 44px 36px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px; padding: 32px 36px;
+    background: #fff; border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; background: var(--cream);
+    border-radius: 12px; font-size: 0.92rem;
+    color: #3a4e3b; line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow { color: var(--green); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Мобильная адаптация ── */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .wrapper {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .deload-table, .macro-table, .cardio-table,
+  .timeline-table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Шаги — вертикальная нумерация горизонтально на мобиле */
+  .step-item, .pillar-item {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .step-num, .pillar-num {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .step-body, .pillar-body {
+    padding: 16px !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Карточки с иконкой слева */
+  .goal-item {
+    flex-direction: column !important;
+  }
+
+  .goal-icon-col {
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Гриды — один столбец */
+  .reason-grid, .answer-grid, .compare-grid,
+  .food-grid, .ex-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tip-card header */
+  .tip-header {
+    flex-wrap: wrap;
+    padding: 14px 16px !important;
+  }
+
+  .tip-body {
+    padding: 14px 16px !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 48px 5vw 72px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.7rem, 7vw, 3rem) !important;
+    word-break: break-word;
+  }
+
+  /* Карточки — нормальный padding */
+  .intro-card, .final-card, .myth-box,
+  .bot-card, .science-card, .read-also {
+    padding: 24px 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Строки примеров */
+  .ex-row {
+    flex-wrap: wrap;
+  }
+
+  /* Пилюли */
+  .final-pills { gap: 8px; }
+  .pill { font-size: 0.78rem; padding: 7px 12px; }
+
+  /* Таблицы внутри step-body */
+  .step-body table, .pillar-body table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Питание</div>
+  <h1>Как питаться <em>для результата</em></h1>
+  <p class="hero-sub">Три параметра определяют 90% результата в питании. Остальное — детали.</p>
+  <div class="hero-badge"><span>🍽️</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Большинство вопросов про питание сводятся к одному: что и сколько есть. Ответ зависит от цели, но принцип один для всех — нужно попадать в нужный баланс калорий и получать достаточно белка.</p>
+    <p><strong>Качество продуктов важно, но вторично. Первичны три параметра: калории, белок и жиры. Когда они в норме — тело меняется в нужную сторону вне зависимости от типа диеты.</strong></p>
+  </div>
+
+  <!-- ТРИ ПАРАМЕТРА -->
+  <div class="section-label">Основа</div>
+  <h2>Три параметра которые решают всё</h2>
+  <div class="divider"></div>
+
+  <div class="pillar-list">
+
+    <div class="pillar-item">
+      <div class="pillar-num">1</div>
+      <div class="pillar-body">
+        <h3>Калории — определяют направление</h3>
+        <p>Если ешь больше чем тратишь — вес растёт. Если меньше — снижается. Это не зависит от типа продуктов, времени приёма пищи или других факторов. Калории первичны.</p>
+        <p>Твоя норма калорий рассчитана в боте в разделе Питание. От неё отталкиваются все остальные цифры.</p>
+        <table class="macro-table">
+          <thead>
+            <tr>
+              <th>Цель</th>
+              <th>Калории</th>
+              <th>Изменение от нормы</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Набор массы</td><td>Профицит</td><td>+200–300 ккал</td></tr>
+            <tr><td>Сушка</td><td>Дефицит</td><td>−300–500 ккал</td></tr>
+            <tr><td>Поддержание</td><td>Норма</td><td>±0 ккал</td></tr>
+          </tbody>
+        </table>
+        <div class="note-box">
+          Большой профицит на наборе не ускоряет рост мышц, но увеличивает набор жира. Большой дефицит на сушке ускоряет потерю мышц. Умеренные отклонения — оптимальный вариант.
+        </div>
+      </div>
+    </div>
+
+    <div class="pillar-item">
+      <div class="pillar-num">2</div>
+      <div class="pillar-body">
+        <h3>Белок — определяет состав тела</h3>
+        <p>Мышечная ткань строится из аминокислот, которые поступают с белком. При недостатке белка мышцы не растут при наборе и разрушаются при дефиците — даже если калории в норме.</p>
+        <table class="macro-table">
+          <thead>
+            <tr>
+              <th>Цель</th>
+              <th>Белок г/кг веса</th>
+              <th>Пример при 75 кг</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Набор массы</td><td>2.0 г/кг</td><td>150 г/день</td></tr>
+            <tr><td>Сушка</td><td>2.2 г/кг</td><td>165 г/день</td></tr>
+            <tr><td>Поддержание</td><td>1.6–2.0 г/кг</td><td>120–150 г/день</td></tr>
+          </tbody>
+        </table>
+        <div class="note-box">
+          На сушке белка нужно больше, чем при наборе — он защищает мышцы от разрушения при дефиците калорий.
+        </div>
+        <div style="margin-top: 16px;">
+          <p style="font-size: 0.9rem; font-weight: 700; color: var(--dark); margin-bottom: 10px;">Продукты с высоким содержанием белка:</p>
+          <div class="food-grid">
+            <div class="food-card">
+              <div class="food-label">Мясо и птица</div>
+              <div class="food-item">🍗 <span>Куриная грудка 100 г — <b>23 г</b></span></div>
+              <div class="food-item">🥩 <span>Говядина 100 г — <b>20 г</b></span></div>
+              <div class="food-item">🐟 <span>Тунец 100 г — <b>22 г</b></span></div>
+            </div>
+            <div class="food-card">
+              <div class="food-label">Молочные продукты</div>
+              <div class="food-item">🧀 <span>Творог 100 г — <b>17 г</b></span></div>
+              <div class="food-item">🥛 <span>Кефир 300 мл — <b>9 г</b></span></div>
+              <div class="food-item">🍳 <span>Яйцо 1 шт — <b>6 г</b></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pillar-item">
+      <div class="pillar-num">3</div>
+      <div class="pillar-body">
+        <h3>Жиры — минимум который нельзя убирать</h3>
+        <p>Жиры необходимы для выработки тестостерона и других гормонов, усвоения жирорастворимых витаминов и нормальной работы нервной системы. При снижении жиров ниже 0.8–1.0 г/кг нарушается гормональный фон.</p>
+        <p>Ориентир: не менее 1.0 г/кг веса тела в день. При 75 кг — это минимум 75 г жира в день. Убирать жиры ниже этого уровня ради экономии калорий — ошибка.</p>
+        <div class="note-box">
+          Углеводы можно варьировать под свою цель — снижать при сушке, повышать при наборе. Но жиры ниже минимума убирать не стоит.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- МИФЫ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Частые заблуждения</div>
+    <h3>«Углеводы после 18:00 приводят к набору жира»</h3>
+    <p>Время приёма пищи не влияет на состав тела при одинаковом суточном балансе калорий. Вес растёт от избытка калорий за день, а не от времени их употребления.</p>
+    <p><b>«Нужно убрать углеводы — тогда жир пойдёт»</b> — при одинаковом дефиците калорий низкоуглеводные и обычные диеты дают одинаковый результат через 6–12 месяцев. Главное — дефицит, а не соотношение макронутриентов.</p>
+  </div>
+
+  <!-- ОШИБКИ -->
+  <div class="section-gap">
+    <div class="section-label">Частые ошибки</div>
+    <h2>Что чаще всего идёт не так</h2>
+    <div class="divider"></div>
+
+    <div class="mistake-list">
+      <div class="mistake-row">
+        <div class="m-dot red"></div>
+        <div>
+          <div class="m-title">Оценивать еду на глаз</div>
+          <div class="m-desc">Люди в среднем ошибаются в оценке калорийности на 30–47%. Горсть гречки — это 40 г у одного человека и 120 г у другого. Без весов точного подсчёта не будет.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot red"></div>
+        <div>
+          <div class="m-title">Не считать жиры при готовке</div>
+          <div class="m-desc">Столовая ложка масла на сковороду — это 90–120 ккал. При трёх приёмах пищи в день это 270–360 незамеченных ккал. Масло нужно взвешивать до добавления.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot red"></div>
+        <div>
+          <div class="m-title">Взвешивать крупы после варки</div>
+          <div class="m-desc">Варёный рис весит в 3 раза больше сухого. Если взвешивать после варки и искать «рис варёный» в приложении — считаешь треть реальных калорий. Всегда взвешивай до приготовления.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot yellow"></div>
+        <div>
+          <div class="m-title">Смотреть на один день, а не на среднее за неделю</div>
+          <div class="m-desc">Вес колеблется на 1–2 кг из-за воды, соли и содержимого желудка. Один замер ничего не показывает. Нужно среднее за 7 дней — оно показывает реальный тренд.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot yellow"></div>
+        <div>
+          <div class="m-title">Менять всё сразу</div>
+          <div class="m-desc">Если одновременно изменить калории, белок и режим питания — непонятно что сработало. Одно изменение, две недели наблюдений, потом следующее.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ПЕРВЫЙ ШАГ -->
+  <div class="section-gap">
+    <div class="section-label">С чего начать</div>
+    <h2>Один первый шаг</h2>
+    <div class="divider"></div>
+    <p>Не нужно менять всё сразу. Один конкретный первый шаг, который даёт результат за 2–3 недели:</p>
+    <div class="note-box" style="margin-top: 0;">
+      Добавь белковый продукт к каждому приёму пищи. Курица, яйца, творог, рыба, кефир — что угодно. Это одно изменение увеличивает суточное потребление белка до нужного уровня без подсчёта калорий и кардинальной смены рациона.<br><br>
+      Когда это войдёт в привычку — подключай подсчёт калорий с весами.
+    </div>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Попадай в нужный баланс калорий под свою цель, потребляй 2.0–2.2 г белка на кг веса, не убирай жиры ниже 1.0 г/кг. Взвешивай еду — без этого точного подсчёта не будет. Меняй одно и жди две недели.</p>
+    <div class="final-pills">
+      <div class="pill">Калории под цель</div>
+      <div class="pill">2.0–2.2 г белка/кг</div>
+      <div class="pill">Весы для еды</div>
+      <div class="pill">Одно изменение за раз</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как точно считать калории и не ошибаться — в <b>«Как правильно считать калории»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Вес не растёт при наборе — что проверить — в <b>«Вес стоит на массе»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Вес не снижается при сушке — что проверить — в <b>«Вес стоит на сушке»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как есть больше без дискомфорта при наборе — в <b>«Фишки при массанаборе»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как держать дефицит без срывов — в <b>«Фишки при сушке»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как подобрать рабочий вес</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1;
+    color: #fff;
+    max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px;
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px;
+    font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px;
+    border-radius: 50px;
+    color: #fff;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem;
+    line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300;
+    margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark);
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 22px;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    color: var(--dark);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px;
+    margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* ── ШАГИ ── */
+  .method-block {
+    margin: 28px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .method-step {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+    display: flex;
+    overflow: hidden;
+  }
+
+  .method-step-num {
+    background: var(--dark);
+    color: var(--mint);
+    font-weight: 900;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 22px 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 42px;
+  }
+
+  .method-step-body {
+    padding: 24px 26px;
+    flex: 1;
+  }
+
+  .method-step-body h3 {
+    margin-bottom: 10px;
+    color: var(--dark);
+  }
+
+  .method-step-body p {
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    margin-bottom: 10px;
+  }
+
+  /* ── ТАБЛИЦА ПРОЦЕНТОВ ── */
+  .pct-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    font-size: 0.9rem;
+  }
+
+  .pct-table th {
+    background: var(--dark);
+    color: var(--mint);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  .pct-table td {
+    padding: 11px 16px;
+    color: #3a4e3b;
+    border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .pct-table tr:last-child td { border-bottom: none; }
+  .pct-table td:first-child { font-weight: 700; color: var(--dark); }
+
+  /* ── ПРИМЕР КГ ── */
+  .example-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  @media(max-width: 520px) { .example-grid { grid-template-columns: 1fr; } }
+
+  .eg-card {
+    background: var(--cream);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .eg-card.highlight { background: var(--mint); }
+
+  .eg-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+
+  .eg-card.highlight .eg-label { color: var(--darkest); }
+
+  .eg-data {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 4px;
+  }
+
+  .eg-note {
+    font-size: 0.77rem;
+    color: #6a8a6b;
+    line-height: 1.4;
+  }
+
+  .eg-card.highlight .eg-note { color: var(--darkest); font-weight: 600; }
+
+  /* ── NOTE BOX ── */
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 14px 14px 0;
+    padding: 16px 22px;
+    margin-top: 14px;
+    font-size: 0.92rem;
+    color: var(--dark);
+    font-weight: 500;
+    line-height: 1.65;
+  }
+
+  /* ── ОЩУЩЕНИЯ: светофор ── */
+  .feel-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .feel-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 20px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .feel-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .feel-dot.green  { background: #22c55e; }
+  .feel-dot.yellow { background: #f59e0b; }
+  .feel-dot.red    { background: #ef4444; }
+
+  .feel-title { font-weight: 700; font-size: 0.94rem; color: var(--dark); margin-bottom: 3px; }
+  .feel-desc  { font-size: 0.87rem; color: #556b56; }
+
+  /* ── МИФ ── */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px;
+    padding: 30px 34px;
+    margin: 56px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.15rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* ── СОВЕТЫ ── */
+  .tips-section { margin: 56px 0; }
+  .tips-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .tip-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .tip-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .tip-content h3 { font-size: 0.96rem; margin-bottom: 4px; }
+  .tip-content p  { font-size: 0.88rem; color: #556b56; }
+
+  /* ── ФИНАЛ ── */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px;
+    padding: 46px 38px;
+    text-align: center;
+    margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills {
+    display: flex; flex-wrap: wrap;
+    gap: 10px; justify-content: center;
+  }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px;
+    border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: var(--dark);
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--green); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+
+  /* ── Мобильная адаптация ── */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .wrapper {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .deload-table, .macro-table, .cardio-table,
+  .timeline-table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Шаги — вертикальная нумерация горизонтально на мобиле */
+  .step-item, .pillar-item {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .step-num, .pillar-num {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .step-body, .pillar-body {
+    padding: 16px !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Карточки с иконкой слева */
+  .goal-item {
+    flex-direction: column !important;
+  }
+
+  .goal-icon-col {
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Гриды — один столбец */
+  .reason-grid, .answer-grid, .compare-grid,
+  .food-grid, .ex-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tip-card header */
+  .tip-header {
+    flex-wrap: wrap;
+    padding: 14px 16px !important;
+  }
+
+  .tip-body {
+    padding: 14px 16px !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 48px 5vw 72px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.7rem, 7vw, 3rem) !important;
+    word-break: break-word;
+  }
+
+  /* Карточки — нормальный padding */
+  .intro-card, .final-card, .myth-box,
+  .bot-card, .science-card, .read-also {
+    padding: 24px 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Строки примеров */
+  .ex-row {
+    flex-wrap: wrap;
+  }
+
+  /* Пилюли */
+  .final-pills { gap: 8px; }
+  .pill { font-size: 0.78rem; padding: 7px 12px; }
+
+  /* Таблицы внутри step-body */
+  .step-body table, .pillar-body table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+
+  /* Мобильный фикс .method-step */
+  @media (max-width: 600px) {
+    .method-step {
+      flex-direction: column !important;
+      overflow: visible !important;
+    }
+    .method-step-num {
+      writing-mode: horizontal-tb !important;
+      transform: none !important;
+      width: 100% !important;
+      min-width: unset !important;
+      padding: 8px 16px !important;
+      font-size: 0.72rem;
+      text-align: left;
+    }
+    .method-step-body {
+      padding: 16px !important;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      max-width: 100%;
+    }
+    .method-step-body p,
+    .method-step-body h3 {
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки</div>
+  <h1>Как подобрать <em>рабочий вес</em></h1>
+  <p class="hero-sub">Вес слишком лёгкий — нет стимула. Слишком тяжёлый — ломается техника. Разбираем, как найти правильную точку.</p>
+  <div class="hero-badge"><span>⚖️</span> Читать 3 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Многие берут вес наугад — либо слишком легко, либо через не могу. Оба варианта плохи.</p>
+    <p><strong>Правильный вес — когда последние 2–3 повторения трудные, но технику ты держишь до конца.</strong> Это главный ориентир. Всё остальное — вспомогательные инструменты.</p>
+  </div>
+
+  <!-- ГЛАВНОЕ ПРАВИЛО -->
+  <div class="section-label">Главное</div>
+  <h2>Ощущения — лучший критерий</h2>
+  <div class="divider"></div>
+  <p>Никакая формула не заменит то, что ты чувствуешь в подходе. Исследования показывают: мышцы растут, когда работа выполняется близко к отказу — то есть когда последние повторения даются с настоящим усилием.</p>
+
+  <div class="feel-grid" style="margin-top: 20px;">
+    <div class="feel-row">
+      <div class="feel-dot green"></div>
+      <div>
+        <div class="feel-title">✅ Вес подобран правильно</div>
+        <div class="feel-desc">Последние 2–3 повторения тяжёлые, но техника держится. Ещё одно повторение — уже с трудом или вообще не получится.</div>
+      </div>
+    </div>
+    <div class="feel-row">
+      <div class="feel-dot yellow"></div>
+      <div>
+        <div class="feel-title">⚠️ Вес слишком лёгкий</div>
+        <div class="feel-desc">После последнего повторения мог бы сделать ещё пять и более. Стимула для роста нет — прогресса не будет.</div>
+      </div>
+    </div>
+    <div class="feel-row">
+      <div class="feel-dot red"></div>
+      <div>
+        <div class="feel-title">❌ Вес слишком тяжёлый</div>
+        <div class="feel-desc">Техника разваливается в середине подхода. Работают не те мышцы, растёт риск травмы. Снизь вес — это не слабость, это разум.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ШАГИ -->
+  <div class="section-gap">
+    <div class="section-label">Как найти вес</div>
+    <h2>Простой способ подобрать стартовую точку</h2>
+    <div class="divider"></div>
+    <p>Если ты не знаешь, с чего начать — есть удобный ориентир. Он не точный, но даёт хорошую стартовую точку.</p>
+
+    <div class="method-block">
+
+      <div class="method-step">
+        <div class="method-step-num">Шаг 1</div>
+        <div class="method-step-body">
+          <h3>Посчитай примерный максимум по формуле</h3>
+          <p>Возьми любой знакомый вес и число повторений, которые ты с ним делаешь. Подставь в формулу:</p>
+          <p><strong>Максимум ≈ вес × (1 + повторения ÷ 30)</strong></p>
+          <p>Это популярная формула Эпли — она даёт приблизительный результат с погрешностью около 5–10%, но для старта этого достаточно.</p>
+          <div class="example-grid">
+            <div class="eg-card">
+              <div class="eg-label">Твои данные</div>
+              <div class="eg-data">60 кг · 10 повт.</div>
+              <div class="eg-note">рабочий вес и число повторений</div>
+            </div>
+            <div class="eg-card">
+              <div class="eg-label">Считаем</div>
+              <div class="eg-data">60 × (1 + 10÷30)</div>
+              <div class="eg-note">подставляем в формулу</div>
+            </div>
+            <div class="eg-card highlight">
+              <div class="eg-label">Примерный максимум</div>
+              <div class="eg-data">≈ 80 кг</div>
+              <div class="eg-note">от него берём нужный процент</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="method-step">
+        <div class="method-step-num">Шаг 2</div>
+        <div class="method-step-body">
+          <h3>Возьми процент от максимума под свою цель</h3>
+          <p>Это общепринятые ориентиры — не строгие правила, а удобная отправная точка:</p>
+          <table class="pct-table">
+            <thead>
+              <tr>
+                <th>Цель</th>
+                <th>Примерно % от макс.</th>
+                <th>Повторения</th>
+                <th>Пример (макс. 80 кг)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Сила</td>
+                <td>80–95%</td>
+                <td>1–5</td>
+                <td>64–76 кг</td>
+              </tr>
+              <tr>
+                <td>Масса</td>
+                <td>60–80%</td>
+                <td>6–15</td>
+                <td>48–64 кг</td>
+              </tr>
+              <tr>
+                <td>Сушка</td>
+                <td>55–75%</td>
+                <td>10–20</td>
+                <td>44–60 кг</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="note-box">
+            Диапазоны широкие — и это нормально. Главное не попасть точно в процент, а найти вес, при котором последние повторения даются с трудом. Начни с нижней границы и двигайся вверх.
+          </div>
+        </div>
+      </div>
+
+      <div class="method-step">
+        <div class="method-step-num">Шаг 3</div>
+        <div class="method-step-body">
+          <h3>Проверь по ощущениям — и скорректируй</h3>
+          <p>Сделай подход и честно оцени: последние повторения были тяжёлыми? Техника держалась? Если да — вес подходит. Если слишком легко — добавь. Если техника поплыла — убери.</p>
+          <p>Ощущения важнее любой формулы. Формула — это только стартовая точка.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Распространённое заблуждение</div>
+    <h3>«Чем тяжелее — тем лучше»</h3>
+    <p>Если техника разваливается — нагрузка уходит с нужной мышцы на суставы. Ты не тренируешь мышцу, ты её перегружаешь не там где нужно.</p>
+    <p>10 чистых повторений с 60 кг дадут больше, чем 6 корявых с 80 кг. Техника — это не про красоту, это про то, куда идёт нагрузка.</p>
+  </div>
+
+  <!-- СОВЕТЫ -->
+  <div class="tips-section">
+    <div class="section-label">Практика</div>
+    <h2>Несколько простых правил</h2>
+    <div class="divider"></div>
+    <ul class="tips-list">
+      <li class="tip-item">
+        <div class="tip-icon">🔽</div>
+        <div class="tip-content">
+          <h3>Первый раз — бери чуть легче</h3>
+          <p>Лучше начать с меньшего веса и сделать чисто, чем взять много и потерять технику. Потом всегда можно добавить.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">📈</div>
+        <div class="tip-content">
+          <h3>Повышай вес маленькими шагами</h3>
+          <p>Когда вес стал лёгким — добавляй понемногу. В базовых упражнениях (жим, присед, тяга) — примерно 2.5 кг. В изолирующих (бицепс, трицепс) — 1–2 кг. Не торопись.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🔄</div>
+        <div class="tip-content">
+          <h3>В плохой день — вес можно снизить</h3>
+          <p>Плохой сон, усталость, стресс — всё это снижает твои силовые. Если сегодня идёт тяжелее — это нормально. Работай с тем весом, при котором держишь технику.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">📓</div>
+        <div class="tip-content">
+          <h3>Записывай вес каждую тренировку</h3>
+          <p>Без записей сложно понять, прогрессируешь ты или топчешься на месте. Используй дневник в боте — там это легко.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко о главном</h2>
+    <p>Правильный вес — когда последние повторения тяжёлые, но техника держится. Формула даёт стартовую точку, проценты — ориентир, но решают ощущения. Начинай легче и добавляй постепенно.</p>
+    <div class="final-pills">
+      <div class="pill">Ощущения важнее формул</div>
+      <div class="pill">Техника прежде всего</div>
+      <div class="pill">Маленькие шаги вверх</div>
+      <div class="pill">Записывай веса</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Нашёл рабочий вес — разберись как его повышать в <b>«Как прогрессировать в тренировках»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Тренируешься на силу — читай <b>«Как увеличить силу»</b>, там отдельная логика работы с весом</span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

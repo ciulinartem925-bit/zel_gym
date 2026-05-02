@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вес стоит — что делать</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: var(--dark); font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* ── НАУЧ. ФАКТ ── */
+  .science-card {
+    background: linear-gradient(135deg, var(--darkest), var(--dark));
+    border-radius: 20px; padding: 32px 36px; margin: 0 0 52px;
+  }
+
+  .science-tag {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 12px;
+  }
+
+  .science-card h3 { color: #fff; font-size: 1.2rem; margin-bottom: 12px; line-height: 1.35; }
+
+  .science-card p {
+    color: rgba(201,235,190,0.85);
+    font-size: 0.97rem; font-weight: 300; margin-bottom: 12px;
+  }
+
+  .science-card p:last-child { margin-bottom: 0; }
+  .science-card p strong { color: #fff; font-weight: 700; }
+
+  /* ── ПРИЧИНЫ ── */
+  .cause-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .cause-header {
+    display: flex; align-items: center; gap: 18px;
+    padding: 20px 26px;
+    background: rgba(42,103,44,0.04);
+    border-bottom: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .cause-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 1rem;
+    width: 40px; height: 40px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cause-header h3 { margin: 0; font-size: 1.02rem; }
+
+  .cause-body { padding: 22px 26px; }
+  .cause-body p { font-size: 0.95rem; color: #3a4e3b; margin-bottom: 12px; }
+  .cause-body p:last-child { margin-bottom: 0; }
+
+  /* ── ПРИМЕР ── */
+  .example-box {
+    background: var(--cream);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 14px;
+  }
+
+  .example-label {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 12px;
+  }
+
+  .ex-row {
+    display: flex; align-items: flex-start;
+    gap: 10px; margin-bottom: 9px;
+    font-size: 0.9rem; color: #3a4e3b;
+  }
+
+  .ex-row:last-child { margin-bottom: 0; }
+  .ex-row .ico { flex-shrink: 0; width: 20px; text-align: center; }
+  .ex-row strong { color: var(--dark); }
+
+  /* ── NOTE ── */
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 14px 14px 0;
+    padding: 15px 20px; margin-top: 14px;
+    font-size: 0.92rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* ── МИФ ── */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b; border-radius: 20px;
+    padding: 28px 32px; margin: 56px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* ── ЧТО ДЕЛАТЬ ── */
+  .action-section {
+    background: linear-gradient(135deg, var(--mint) 0%, var(--cream) 100%);
+    border-radius: 24px; padding: 36px 34px; margin: 56px 0;
+  }
+
+  .action-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+
+  .action-step {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+
+  .action-step-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 0.9rem;
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  .action-step h3 { font-size: 0.97rem; margin-bottom: 5px; }
+  .action-step p  { font-size: 0.88rem; color: #556b56; margin: 0; }
+
+  /* ── СОВЕТЫ ── */
+  .tips-section { margin-top: 56px; }
+  .tips-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .tip-item {
+    display: flex; align-items: flex-start; gap: 16px;
+    background: #fff; border-radius: 16px; padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .tip-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .tip-content h3 { font-size: 0.96rem; margin-bottom: 4px; }
+  .tip-content p  { font-size: 0.88rem; color: #556b56; }
+
+  /* ── ФИНАЛ ── */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 46px 38px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: var(--dark);
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--green); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+
+  /* ── Мобильная адаптация ── */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .wrapper {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .deload-table, .macro-table, .cardio-table,
+  .timeline-table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Шаги — вертикальная нумерация горизонтально на мобиле */
+  .step-item, .pillar-item {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .step-num, .pillar-num {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .step-body, .pillar-body {
+    padding: 16px !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Карточки с иконкой слева */
+  .goal-item {
+    flex-direction: column !important;
+  }
+
+  .goal-icon-col {
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Гриды — один столбец */
+  .reason-grid, .answer-grid, .compare-grid,
+  .food-grid, .ex-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tip-card header */
+  .tip-header {
+    flex-wrap: wrap;
+    padding: 14px 16px !important;
+  }
+
+  .tip-body {
+    padding: 14px 16px !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 48px 5vw 72px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.7rem, 7vw, 3rem) !important;
+    word-break: break-word;
+  }
+
+  /* Карточки — нормальный padding */
+  .intro-card, .final-card, .myth-box,
+  .bot-card, .science-card, .read-also {
+    padding: 24px 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Строки примеров */
+  .ex-row {
+    flex-wrap: wrap;
+  }
+
+  /* Пилюли */
+  .final-pills { gap: 8px; }
+  .pill { font-size: 0.78rem; padding: 7px 12px; }
+
+  /* Таблицы внутри step-body */
+  .step-body table, .pillar-body table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Питание · Набор массы</div>
+  <h1>Вес стоит — <em>что делать</em></h1>
+  <p class="hero-sub">Тренируешься, стараешься — а вес не растёт. Разбираем почему и что с этим делать.</p>
+  <div class="hero-badge"><span>💪</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Для роста мышц нужны три условия: нагрузка с прогрессией, достаточное питание и нормальный сон. Если вес не растёт — одного из них не хватает.
+    Чаще всего проблема в питании — не в качестве продуктов, а в том, что калорий или белка физически не хватает для роста.</p>
+  </div>
+
+  <!-- НАУЧНЫЙ ФАКТ -->
+  <div class="science-card">
+    <div class="science-tag">🔬 Научный факт</div>
+    <h3>Для роста мышц нужен профицит калорий и достаточно белка</h3>
+    <p>Для роста мышц нужно 1.6–2.2 г белка на кг веса тела в день. При нехватке белка мышцы не растут даже при правильных тренировках.
+    Для набора мышечной массы нужен небольшой профицит калорий — около 200–300 ккал сверх нормы. Больший профицит не ускоряет рост мышц, но увеличивает набор жира.</p>
+  </div>
+
+  <!-- ПРИЧИНЫ -->
+  <div class="section-label">Три причины</div>
+  <h2>Почему вес стоит при наборе</h2>
+  <div class="divider"></div>
+  <p>Разбери каждую по очереди — почти всегда находится одна из них.</p>
+
+  <div style="margin-top: 24px;">
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">1</div>
+        <h3>Не хватает калорий</h3>
+      </div>
+      <div class="cause-body">
+        <p>Это самая частая причина. Многие думают, что едят много — но на деле просто закрывают норму поддержания, а не создают профицит. Чтобы весы пошли вверх, нужно есть <strong>больше, чем тратишь.</strong></p>
+        <p>При активных тренировках суточный расход легко достигает 2800–3200 ккал. Если ешь на 2500 — роста не будет, даже при идеальном белке и тренировках.</p>
+        <div class="example-box">
+          <div class="example-label">Простые способы добавить 200–300 ккал</div>
+          <div class="ex-row"><div class="ico">🍌</div><div>Банан + стакан молока к завтраку — <strong>+200 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🥣</div><div>Увеличь порцию крупы на 50 г — <strong>+170 ккал</strong></div></div>
+          <div class="ex-row"><div class="ico">🧀</div><div>Творог 200 г перед сном — <strong>+160 ккал и +35 г белка</strong></div></div>
+          <div class="ex-row"><div class="ico">🫒</div><div>Добавь ст.л. масла к еде — <strong>+120 ккал</strong></div></div>
+        </div>
+        <div class="note-box">
+          💡 Если вес не растёт 2 недели — добавь 200 ккал в день и жди ещё 2 недели. Не нужно сразу есть в два раза больше.
+        </div>
+      </div>
+    </div>
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">2</div>
+        <h3>Не хватает белка</h3>
+      </div>
+      <div class="cause-body">
+        <p>Тело строит мышцы из белка. Если белка не хватает — мышцы не растут, даже если калорий достаточно. Многие едят 80–100 г белка в день и думают что этого хватает. При весе 75 кг нужно минимум 120 г.</p>
+        <div class="example-box">
+          <div class="example-label">Сколько белка в простых продуктах</div>
+          <div class="ex-row"><div class="ico">🍗</div><div>Куриная грудка 200 г — <strong>46 г белка</strong></div></div>
+          <div class="ex-row"><div class="ico">🥚</div><div>3 яйца — <strong>19 г белка</strong></div></div>
+          <div class="ex-row"><div class="ico">🧀</div><div>Творог 200 г — <strong>34 г белка</strong></div></div>
+          <div class="ex-row"><div class="ico">🐟</div><div>Тунец консервированный (банка 185 г) — <strong>40 г белка</strong></div></div>
+        </div>
+        <div class="note-box">
+          💡 Ориентир — 1.6–2 г белка на кг веса тела. При 75 кг это 120–150 г белка в день. Добавляй белковый продукт к каждому приёму пищи.
+        </div>
+      </div>
+    </div>
+
+    <div class="cause-card">
+      <div class="cause-header">
+        <div class="cause-num">3</div>
+        <h3>Нет прогрессии в тренировках</h3>
+      </div>
+      <div class="cause-body">
+        <p>Еда и белок — это материал для роста. Но без стимула тело не будет строить новые мышцы. Если веса и повторения не растут неделями — тело уже адаптировалось к нагрузке и не получает стимула для роста.</p>
+        <p>Мышцы растут только в ответ на нарастающую нагрузку. Без прогрессии профицит калорий откладывается в жир, а не в мышцы.</p>
+        <div class="note-box">
+          💡 Раздел «Тренировки» → «Вопросы в тренировках» → «Как прогрессировать» — там подробно про методику прогрессии.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Распространённое заблуждение</div>
+    <h3>«Я ем много, но вес не растёт — значит у меня быстрый метаболизм»</h3>
+    <p>Разница в скорости метаболизма между людьми одного роста и веса — около 200–300 ккал в день. Этим нельзя объяснить полное отсутствие набора.
+    Чаще всего проблема в том, что человек переоценивает количество съеденного — люди в среднем недооценивают калорийность рациона на 30–40%. Взвешивание еды с подсчётом в большинстве случаев решает эту проблему.</p>
+  </div>
+
+  <!-- ЧТО ДЕЛАТЬ -->
+  <div class="action-section">
+    <div class="section-label">Что делать</div>
+    <h2>Пошаговый план</h2>
+    <div class="divider"></div>
+    <p style="color: var(--dark);">Делай по порядку — не прыгай сразу к последнему шагу.</p>
+
+    <div class="action-steps">
+      <div class="action-step">
+        <div class="action-step-num">1</div>
+        <div>
+          <h3>Посчитай сколько ты реально ешь сейчас</h3>
+          <p>5–7 дней записывай всё что ешь с весами. Масло, соусы, перекусы — всё. Скорее всего окажется, что ешь меньше, чем думаешь.</p>
+        </div>
+      </div>
+      <div class="action-step">
+        <div class="action-step-num">2</div>
+        <div>
+          <h3>Проверь белок — минимум 1.6 г на кг веса</h3>
+          <p>При 75 кг — это 120 г белка в день. Добавляй белковый продукт к каждому приёму пищи: курица, яйца, творог, рыба.</p>
+        </div>
+      </div>
+      <div class="action-step">
+        <div class="action-step-num">3</div>
+        <div>
+          <h3>Добавь 200–300 ккал сверху</h3>
+          <p>Если калории и белок в норме, но вес не растёт 2 недели — добавь 200 ккал. Подождни ещё 2 недели. Не видишь роста — добавь ещё 200.</p>
+        </div>
+      </div>
+      <div class="action-step">
+        <div class="action-step-num">4</div>
+        <div>
+          <h3>Следи за прогрессией в тренировках</h3>
+          <p>Веса и повторения должны расти. Если в зале стоишь на месте — тело не получает стимула и не будет строить новые мышцы, даже при хорошем питании.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СОВЕТЫ -->
+  <div class="tips-section">
+    <div class="section-label">Практика</div>
+    <h2>Что помогает набирать без лишнего жира</h2>
+    <div class="divider"></div>
+    <ul class="tips-list">
+      <li class="tip-item">
+        <div class="tip-icon">📅</div>
+        <div class="tip-content">
+          <h3>Взвешивайся каждое утро и смотри на среднее за неделю</h3>
+          <p>Вес колеблется на 1–2 кг из-за воды и еды в желудке. Один замер ничего не показывает. Нужно среднее за 7 дней — оно показывает реальный тренд.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🍳</div>
+        <div class="tip-content">
+          <h3>Ешь белок перед сном</h3>
+          <p>40 г белка за 30 минут до сна увеличивают синтез мышечного белка в ночное время. Творог или казеин — оптимальный выбор за счёт медленного усвоения.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">⚖️</div>
+        <div class="tip-content">
+          <h3>Взвешивай крупы и мясо в сухом и сыром виде</h3>
+          <p>Варёный рис весит в 3 раза больше сухого. Если взвешивать после варки — считаешь треть реальных калорий. Всегда взвешивай до приготовления.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">😴</div>
+        <div class="tip-content">
+          <h3>Спи 7–9 часов</h3>
+          <p>Гормон роста выделяется преимущественно во время глубокого сна. При хроническом недосыпании его выработка снижается — мышцы растут медленнее даже при достаточном питании и правильных тренировках.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🔄</div>
+        <div class="tip-content">
+          <h3>Меняй одно и жди 2 недели</h3>
+          <p>Не меняй сразу калории, белок и тренировки. Одно изменение — 2 недели — смотришь на результат. Иначе непонятно что именно сработало.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Проверь три вещи: достаточно ли калорий, хватает ли белка, есть ли прогрессия в тренировках. В большинстве случаев проблема в одном из этих трёх. Добавляй калории постепенно по 200 ккал за раз и жди 2 недели после каждого изменения.</p>
+    <div class="final-pills">
+      <div class="pill">+200 ккал профицит</div>
+      <div class="pill">1.6–2 г белка на кг</div>
+      <div class="pill">Белок перед сном</div>
+      <div class="pill">Прогрессия в зале</div>
+      <div class="pill">Жди 2 недели</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Как считать калории точнее — в <b>«Как правильно считать калории»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Нет прогрессии в тренировках — читай <b>«Как прогрессировать в тренировках»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Сон влияет на набор — подробнее в <b>«Почему важен сон»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

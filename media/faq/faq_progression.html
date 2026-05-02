@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как прогрессировать в тренировках</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1;
+    color: #fff;
+    max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px;
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px;
+    font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px;
+    border-radius: 50px;
+    color: #fff;
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem;
+    line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300;
+    margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark);
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 22px;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    color: var(--dark);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px;
+    margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* ── МЕТОД: шаги ── */
+  .method-block {
+    margin: 28px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .method-step {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+    display: flex;
+    overflow: hidden;
+  }
+
+  .method-step-num {
+    background: var(--dark);
+    color: var(--mint);
+    font-weight: 900;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 22px 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 42px;
+  }
+
+  .method-step-body {
+    padding: 24px 26px;
+    flex: 1;
+  }
+
+  .method-step-body h3 {
+    margin-bottom: 10px;
+    color: var(--dark);
+  }
+
+  .method-step-body p {
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    margin-bottom: 18px;
+  }
+
+  /* ── ПРИМЕР ПО НЕДЕЛЯМ ── */
+  .method-example {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  @media(max-width: 520px) { .method-example { grid-template-columns: 1fr; } }
+
+  .me-week {
+    background: var(--cream);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .me-week.highlight {
+    background: var(--mint);
+  }
+
+  .me-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+
+  .me-week.highlight .me-label { color: var(--darkest); }
+
+  .me-data {
+    font-size: 0.97rem;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 4px;
+  }
+
+  .me-note {
+    font-size: 0.77rem;
+    color: #6a8a6b;
+    line-height: 1.4;
+  }
+
+  .me-week.highlight .me-note { color: var(--darkest); font-weight: 600; }
+
+  /* ── NOTE BOX ── */
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 14px 14px 0;
+    padding: 16px 22px;
+    margin-top: 14px;
+    font-size: 0.92rem;
+    color: var(--dark);
+    font-weight: 500;
+    line-height: 1.65;
+  }
+
+  /* ── СРАВНЕНИЕ ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 28px;
+  }
+
+  @media(max-width: 500px) { .compare-grid { grid-template-columns: 1fr; } }
+
+  .compare-card { border-radius: 18px; padding: 28px 24px; }
+  .compare-card.good { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1.5px solid #86efac; }
+  .compare-card.bad  { background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1.5px solid #fca5a5; }
+
+  .compare-title { font-weight: 800; font-size: 0.88rem; margin-bottom: 16px; }
+  .compare-card.good .compare-title { color: #166534; }
+  .compare-card.bad  .compare-title { color: #9f1239; }
+
+  .compare-card ul { list-style: none; padding: 0; }
+  .compare-card ul li {
+    font-size: 0.9rem;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .compare-card ul li:last-child { border-bottom: none; }
+  .compare-card.good ul li { color: #166534; }
+  .compare-card.bad  ul li { color: #9f1239; }
+  .compare-card ul li::before { flex-shrink: 0; font-size: 0.8rem; margin-top: 3px; }
+  .compare-card.good ul li::before { content: '✓'; }
+  .compare-card.bad  ul li::before { content: '✗'; }
+
+  /* ── ДНЕВНИК ── */
+  .journal-section {
+    background: linear-gradient(135deg, var(--mint) 0%, var(--cream) 100%);
+    border-radius: 24px;
+    padding: 40px 36px;
+    margin: 56px 0;
+  }
+
+  .journal-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .journal-table th {
+    background: var(--dark);
+    color: var(--mint);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  .journal-table td {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #3a4e3b;
+    border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .journal-table tr:last-child td { border-bottom: none; }
+  .td-up { color: var(--dark); font-weight: 700; }
+  .td-same { color: #888; }
+
+  /* ── МИФ ── */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px;
+    padding: 30px 34px;
+    margin: 56px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.15rem; margin-bottom: 10px; }
+  .myth-box p { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* ── ЭТАПЫ ── */
+  .phases-section {
+    background: linear-gradient(135deg, var(--darkest), var(--dark));
+    border-radius: 24px;
+    padding: 42px 38px;
+    margin: 56px 0;
+  }
+
+  .phases-section .section-label { background: rgba(255,255,255,0.16); }
+  .phases-section h2 { color: #fff; }
+  .phases-section > p { color: rgba(255,255,255,0.72); margin-bottom: 0; }
+
+  .phases-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 24px;
+  }
+
+  @media(max-width: 500px) { .phases-grid { grid-template-columns: 1fr; } }
+
+  .phase-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 22px 18px;
+  }
+
+  .phase-tag {
+    font-size: 0.66rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 9px;
+  }
+
+  .phase-card h3 { color: #fff; font-size: 1rem; margin-bottom: 8px; }
+  .phase-card p { color: rgba(255,255,255,0.7); font-size: 0.88rem; }
+
+  /* ── СОВЕТЫ ── */
+  .tips-section { margin: 56px 0; }
+  .tips-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .tip-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .tip-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .tip-content h3 { font-size: 0.96rem; margin-bottom: 4px; }
+  .tip-content p { font-size: 0.88rem; color: #556b56; }
+
+  /* ── ФИНАЛ ── */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px;
+    padding: 46px 38px;
+    text-align: center;
+    margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills {
+    display: flex; flex-wrap: wrap;
+    gap: 10px; justify-content: center;
+  }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px;
+    border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: var(--dark);
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--green); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+
+  /* ── Мобильная адаптация ── */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .wrapper {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .deload-table, .macro-table, .cardio-table,
+  .timeline-table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Шаги — вертикальная нумерация горизонтально на мобиле */
+  .step-item, .pillar-item {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .step-num, .pillar-num {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .step-body, .pillar-body {
+    padding: 16px !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Карточки с иконкой слева */
+  .goal-item {
+    flex-direction: column !important;
+  }
+
+  .goal-icon-col {
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Гриды — один столбец */
+  .reason-grid, .answer-grid, .compare-grid,
+  .food-grid, .ex-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tip-card header */
+  .tip-header {
+    flex-wrap: wrap;
+    padding: 14px 16px !important;
+  }
+
+  .tip-body {
+    padding: 14px 16px !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 48px 5vw 72px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.7rem, 7vw, 3rem) !important;
+    word-break: break-word;
+  }
+
+  /* Карточки — нормальный padding */
+  .intro-card, .final-card, .myth-box,
+  .bot-card, .science-card, .read-also {
+    padding: 24px 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Строки примеров */
+  .ex-row {
+    flex-wrap: wrap;
+  }
+
+  /* Пилюли */
+  .final-pills { gap: 8px; }
+  .pill { font-size: 0.78rem; padding: 7px 12px; }
+
+  /* Таблицы внутри step-body */
+  .step-body table, .pillar-body table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки в зале</div>
+  <h1>Как <em>прогрессировать</em> в тренировках</h1>
+  <p class="hero-sub">Прогресс — это не просто ходить в зал. Это делать каждую следующую тренировку чуть сложнее предыдущей.</p>
+  <div class="hero-badge"><span>📈</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Мышцы растут только при постепенном увеличении нагрузки. Одинаковая нагрузка неделями — тело адаптируется и рост останавливается.</p>
+  </div>
+
+  <!-- ПРИНЦИП -->
+  <div class="section-label">Главный принцип</div>
+  <h2>Почему без прогрессии нет роста</h2>
+  <div class="divider"></div>
+  <p>При постоянной нагрузке одного уровня тело к ней адаптируется и перестаёт реагировать ростом. Чтобы продолжать прогрессировать, нагрузка должна постепенно увеличиваться. Этот принцип называется прогрессивной перегрузкой.</p>
+
+  <!-- СРАВНЕНИЕ -->
+  <div class="section-gap">
+    <div class="section-label">Разница</div>
+    <h2>С прогрессией vs без прогрессии</h2>
+    <div class="divider"></div>
+    <div class="compare-grid">
+      <div class="compare-card good">
+        <div class="compare-title">✅ С прогрессией</div>
+        <ul>
+          <li>Нагрузка постепенно растёт</li>
+          <li>Тело вынуждено адаптироваться</li>
+          <li>Мышцы продолжают расти</li>
+          <li>Есть чёткий ориентир на тренировке</li>
+          <li>Виден конкретный прогресс</li>
+          <li>Мотивация держится дольше</li>
+        </ul>
+      </div>
+      <div class="compare-card bad">
+        <div class="compare-title">❌ Без прогрессии</div>
+        <ul>
+          <li>Нагрузка не меняется</li>
+          <li>Тело привыкает и перестаёт расти</li>
+          <li>Мышцы не получают стимул</li>
+          <li>Нет понимания, что делать дальше</li>
+          <li>Прогресс незаметен или его нет</li>
+          <li>Мотивация падает</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- МЕТОД -->
+  <div class="section-gap">
+    <div class="section-label">Самый рабочий метод</div>
+    <h2>Двойная прогрессия — и почему именно она</h2>
+    <div class="divider"></div>
+    <p>Увеличивать нагрузку можно разными способами: добавлять вес, повторения, подходы, менять темп или сокращать отдых. Двойная прогрессия — один из наиболее практичных методов: сначала растёшь в повторениях, потом добавляешь вес — и цикл начинается заново.</p>
+
+    <div class="method-block">
+
+      <div class="method-step">
+        <div class="method-step-num">Шаг 1</div>
+        <div class="method-step-body">
+          <h3>Сначала добей все повторения во всех подходах</h3>
+          <p>В плане у каждого упражнения есть диапазон повторений, например 3×8–12. Начинай с нижней границы — с 8. Твоя задача — дотянуть каждый подход до верхней границы (12 повторений) с хорошей техникой. Пока не сделал все подходы на 12 чисто — вес не трогаешь.</p>
+          <div class="method-example">
+            <div class="me-week">
+              <div class="me-label">Неделя 1</div>
+              <div class="me-data">60 кг · 8 / 8 / 7</div>
+              <div class="me-note">не хватает повторений — вес не меняем</div>
+            </div>
+            <div class="me-week">
+              <div class="me-label">Неделя 2</div>
+              <div class="me-data">60 кг · 10 / 9 / 9</div>
+              <div class="me-note">растём в повторениях — продолжаем</div>
+            </div>
+            <div class="me-week highlight">
+              <div class="me-label">Неделя 3</div>
+              <div class="me-data">60 кг · 12 / 12 / 12</div>
+              <div class="me-note">все подходы на 12 чисто — переходим к шагу 2</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="method-step">
+        <div class="method-step-num">Шаг 2</div>
+        <div class="method-step-body">
+          <h3>Добавь вес и вернись к нижней границе</h3>
+          <p>Как только сделал все подходы на верхнее число повторений — добавляй вес. В базовых упражнениях (жим, присед, тяга) обычно 2.5 кг, в изолирующих (разводка, кроссовер, сгибания) — 1–2 кг. После этого снова начинаешь с нижней границы и повторяешь цикл.</p>
+          <div class="method-example">
+            <div class="me-week highlight">
+              <div class="me-label">Неделя 4</div>
+              <div class="me-data">62.5 кг · 8 / 7 / 7</div>
+              <div class="me-note">новый вес — снова с нижней границы</div>
+            </div>
+            <div class="me-week">
+              <div class="me-label">Неделя 5</div>
+              <div class="me-data">62.5 кг · 10 / 10 / 9</div>
+              <div class="me-note">снова растём в повторениях</div>
+            </div>
+            <div class="me-week">
+              <div class="me-label">Неделя 6–7</div>
+              <div class="me-data">62.5 кг · 12 / 12 / 12</div>
+              <div class="me-note">снова все на 12 — добавляем вес</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="note-box">
+      💡 Если в плане указано конкретное число без диапазона (например 3×10) — логика та же: сначала сделай все 10 повторений во всех подходах чисто, потом добавляй вес.
+    </div>
+  </div>
+
+  <!-- ДНЕВНИК -->
+  <div class="journal-section">
+    <div class="section-label">Инструмент</div>
+    <h2>Зачем вести дневник тренировок</h2>
+    <div class="divider"></div>
+    <p style="color: var(--dark);">Двойная прогрессия работает только если ты помнишь, что делал в прошлый раз. Без записей это невозможно — ты просто не запомнишь вес и повторения по каждому упражнению. Дневник решает эту проблему.</p>
+
+    <table class="journal-table">
+      <thead>
+        <tr>
+          <th>Упражнение</th>
+          <th>Пн 10.06</th>
+          <th>Пн 17.06</th>
+          <th>Изменение</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Жим лёжа</td>
+          <td>60 кг · 8 / 8 / 7</td>
+          <td>60 кг · 10 / 9 / 9</td>
+          <td class="td-up">↑ +повт.</td>
+        </tr>
+        <tr>
+          <td>Приседания</td>
+          <td>80 кг · 10 / 10 / 9</td>
+          <td>80 кг · 12 / 12 / 12</td>
+          <td class="td-up">↑ добавляем вес</td>
+        </tr>
+        <tr>
+          <td>Тяга блока</td>
+          <td>55 кг · 9 / 8 / 8</td>
+          <td>55 кг · 9 / 9 / 8</td>
+          <td class="td-up">↑ +повт.</td>
+        </tr>
+        <tr>
+          <td>Разводка гантелей</td>
+          <td>14 кг · 12 / 12 / 12</td>
+          <td>16 кг · 8 / 8 / 7</td>
+          <td class="td-up">↑ +2 кг</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      Записывать можно в телефоне, блокноте или специальном приложении — не важно как, важно делать это каждую тренировку.
+    </div>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Распространённое заблуждение</div>
+    <h3>«Нужно постоянно менять упражнения, чтобы мышцы не привыкали»</h3>
+    <p>Мышцы привыкают к уровню нагрузки — не к самому движению. Можно делать жим лёжа годами и продолжать прогрессировать, если вес и повторения растут.</p>
+    <p>Частая смена упражнений только мешает — ты не можешь сравнить результаты и применить двойную прогрессию, если каждый раз делаешь что-то новое. Держи базовые упражнения стабильными и меняй только нагрузку.</p>
+  </div>
+
+  <!-- ЭТАПЫ -->
+  <div class="phases-section">
+    <div class="section-label">Как меняется прогресс со временем</div>
+    <h2>Рост в начале быстрый — потом замедляется</h2>
+    <div class="divider" style="background: linear-gradient(90deg, var(--mint), var(--green));"></div>
+    <p>Двойная прогрессия работает на любом уровне, но скорость роста со временем меняется. Это нормально — не значит, что метод перестал работать.</p>
+    <div class="phases-grid">
+      <div class="phase-card">
+        <div class="phase-tag">Первые месяцы</div>
+        <h3>Прогресс идёт быстро</h3>
+        <p>Нервная система и мышцы быстро адаптируются. Повторения и вес растут почти каждую тренировку. Это лучший период — важно не пропускать тренировки и фиксировать каждый результат.</p>
+      </div>
+      <div class="phase-card">
+        <div class="phase-tag">После 6–12 месяцев</div>
+        <h3>Прогресс замедляется</h3>
+        <p>Добиться верхней границы повторений теперь занимает не одну, а несколько недель. Это нормально — тело стало тренированнее и требует больше времени на адаптацию. Метод тот же, темп другой.</p>
+      </div>
+      <div class="phase-card">
+        <div class="phase-tag">Промежуточный уровень</div>
+        <h3>Важно восстановление</h3>
+        <p>Чем дольше ты тренируешься, тем больше роль сна, питания и отдыха. Без нормального восстановления двойная прогрессия начинает давать сбои — сил на следующий цикл просто не хватает.</p>
+      </div>
+      <div class="phase-card">
+        <div class="phase-tag">Продвинутый уровень</div>
+        <h3>Каждый шаг — результат</h3>
+        <p>Добавить 2.5 кг на штангу может занять месяц и больше. Это не плохо — это значит, что ты уже далеко ушёл от старта. Дневник на этом этапе особенно важен.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- СОВЕТЫ -->
+  <div class="tips-section">
+    <div class="section-label">Практика</div>
+    <h2>Что поможет прогрессировать стабильно</h2>
+    <div class="divider"></div>
+    <ul class="tips-list">
+      <li class="tip-item">
+        <div class="tip-icon">📓</div>
+        <div class="tip-content">
+          <h3>Записывай каждую тренировку</h3>
+          <p>Вес и повторения по каждому упражнению. Без этого двойная прогрессия не работает — ты просто не будешь знать, от чего отталкиваться.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🧱</div>
+        <div class="tip-content">
+          <h3>Держи базовые упражнения стабильными</h3>
+          <p>Жим, присед, тяга, подтягивания — в этих упражнениях легко отслеживать прогресс. Не меняй их без причины. Именно в них двойная прогрессия даёт самый заметный результат.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🔬</div>
+        <div class="tip-content">
+          <h3>Добавляй вес маленькими шагами</h3>
+          <p>2.5 кг в базовых и 1–2 кг в изолирующих — это нормальный шаг. Не нужно торопиться. Маленький прирост каждые 2–3 недели за год даёт большой суммарный результат.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">😴</div>
+        <div class="tip-content">
+          <h3>Восстанавливайся между тренировками</h3>
+          <p>Мышечный белок синтезируется во время отдыха, а не во время тренировки. Без достаточного восстановления прогрессия замедляется, даже если метод правильный.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🍳</div>
+        <div class="tip-content">
+          <h3>Ешь достаточно белка</h3>
+          <p>Без достаточного белка мышечная масса не растёт даже при правильной прогрессии. Ориентир — 1.6–2 г белка на килограмм веса тела в день.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко о главном</h2>
+    <p>Используй двойную прогрессию: сначала добивай все повторения во всех подходах, потом добавляй вес и начинай цикл заново. Записывай каждую тренировку, держи базовые упражнения стабильными и восстанавливайся между тренировками.</p>
+    <div class="final-pills">
+      <div class="pill">Двойная прогрессия</div>
+      <div class="pill">Записывай тренировки</div>
+      <div class="pill">Держи базу</div>
+      <div class="pill">Маленькие шаги</div>
+      <div class="pill">Восстанавливайся</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Не знаешь с какого веса начать прогрессию — читай <b>«Как подобрать рабочий вес»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Прогрессия требует восстановления — подробнее в <b>«Почему важен сон»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Тренируешься дома — читай <b>«Как прогрессировать со своим весом»</b>, там отдельная система</span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

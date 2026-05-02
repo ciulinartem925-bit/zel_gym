@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как поставить технику</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 580px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 { font-size: 1.05rem; color: var(--dark); font-weight: 700; margin-bottom: 8px; }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* Шаги */
+  .step-list {
+    display: flex; flex-direction: column;
+    gap: 14px; margin-top: 24px;
+  }
+
+  .step-item {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    display: flex; overflow: hidden;
+  }
+
+  .step-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 0.72rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    writing-mode: vertical-rl; text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 22px 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; min-width: 42px;
+  }
+
+  .step-body { padding: 24px 26px; flex: 1; }
+  .step-body h3 { color: var(--dark); margin-bottom: 8px; }
+  .step-body p  { font-size: 0.92rem; color: #3a4e3b; margin-bottom: 8px; }
+
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px; margin-top: 10px;
+    font-size: 0.9rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* Упражнения — карточки */
+  .ex-grid {
+    display: flex; flex-direction: column;
+    gap: 14px; margin-top: 24px;
+  }
+
+  .ex-card {
+    background: #fff;
+    border-radius: 18px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    overflow: hidden;
+  }
+
+  .ex-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 22px;
+    background: rgba(42,103,44,0.04);
+    border-bottom: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .ex-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .ex-header h3 { margin: 0; font-size: 1rem; }
+
+  .ex-body { padding: 18px 22px; }
+  .ex-body p { font-size: 0.92rem; color: #3a4e3b; margin-bottom: 10px; }
+  .ex-body p:last-child { margin-bottom: 0; }
+
+  .cue-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 6px;
+    margin-top: 8px;
+  }
+
+  .cue-item {
+    display: flex; gap: 10px;
+    font-size: 0.88rem; color: #3a4e3b;
+    align-items: flex-start;
+  }
+
+  .cue-num {
+    background: var(--dark); color: var(--mint);
+    font-size: 0.68rem; font-weight: 800;
+    border-radius: 50%; width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+
+  /* Ошибки — светофор */
+  .mistake-list {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 20px;
+  }
+
+  .mistake-row {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: #fff; border-radius: 14px;
+    padding: 14px 18px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .m-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    flex-shrink: 0; margin-top: 5px;
+  }
+
+  .m-dot.red    { background: #ef4444; }
+  .m-dot.yellow { background: #f59e0b; }
+
+  .m-title { font-weight: 700; font-size: 0.93rem; color: var(--dark); margin-bottom: 3px; }
+  .m-desc  { font-size: 0.87rem; color: #556b56; }
+
+  /* Бот-блок */
+  .bot-card {
+    background: linear-gradient(135deg, var(--darkest), var(--dark));
+    border-radius: 22px; padding: 34px 36px; margin: 52px 0;
+  }
+
+  .bot-card-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 12px;
+  }
+
+  .bot-card h3 { color: #fff; font-size: 1.15rem; margin-bottom: 12px; }
+  .bot-card p  { color: rgba(201,235,190,0.85); font-size: 0.95rem; margin-bottom: 10px; }
+  .bot-card p:last-child { margin-bottom: 0; }
+  .bot-card p strong { color: #fff; }
+
+  /* Миф */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b;
+    border-radius: 20px; padding: 28px 32px; margin: 52px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* Финал */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 44px 36px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px; padding: 32px 36px;
+    background: #fff; border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; background: var(--cream);
+    border-radius: 12px; font-size: 0.92rem;
+    color: #3a4e3b; line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow { color: var(--green); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Мобильная адаптация ── */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .wrapper {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .deload-table, .macro-table, .cardio-table,
+  .timeline-table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Шаги — вертикальная нумерация горизонтально на мобиле */
+  .step-item, .pillar-item {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .step-num, .pillar-num {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .step-body, .pillar-body {
+    padding: 16px !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Карточки с иконкой слева */
+  .goal-item {
+    flex-direction: column !important;
+  }
+
+  .goal-icon-col {
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Гриды — один столбец */
+  .reason-grid, .answer-grid, .compare-grid,
+  .food-grid, .ex-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tip-card header */
+  .tip-header {
+    flex-wrap: wrap;
+    padding: 14px 16px !important;
+  }
+
+  .tip-body {
+    padding: 14px 16px !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 48px 5vw 72px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.7rem, 7vw, 3rem) !important;
+    word-break: break-word;
+  }
+
+  /* Карточки — нормальный padding */
+  .intro-card, .final-card, .myth-box,
+  .bot-card, .science-card, .read-also {
+    padding: 24px 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Строки примеров */
+  .ex-row {
+    flex-wrap: wrap;
+  }
+
+  /* Пилюли */
+  .final-pills { gap: 8px; }
+  .pill { font-size: 0.78rem; padding: 7px 12px; }
+
+  /* Таблицы внутри step-body */
+  .step-body table, .pillar-body table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки</div>
+  <h1>Как поставить <em>технику</em></h1>
+  <p class="hero-sub">Техника определяет, куда идёт нагрузка. При неправильном движении целевая мышца получает меньший стимул, суставы — повышенную нагрузку.</p>
+  <div class="hero-badge"><span>🎯</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>При правильной технике нагрузка попадает в целевую мышцу. При неправильной — распределяется по суставам и вспомогательным мышцам, которые не предназначены для этой нагрузки.</p>
+    <p><strong>Правильная техника с меньшим весом создаёт больший стимул для целевой мышцы, чем неправильная техника с большим весом.</strong> При этом снижается нагрузка на суставы и риск травм.</p>
+  </div>
+
+  <!-- КАК ОСВАИВАТЬ -->
+  <div class="section-label">Как осваивать</div>
+  <h2>Три шага для постановки техники</h2>
+  <div class="divider"></div>
+
+  <div class="step-list">
+
+    <div class="step-item">
+      <div class="step-num">Шаг 1</div>
+      <div class="step-body">
+        <h3>Начни с веса 50–60% от рабочего</h3>
+        <p>На формирование стабильного двигательного навыка уходит 2–4 недели. В этот период вес не имеет значения — важна только траектория движения. Лёгкий вес позволяет контролировать каждую фазу движения без отвлечения на усилие.</p>
+        <p>Когда движение воспроизводится одинаково во всех повторениях подхода — начинай добавлять вес.</p>
+        <div class="note-box">
+          Критерий: первое и последнее повторения в подходе технически не отличаются.
+        </div>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-num">Шаг 2</div>
+      <div class="step-body">
+        <h3>Используй видео и инструкцию в боте</h3>
+        <p>В разделе тренировок под каждым упражнением есть кнопка <strong>📚</strong> — там видео выполнения и пошаговое описание техники. Перед первым подходом посмотри видео и прочитай ключевые точки.</p>
+        <p>На что обращать внимание: положение спины, угол суставов, траектория движения, точка максимального напряжения мышцы.</p>
+      </div>
+    </div>
+
+    <div class="step-item">
+      <div class="step-num">Шаг 3</div>
+      <div class="step-body">
+        <h3>Снимай себя на видео сбоку</h3>
+        <p>Проприоцептивные ощущения во время движения часто не совпадают с реальной картиной. То, что воспринимается как прямая спина, на видео нередко оказывается скруглённой. Достаточно снять один рабочий подход сбоку.</p>
+        <div class="note-box">
+          Сравни своё видео с видео в боте: траектория движения, положение корпуса, угол в суставах в ключевых точках.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ТЕХНИКА БАЗОВЫХ УПРАЖНЕНИЙ -->
+  <div class="section-gap">
+    <div class="section-label">Базовые упражнения</div>
+    <h2>Ключевые точки техники</h2>
+    <div class="divider"></div>
+    <p>Для каждого упражнения — самые важные моменты, на которые нужно обращать внимание. Полное описание и видео — в боте по кнопке 📚.</p>
+
+    <div class="ex-grid">
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">🦵</div>
+          <h3>Присед</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Стопы на ширине плеч или чуть шире, носки немного развёрнуты наружу — угол зависит от строения тазобедренного сустава</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Спина прямая на протяжении всего движения — грудь вперёд, поясница в нейтральном положении без прогиба и скругления</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Колени двигаются вдоль носков — не заваливаются внутрь</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Опускайся до параллели бедра с полом или ниже — при достаточной подвижности</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Вставай усилием ног, не переносом корпуса вперёд</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">🏋️</div>
+          <h3>Становая тяга</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Стопы под бёдрами, гриф над серединой стопы — примерно в 2–3 см от голени</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Перед подъёмом — нейтральный позвоночник, грудь вперёд, лопатки сведены и опущены</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Гриф движется вдоль голени и бедра — не отходит от тела</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Тянешь не руками — руки просто держат гриф. Усилие — от ног и спины</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>В верхней точке — полное выпрямление, без переразгибания поясницы назад</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">💪</div>
+          <h3>Жим лёжа</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Лопатки сведены и прижаты к скамье — это стабилизирует плечевой пояс и снижает нагрузку на плечевые суставы</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Хват чуть шире плеч, запястья прямые — гриф над основанием ладони, не у пальцев</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Локти под углом 45–75° к корпусу — не перпендикулярно телу, это перегружает плечи</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Опускай гриф к нижней части груди, не к ключицам</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Ступни плотно на полу, пятки не отрываются во время жима</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">🔝</div>
+          <h3>Подтягивания</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Хват чуть шире плеч, руки полностью выпрямлены в нижней точке</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Перед подъёмом — лопатки вниз и к позвоночнику. Начинай движение с этого, а не с рук</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Тяни грудь к перекладине — это обеспечивает работу широчайших. Если тянуться только подбородком — основная нагрузка уходит в трапецию</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Опускайся под контролем — эксцентрическая фаза создаёт дополнительную нагрузку на мышцы</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Корпус слегка отклонён назад — не строго вертикален</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">➡️</div>
+          <h3>Тяга штанги в наклоне</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Наклон корпуса около 45° — спина прямая, не горбится</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Тяни локтями назад и вверх — не руками к себе</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>В верхней точке лопатки сводятся — это завершает сокращение широчайших мышц</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Гриф тянется к животу или нижней части груди, не к ключицам</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Корпус не раскачивается — если раскачивается, вес слишком большой</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">🏃</div>
+          <h3>Выпады</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Шаг достаточно длинный — при опускании переднее колено не выходит за носок</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Корпус вертикален — не наклоняется вперёд</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Заднее колено опускается почти до пола — не касается</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Вставай усилием передней ноги, пятка плотно на полу</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Переднее колено не заваливается внутрь при подъёме</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">↗️</div>
+          <h3>Жим гантелей стоя (плечи)</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Стартовое положение: гантели на уровне плеч, локти чуть ниже кистей</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Пресс напряжён — не допускает переразгибания поясницы при жиме вверх</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Жми строго вверх, не вперёд — гантели движутся над плечами</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>В верхней точке руки выпрямлены, но локти не залочены жёстко</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Не помогай ногами — если приходится, вес слишком большой</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon">🤸</div>
+          <h3>Отжимания</h3>
+        </div>
+        <div class="ex-body">
+          <ul class="cue-list">
+            <li class="cue-item"><div class="cue-num">1</div><span>Тело — прямая линия от головы до пяток, без провисания таза и подъёма ягодиц</span></li>
+            <li class="cue-item"><div class="cue-num">2</div><span>Руки чуть шире плеч, пальцы смотрят вперёд или слегка наружу</span></li>
+            <li class="cue-item"><div class="cue-num">3</div><span>Локти под углом 45° к корпусу — не расходятся перпендикулярно телу</span></li>
+            <li class="cue-item"><div class="cue-num">4</div><span>Грудь опускается до 2–5 см от пола, не останавливается на полпути</span></li>
+            <li class="cue-item"><div class="cue-num">5</div><span>Пресс и ягодицы напряжены на протяжении всего подхода</span></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- БОТ БЛОК -->
+  <div class="bot-card">
+    <div class="bot-card-label">📱 В боте</div>
+    <h3>Видео и инструкция к каждому упражнению</h3>
+    <p>В разделе тренировок под каждым упражнением есть кнопка <strong>📚</strong>. Там видео выполнения с правильным углом съёмки и пошаговое описание техники.</p>
+    <p>Используй это перед первым подходом с новым упражнением — особенно в первые недели освоения.</p>
+  </div>
+
+  <!-- ОШИБКИ -->
+  <div class="section-gap">
+    <div class="section-label">Частые ошибки</div>
+    <h2>Что чаще всего идёт не так</h2>
+    <div class="divider"></div>
+
+    <div class="mistake-list">
+      <div class="mistake-row">
+        <div class="m-dot red"></div>
+        <div>
+          <div class="m-title">Слишком большой вес при освоении</div>
+          <div class="m-desc">При превышении нагрузки движение искажается — подключаются компенсаторные мышцы. Неправильный двигательный навык закрепляется через повторения и затем требует значительного времени для переучивания.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot red"></div>
+        <div>
+          <div class="m-title">Скругление поясницы в тягах и приседе</div>
+          <div class="m-desc">При флексии поясничного отдела под нагрузкой давление на межпозвоночные диски возрастает. При рабочих весах это повышает риск травмы. Поясница должна сохранять нейтральное положение на протяжении всего движения.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot red"></div>
+        <div>
+          <div class="m-title">Неполная амплитуда</div>
+          <div class="m-desc">Полный диапазон движения создаёт большее механическое напряжение в мышце по сравнению с частичной амплитудой при том же весе. Сокращение амплитуды снижает стимул для роста.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot yellow"></div>
+        <div>
+          <div class="m-title">Слишком быстрое опускание</div>
+          <div class="m-desc">Эксцентрическая фаза (опускание) создаёт значительную нагрузку на мышечные волокна. Контролируемое опускание за 2–3 секунды увеличивает общий объём нагрузки на мышцу без изменения веса.</div>
+        </div>
+      </div>
+      <div class="mistake-row">
+        <div class="m-dot yellow"></div>
+        <div>
+          <div class="m-title">Использование инерции</div>
+          <div class="m-desc">При раскачке корпуса и рывках часть нагрузки переносится с мышцы на кинетический импульс. Целевая мышца получает меньший стимул. Вес нужно снизить до уровня, при котором движение выполняется без инерции.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Частое заблуждение</div>
+    <h3>«Сначала набью силу, потом займусь техникой»</h3>
+    <p>Двигательный навык формируется через повторение. Чем больше повторений выполнено с неправильным движением — тем сложнее изменить закреплённый навык. Травмы, возникающие при работе с большими весами и плохой техникой, исключают тренировки на несколько месяцев.</p>
+    <p>Правильный порядок: сначала освоение движения с лёгким весом, затем постепенное увеличение нагрузки по мере стабилизации техники.</p>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Начни с 50–60% от рабочего веса. Используй видео в боте, снимай себя сбоку, сравнивай. Добавляй вес только когда движение воспроизводится одинаково от повторения к повторению.</p>
+    <div class="final-pills">
+      <div class="pill">Лёгкий вес при освоении</div>
+      <div class="pill">Видео 📚 в боте</div>
+      <div class="pill">Снимай себя сбоку</div>
+      <div class="pill">Полная амплитуда</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как подбирать вес под конкретное упражнение — в <b>«Как подобрать рабочий вес»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Как увеличивать нагрузку когда техника поставлена — в <b>«Как прогрессировать в тренировках»</b></span></li>
+      <li class="read-also-item"><span class="ra-arrow">→</span><span>Тренируешься дома — система прогрессии без железа в <b>«Как прогрессировать со своим весом»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

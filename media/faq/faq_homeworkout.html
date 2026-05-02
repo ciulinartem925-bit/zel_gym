@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Как прогрессировать дома</title>
+<style>
+  :root {
+    --cream:   #EAEBBE;
+    --mint:    #C9EBBE;
+    --dark:    #2A672C;
+    --green:   #6CB254;
+    --darkest: #1a3f1b;
+    --text:    #2c3e2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 52vh;
+    background: linear-gradient(160deg, var(--darkest) 0%, var(--dark) 50%, var(--green) 100%);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: flex-start;
+    padding: 64px 7vw 88px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 64px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-tag {
+    font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-weight: 900;
+    font-size: clamp(2.2rem, 7vw, 4.6rem);
+    line-height: 1.1; color: #fff; max-width: 620px;
+  }
+
+  .hero h1 em { font-style: italic; color: var(--mint); }
+
+  .hero-sub {
+    margin-top: 18px; font-size: 1.05rem;
+    color: rgba(255,255,255,0.78);
+    max-width: 460px; font-weight: 300;
+  }
+
+  .hero-badge {
+    margin-top: 30px;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 22px; border-radius: 50px;
+    color: #fff; font-size: 0.86rem; font-weight: 600;
+  }
+
+  .wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 20px 100px;
+  }
+
+  .intro-card {
+    background: var(--dark);
+    border-radius: 24px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+  }
+
+  .intro-card p {
+    font-size: 1.08rem; line-height: 1.85;
+    color: rgba(201,235,190,0.92);
+    font-weight: 300; margin-bottom: 14px;
+  }
+
+  .intro-card p:last-child { margin-bottom: 0; }
+  .intro-card p strong { color: #fff; font-weight: 700; }
+
+  .section-label {
+    display: inline-block; background: var(--green);
+    color: #fff; font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--dark); font-weight: 800;
+    line-height: 1.25; margin-bottom: 22px;
+  }
+
+  h3 {
+    font-size: 1.05rem; color: var(--dark);
+    font-weight: 700; margin-bottom: 8px;
+  }
+
+  p { margin-bottom: 14px; font-size: 1rem; color: #3a4e3b; }
+  p:last-child { margin-bottom: 0; }
+
+  .divider {
+    width: 48px; height: 4px;
+    background: linear-gradient(90deg, var(--green), var(--mint));
+    border-radius: 4px; margin: 0 0 24px;
+  }
+
+  .section-gap { margin-top: 56px; }
+
+  /* ── НАУЧНЫЙ ФАКТ ── */
+  .science-card {
+    background: linear-gradient(135deg, var(--darkest), var(--dark));
+    border-radius: 20px; padding: 32px 36px;
+    margin: 0 0 52px;
+  }
+
+  .science-tag {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 12px;
+  }
+
+  .science-card h3 { color: #fff; font-size: 1.2rem; margin-bottom: 12px; line-height: 1.35; }
+
+  .science-card p {
+    color: rgba(201,235,190,0.85);
+    font-size: 0.97rem; font-weight: 300; margin-bottom: 12px;
+  }
+
+  .science-card p:last-child { margin-bottom: 0; }
+  .science-card p strong { color: #fff; font-weight: 700; }
+
+  /* ── МЕТОД ── */
+  .method-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .method-header {
+    display: flex; align-items: center; gap: 18px;
+    padding: 20px 26px;
+    background: rgba(42,103,44,0.04);
+    border-bottom: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .method-num {
+    background: var(--dark); color: var(--mint);
+    font-weight: 900; font-size: 1rem;
+    width: 40px; height: 40px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .method-header h3 { margin: 0; font-size: 1.02rem; }
+
+  .method-body { padding: 22px 26px; }
+  .method-body p { font-size: 0.95rem; color: #3a4e3b; margin-bottom: 12px; }
+  .method-body p:last-child { margin-bottom: 0; }
+
+  /* ── ПРИМЕР ── */
+  .example-box {
+    background: var(--cream);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 14px;
+  }
+
+  .example-label {
+    font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 12px;
+  }
+
+  .ex-row {
+    display: flex; align-items: flex-start;
+    gap: 10px; margin-bottom: 9px;
+    font-size: 0.9rem; color: #3a4e3b;
+  }
+
+  .ex-row:last-child { margin-bottom: 0; }
+  .ex-row .ico { flex-shrink: 0; width: 20px; text-align: center; }
+  .ex-row strong { color: var(--dark); }
+  .ex-row .next { color: var(--dark); font-weight: 700; }
+
+  /* ── ПРАВИЛО-БЛОК ── */
+  .rule-highlight {
+    background: linear-gradient(135deg, var(--mint), var(--cream));
+    border-radius: 18px;
+    padding: 26px 30px;
+    margin: 14px 0 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .rule-icon { font-size: 1.8rem; flex-shrink: 0; }
+
+  .rule-text h3 { font-size: 1rem; margin-bottom: 6px; color: var(--darkest); }
+  .rule-text p  { font-size: 0.9rem; color: var(--darkest); opacity: 0.8; margin: 0; }
+
+  /* ── УПРАЖНЕНИЯ ── */
+  .ex-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1.5px solid rgba(42,103,44,0.1);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+
+  .ex-header {
+    background: var(--dark); padding: 18px 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+
+  .ex-icon-big { font-size: 1.6rem; }
+  .ex-header-text h3 { color: #fff; font-size: 1rem; margin: 0 0 3px; }
+  .ex-header-text p  { color: rgba(201,235,190,0.7); font-size: 0.8rem; margin: 0; font-weight: 300; }
+
+  .ex-levels { padding: 6px 24px 16px; }
+
+  .ex-level {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .ex-level:last-child { border-bottom: none; }
+
+  .ex-badge {
+    font-size: 0.62rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+
+  .l1 { background: var(--mint); color: var(--darkest); }
+  .l2 { background: var(--green); color: #fff; }
+  .l3 { background: var(--dark); color: var(--mint); }
+  .l4 { background: var(--darkest); color: var(--mint); }
+
+  .ex-level-text h4 { font-size: 0.93rem; color: var(--dark); font-weight: 700; margin-bottom: 3px; }
+  .ex-level-text p  { font-size: 0.83rem; color: #6a8a6b; margin: 0; }
+
+  /* ── NOTE ── */
+  .note-box {
+    background: rgba(42,103,44,0.07);
+    border-left: 4px solid var(--green);
+    border-radius: 0 14px 14px 0;
+    padding: 15px 20px; margin-top: 14px;
+    font-size: 0.92rem; color: var(--dark);
+    font-weight: 500; line-height: 1.65;
+  }
+
+  /* ── МИФ ── */
+  .myth-box {
+    background: linear-gradient(135deg, #fff8e1, #fffde7);
+    border: 2px solid #f59e0b; border-radius: 20px;
+    padding: 28px 32px; margin: 56px 0;
+  }
+
+  .myth-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #b45309; margin-bottom: 10px;
+  }
+
+  .myth-box h3 { color: #92400e; font-size: 1.1rem; margin-bottom: 10px; }
+  .myth-box p  { color: #78350f; margin-bottom: 10px; }
+  .myth-box p:last-child { margin-bottom: 0; }
+
+  /* ── ДНЕВНИК ── */
+  .journal-section {
+    background: linear-gradient(135deg, var(--mint) 0%, var(--cream) 100%);
+    border-radius: 24px; padding: 36px 34px; margin: 56px 0;
+  }
+
+  .journal-table {
+    width: 100%; border-collapse: collapse; margin-top: 20px;
+    background: #fff; border-radius: 14px; overflow: hidden;
+  }
+
+  .journal-table th {
+    background: var(--dark); color: var(--mint);
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 11px 14px; text-align: left;
+  }
+
+  .journal-table td {
+    padding: 11px 14px; font-size: 0.86rem;
+    color: #3a4e3b; border-bottom: 1px solid rgba(42,103,44,0.07);
+  }
+
+  .journal-table tr:last-child td { border-bottom: none; }
+  .td-up   { color: var(--dark); font-weight: 700; }
+  .td-same { color: #999; }
+
+  /* ── СОВЕТЫ ── */
+  .tips-section { margin-top: 56px; }
+  .tips-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .tip-item {
+    display: flex; align-items: flex-start; gap: 16px;
+    background: #fff; border-radius: 16px; padding: 20px 22px;
+    border: 1.5px solid rgba(42,103,44,0.08);
+  }
+
+  .tip-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .tip-content h3 { font-size: 0.96rem; margin-bottom: 4px; }
+  .tip-content p  { font-size: 0.88rem; color: #556b56; }
+
+  /* ── ФИНАЛ ── */
+  .final-card {
+    background: linear-gradient(135deg, var(--dark), var(--green));
+    border-radius: 24px; padding: 46px 38px;
+    text-align: center; margin-top: 56px;
+  }
+
+  .final-card h2 { color: #fff; margin-bottom: 14px; }
+  .final-card p  { color: rgba(255,255,255,0.82); margin-bottom: 28px; }
+
+  .final-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+  .pill {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; padding: 8px 18px; border-radius: 50px;
+    font-weight: 700; font-size: 0.85rem;
+  }
+
+  /* Читай также */
+  .read-also {
+    margin-top: 48px;
+    padding: 32px 36px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid rgba(42,103,44,0.12);
+  }
+
+  .read-also-label {
+    font-size: 0.67rem; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+  }
+
+  .read-also h3 {
+    font-size: 1.05rem; color: var(--dark);
+    margin-bottom: 14px; font-weight: 700;
+  }
+
+  .read-also-list {
+    list-style: none; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .read-also-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    background: var(--cream);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    color: #3a4e3b;
+    line-height: 1.5;
+  }
+
+  .read-also-item .ra-arrow {
+    color: var(--green); font-weight: 900;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+
+  /* ── Мобильная адаптация ── */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .wrapper {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .deload-table, .macro-table, .cardio-table,
+  .timeline-table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Шаги — вертикальная нумерация горизонтально на мобиле */
+  .step-item, .pillar-item {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .step-num, .pillar-num {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    min-width: unset !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  .step-body, .pillar-body {
+    padding: 16px !important;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Карточки с иконкой слева */
+  .goal-item {
+    flex-direction: column !important;
+  }
+
+  .goal-icon-col {
+    padding: 12px 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Гриды — один столбец */
+  .reason-grid, .answer-grid, .compare-grid,
+  .food-grid, .ex-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tip-card header */
+  .tip-header {
+    flex-wrap: wrap;
+    padding: 14px 16px !important;
+  }
+
+  .tip-body {
+    padding: 14px 16px !important;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 48px 5vw 72px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.7rem, 7vw, 3rem) !important;
+    word-break: break-word;
+  }
+
+  /* Карточки — нормальный padding */
+  .intro-card, .final-card, .myth-box,
+  .bot-card, .science-card, .read-also {
+    padding: 24px 18px !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Строки примеров */
+  .ex-row {
+    flex-wrap: wrap;
+  }
+
+  /* Пилюли */
+  .final-pills { gap: 8px; }
+  .pill { font-size: 0.78rem; padding: 7px 12px; }
+
+  /* Таблицы внутри step-body */
+  .step-body table, .pillar-body table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-tag">Тренировки дома</div>
+  <h1>Как прогрессировать со <em>своим весом</em></h1>
+  <p class="hero-sub">Одна методика, которая работает — пошагово и без лишнего.</p>
+  <div class="hero-badge"><span>🏠</span> Читать 4 минуты</div>
+</section>
+
+<div class="wrapper">
+
+  <div class="intro-card">
+    <p>Без штанги и гантелей нагрузку увеличивают иначе: переходом к более сложным вариантам упражнений или добавлением внешнего веса. Каждое упражнение имеет несколько версий по уровню сложности.
+    Метод называется двойная прогрессия: сначала растёшь в повторениях — потом переходишь к более сложному варианту или добавляешь вес.</p>
+  </div>
+
+  <!-- НАУЧНЫЙ ФАКТ -->
+  <div class="science-card">
+    <div class="science-tag">🔬 Научный факт</div>
+    <h3>Диапазон 6–30 повторений одинаково работает на рост мышц</h3>
+    <p>При одинаковом объёме работы широкий диапазон повторений — от 6 до 30 — даёт сопоставимый прирост мышечной массы. Это значит, что количество повторений не так важно, как общий объём нагрузки и приближение к отказу.</p>
+    <p><strong>Для практики используем диапазон 8–20 повторений.</strong> Начинаешь с 8 — и добавляешь повторения до тех пор, пока не дойдёшь до 20 во всех подходах. Дошёл до 20 — переходишь к более сложному варианту или добавляешь внешний вес.</p>
+  </div>
+
+  <!-- МЕТОДИКА -->
+  <div class="section-label">Методика</div>
+  <h2>Двойная прогрессия — как это работает</h2>
+  <div class="divider"></div>
+  <p>Три шага, которые повторяются по кругу для каждого упражнения.</p>
+
+  <div style="margin-top: 24px;">
+
+    <div class="method-card">
+      <div class="method-header">
+        <div class="method-num">1</div>
+        <h3>Выбери вариант упражнения, где можешь сделать 8–12 повторений</h3>
+      </div>
+      <div class="method-body">
+        <p>Если с первой попытки делаешь больше 20 — вариант слишком лёгкий, бери сложнее. Если не можешь сделать даже 8 — слишком сложный, бери проще. Нужна версия, где 8–12 повторений даются с усилием.</p>
+        <div class="example-box">
+          <div class="example-label">Пример</div>
+          <div class="ex-row"><div class="ico">✅</div><div>Обычные отжимания — делаю 10, с усилием. <strong>Это мой вариант.</strong></div></div>
+          <div class="ex-row"><div class="ico">⬇️</div><div>Обычные отжимания — делаю 30 легко. Беру <strong>ноги на возвышении.</strong></div></div>
+          <div class="ex-row"><div class="ico">⬆️</div><div>Обычные отжимания — не могу сделать 8. Беру <strong>с колен.</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-header">
+        <div class="method-num">2</div>
+        <h3>Каждую тренировку добавляй повторения — до тех пор, пока не дойдёшь до 20</h3>
+      </div>
+      <div class="method-body">
+        <p>На каждой тренировке пробуй сделать чуть больше повторений, чем в прошлый раз. Когда во всех подходах дошёл до 20 — переходи к шагу 3.</p>
+        <div class="example-box">
+          <div class="example-label">Пример: обычные отжимания, 3 подхода</div>
+          <div class="ex-row"><div class="ico">📅</div><div><strong>Тренировка 1:</strong> 10 / 9 / 9 — записал, продолжаю.</div></div>
+          <div class="ex-row"><div class="ico">📅</div><div><strong>Тренировка 2:</strong> 12 / 11 / 11 — растём.</div></div>
+          <div class="ex-row"><div class="ico">📅</div><div><strong>Тренировка 3:</strong> 15 / 14 / 13 — продолжаю.</div></div>
+          <div class="ex-row"><div class="ico">📅</div><div><strong>Тренировка 4:</strong> 18 / 17 / 16 — почти.</div></div>
+          <div class="ex-row"><div class="ico" style="color:var(--dark)">🔼</div><div><strong>Тренировка 5:</strong> 20 / 20 / 20 — <span class="next">дошёл до 20 во всех подходах. Переходим к шагу 3.</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-header">
+        <div class="method-num">3</div>
+        <h3>Перейди к более сложному варианту или добавь внешний вес</h3>
+      </div>
+      <div class="method-body">
+        <p>Дошёл до 20 повторений во всех подходах — есть два пути:</p>
+        <p><strong>Путь 1 — сложнее вариант упражнения.</strong> Например, с обычных отжиманий переходишь к отжиманиям с ногами на стуле. Начинаешь снова с 8–12 повторений и повторяешь цикл.</p>
+        <p><strong>Путь 2 — добавить внешний вес.</strong> Надеваешь рюкзак с книгами и возвращаешься к нижней границе — снова 8–12 повторений. Это особенно удобно, когда больше нет более сложного варианта упражнения.</p>
+        <div class="example-box">
+          <div class="example-label">Продолжение примера</div>
+          <div class="ex-row"><div class="ico">🔼</div><div><strong>Тренировка 5:</strong> обычные — 20/20/20. Перехожу к ногам на стуле.</div></div>
+          <div class="ex-row"><div class="ico">📅</div><div><strong>Тренировка 6:</strong> ноги на стуле — 9 / 8 / 8. Новый уровень, цикл начинается заново.</div></div>
+          <div class="ex-row"><div class="ico">📅</div><div><strong>Тренировки 7–12:</strong> добавляю повторения до 20 во всех подходах.</div></div>
+          <div class="ex-row"><div class="ico">🔼</div><div><strong>Тренировка 13:</strong> ноги на стуле — 20/20/20. Перехожу к следующему варианту или добавляю рюкзак.</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="rule-highlight">
+    <div class="rule-icon">📌</div>
+    <div class="rule-text">
+      <h3>Правило одно для всех упражнений</h3>
+      <p>Начинаешь с 8–12 повторений → добавляешь до 20 → переходишь к сложнее или добавляешь вес → снова с 8–12. И так по кругу.</p>
+    </div>
+  </div>
+
+  <!-- УПРАЖНЕНИЯ -->
+  <div class="section-gap">
+    <div class="section-label">Упражнения</div>
+    <h2>Уровни сложности для каждого упражнения</h2>
+    <div class="divider"></div>
+    <p>Для каждого упражнения — четыре версии от простой к сложной. Двигайся по ним, применяя методику выше.</p>
+
+    <div style="margin-top: 22px;">
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon-big">🤸</div>
+          <div class="ex-header-text">
+            <h3>Отжимания</h3>
+            <p>Грудь, трицепс, передние дельты</p>
+          </div>
+        </div>
+        <div class="ex-levels">
+          <div class="ex-level">
+            <div class="ex-badge l1">Уровень 1</div>
+            <div class="ex-level-text">
+              <h4>С колен</h4>
+              <p>Снижает нагрузку примерно вдвое. Старт, если обычные пока не даются</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l2">Уровень 2</div>
+            <div class="ex-level-text">
+              <h4>Обычные</h4>
+              <p>Руки чуть шире плеч, тело — прямая линия от головы до пяток</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l3">Уровень 3</div>
+            <div class="ex-level-text">
+              <h4>Ноги на возвышении</h4>
+              <p>Ноги на стуле — смещает нагрузку на верхнюю грудь и плечи</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l4">Уровень 4</div>
+            <div class="ex-level-text">
+              <h4>С весом в рюкзаке или на одной руке</h4>
+              <p>Рюкзак с книгами на спине — добавляет внешний вес. Или переход к отжиманиям на одной руке</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon-big">🦵</div>
+          <div class="ex-header-text">
+            <h3>Приседания</h3>
+            <p>Квадрицепс, ягодицы, задняя поверхность бедра</p>
+          </div>
+        </div>
+        <div class="ex-levels">
+          <div class="ex-level">
+            <div class="ex-badge l1">Уровень 1</div>
+            <div class="ex-level-text">
+              <h4>С опорой</h4>
+              <p>Держишься за стул — для освоения техники</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l2">Уровень 2</div>
+            <div class="ex-level-text">
+              <h4>Обычные</h4>
+              <p>Ноги на ширине плеч, колени вдоль носков, спина прямая</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l3">Уровень 3</div>
+            <div class="ex-level-text">
+              <h4>Болгарские сплит-приседания</h4>
+              <p>Задняя нога на возвышении — почти весь вес на одну ногу</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l4">Уровень 4</div>
+            <div class="ex-level-text">
+              <h4>На одной ноге (пистолет) или с рюкзаком</h4>
+              <p>Рюкзак при болгарских или полный присед на одной ноге</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon-big">🏋️</div>
+          <div class="ex-header-text">
+            <h3>Подтягивания</h3>
+            <p>Широчайшие мышцы спины, бицепс — нужен турник</p>
+          </div>
+        </div>
+        <div class="ex-levels">
+          <div class="ex-level">
+            <div class="ex-badge l1">Уровень 1</div>
+            <div class="ex-level-text">
+              <h4>Негативные подтягивания</h4>
+              <p>Запрыгиваешь в верхнюю точку, медленно опускаешься за 4–5 секунд</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l2">Уровень 2</div>
+            <div class="ex-level-text">
+              <h4>Подтягивания обратным хватом</h4>
+              <p>Ладони смотрят на тебя — чуть легче, больше работает бицепс</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l3">Уровень 3</div>
+            <div class="ex-level-text">
+              <h4>Подтягивания прямым хватом</h4>
+              <p>Ладони от тебя, хват чуть шире плеч — больше работает спина</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l4">Уровень 4</div>
+            <div class="ex-level-text">
+              <h4>С весом в рюкзаке</h4>
+              <p>Рюкзак с книгами — когда обычные подтягивания дошли до 20</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-card">
+        <div class="ex-header">
+          <div class="ex-icon-big">💪</div>
+          <div class="ex-header-text">
+            <h3>Отжимания на брусьях</h3>
+            <p>Трицепс, нижняя грудь — нужны брусья или два стула</p>
+          </div>
+        </div>
+        <div class="ex-levels">
+          <div class="ex-level">
+            <div class="ex-badge l1">Уровень 1</div>
+            <div class="ex-level-text">
+              <h4>Обратные отжимания от стула</h4>
+              <p>Руки на стуле за спиной, ноги на полу</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l2">Уровень 2</div>
+            <div class="ex-level-text">
+              <h4>На брусьях — ноги согнуты</h4>
+              <p>Ноги скрещены и согнуты — немного снижает нагрузку</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l3">Уровень 3</div>
+            <div class="ex-level-text">
+              <h4>На брусьях — ноги прямые</h4>
+              <p>Полный вес тела, опускайся до угла 90° в локтях</p>
+            </div>
+          </div>
+          <div class="ex-level">
+            <div class="ex-badge l4">Уровень 4</div>
+            <div class="ex-level-text">
+              <h4>С весом в рюкзаке</h4>
+              <p>Рюкзак на спине когда обычные дошли до 20</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- МИФ -->
+  <div class="myth-box">
+    <div class="myth-label">⚠️ Распространённое заблуждение</div>
+    <h3>«Дома можно только поддерживать форму, но не расти»</h3>
+    <p>Это не так. Мышцам всё равно, что их нагружает. Если нагрузка достаточная и со временем растёт — мышцы растут. Отжимание или подтягивание на одной руке с рюкзаком — это серьёзная нагрузка, до которой многие в зале не доходят.</p>
+  </div>
+
+  <!-- ДНЕВНИК -->
+  <div class="journal-section">
+    <div class="section-label">Дневник</div>
+    <h2>Как записывать тренировки</h2>
+    <div class="divider"></div>
+    <p style="color: var(--dark);">Без записей двойная прогрессия не работает — ты не знаешь, сколько делал в прошлый раз и когда переходить к следующему уровню. Записывай вариант упражнения и повторения по каждому подходу.</p>
+    <table class="journal-table">
+      <thead>
+        <tr>
+          <th>Упражнение</th>
+          <th>Тренировка 1</th>
+          <th>Тренировка 2</th>
+          <th>Решение</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Отжимания</td>
+          <td>Обычные · 14/13/12</td>
+          <td>Обычные · 17/16/15</td>
+          <td class="td-same">→ продолжаем</td>
+        </tr>
+        <tr>
+          <td>Приседания</td>
+          <td>Обычные · 20/20/20</td>
+          <td>Болгарские · 9/8/8</td>
+          <td class="td-up">↑ новый уровень</td>
+        </tr>
+        <tr>
+          <td>Подтягивания</td>
+          <td>Обратный хват · 11/10/9</td>
+          <td>Обратный хват · 14/13/12</td>
+          <td class="td-same">→ продолжаем</td>
+        </tr>
+        <tr>
+          <td>Отж. на брусьях</td>
+          <td>Ноги прямые · 20/20/19</td>
+          <td>С рюкзаком 5 кг · 10/9/9</td>
+          <td class="td-up">↑ добавили вес</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note-box">
+      💡 Записывай вариант упражнения полностью — не «приседания», а «болгарские сплит-приседания». Иначе не поймёшь, на каком уровне остановился.
+    </div>
+  </div>
+
+  <!-- СОВЕТЫ -->
+  <div class="tips-section">
+    <div class="section-label">Дополнительно</div>
+    <h2>Что влияет на прогресс</h2>
+    <div class="divider"></div>
+    <ul class="tips-list">
+      <li class="tip-item">
+        <div class="tip-icon">😴</div>
+        <div class="tip-content">
+          <h3>Сон — мышцы растут ночью</h3>
+          <p>Синтез мышечного белка происходит преимущественно во время сна. Без нормального сна прогрессия замедляется даже при правильной методике.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🍳</div>
+        <div class="tip-content">
+          <h3>Белок
+        </h3>
+        <p>Без достаточного белка мышцы не растут независимо от нагрузки. Ориентир — 1.6–2 г белка на килограмм веса тела в день.</p>
+        </div>
+      </li>
+      <li class="tip-item">
+        <div class="tip-icon">🎯</div>
+        <div class="tip-content">
+          <h3>Не торопись к следующему уровню</h3>
+          <p>Дойди до 20 повторений во всех подходах с хорошей техникой — только потом переходи. Если торопиться и переходить раньше — нарушается техника и замедляется прогресс.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div class="final-card">
+    <h2>Коротко</h2>
+    <p>Выбери вариант упражнения, где можешь сделать 8–12 повторений. Добавляй повторения каждую тренировку. Дошёл до 20 во всех подходах — переходи к сложнее варианту или добавляй вес в рюкзак. Записывай каждую тренировку.</p>
+    <div class="final-pills">
+      <div class="pill">8–12 старт</div>
+      <div class="pill">Добавляй повторения</div>
+      <div class="pill">20 — переходи</div>
+      <div class="pill">Сложнее или рюкзак</div>
+      <div class="pill">Записывай</div>
+    </div>
+  </div>
+
+  <div class="read-also">
+    <div class="read-also-label">📚 Читай также</div>
+    <ul class="read-also-list">
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Принципы прогрессии — подробнее в <b>«Как прогрессировать в тренировках»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Сон влияет на результат и дома — читай <b>«Почему важен сон»</b></span></li>
+    <li class="read-also-item"><span class="ra-arrow">→</span><span>Набираешь массу дома — советы по питанию в <b>«Фишки при массанаборе»</b></span></li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
