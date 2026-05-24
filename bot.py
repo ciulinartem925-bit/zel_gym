@@ -851,7 +851,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -7389,7 +7389,7 @@ FUNNEL_STAGE_CONFIG = {
         "url": None,
     },
     "solution": {
-        "video": "BAACAgIAAxkBAAILvWoNx9T4i6FcnA1u7V8Cg9YXTxirAAObAAKo4GlIjsoIMbMAAVBgOwQ",
+        "video": "BAACAgIAAxkBAAKaZGoTY36V_5rln8phDCP0X6-kzFxRAAL2mQACkwmYSLtoyiZUSofjOwQ",
         "image": "media2/funnel/solution.jpg",
         "url": None,
     },
