@@ -603,29 +603,199 @@ def safe_btn(text: str, maxlen: int = 20) -> str:
     return cut.rstrip("(,—") + "…"
 
 
+# =========================
+# ТИПЫ УПРАЖНЕНИЙ
+# =========================
+# "compound"  — многосуставное: подбор по группе мышц (group в EXERCISE_ALTERNATIVES)
+# "isolation" — изолирующее:    подбор строго по той же мышце (точный group)
+#
+# Правило:
+#   compound  → альтернативы должны совпадать по group (широкая группа)
+#   isolation → альтернативы должны совпадать по group И быть isolation-типа
+#               (т.е. качать ту же конкретную мышцу, а не всю группу)
+#
+EXERCISE_TYPE: Dict[str, str] = {
+    # ── НОГИ — многосуставные ────────────────────────────────────────────────
+    "squat_barbell":          "compound",
+    "squat_sumo":             "compound",
+    "squat_bw":               "compound",
+    "goblet":                 "compound",
+    "hack_squat":             "compound",
+    "legpress":               "compound",
+    "bulgarian":              "compound",
+    "bulgarian_dumbbell":     "compound",
+    "lunge_barbell":          "compound",
+    "lunge_dumbbell":         "compound",
+    "lunge_walking":          "compound",
+    "lunge_bw":               "compound",
+    "lunge_plate":            "compound",
+    "reverse_lunge_plate":    "compound",
+    "reverse_lunge_dumbbell": "compound",
+    "reverse_lunge_bw":       "compound",
+    "lateral_lunge_plate":    "compound",
+    "lateral_lunge_dumbbell": "compound",
+    "lateral_lunge_bw":       "compound",
+    "squat_explosive_bw":     "compound",
+    "pistol_squat":           "compound",
+    "sumo_squat_bw":          "compound",
+    "deadlift":               "compound",
+    "deadlift_sumo":          "compound",
+    "rdl_barbell":            "compound",
+    "rdl_dumbbell":           "compound",
+    "rdl_plate":              "compound",
+    "good_morning":           "compound",
+    "hyperext":               "compound",
+    # ── НОГИ — изолирующие ──────────────────────────────────────────────────
+    "legcurl":                "isolation",   # бицепс бедра
+    "leg_extension":          "isolation",   # квадрицепс
+    "leg_adduction":          "isolation",   # приводящие
+    "cable_kickback":         "isolation",   # ягодицы
+    "glute_bridge":           "isolation",   # ягодицы
+    "glute_bridge_single":    "isolation",   # ягодицы
+    "glute_bridge_bodyweight":"isolation",   # ягодицы
+    "superman":               "isolation",   # поясница
+    "calves_machine":         "isolation",   # икры
+    "calves_standing":        "isolation",   # икры
+    # ── ГРУДЬ — многосуставные ──────────────────────────────────────────────
+    "bench_barbell":          "compound",
+    "bench_dumbbell":         "compound",
+    "bench_machine":          "compound",
+    "incline_press_barbell":  "compound",
+    "incline_press_dumbbell": "compound",
+    "pushup_wide":            "compound",
+    "pushup_elevated":        "compound",
+    "pushup_knee":            "compound",
+    "pushup_elevated_knee":   "compound",
+    "pushup_hands_elevated":  "compound",
+    "deep_pushup":            "compound",
+    "explosive_pushup":       "compound",
+    "single_leg_pushup":      "compound",
+    "dips":                   "compound",
+    "diamond_pushup":         "compound",
+    "diamond_pushup_knee":    "compound",
+    # ── ГРУДЬ — изолирующие ─────────────────────────────────────────────────
+    "chest_fly":              "isolation",   # грудь (изоляция)
+    "crossover_chest":        "isolation",   # грудь (изоляция)
+    # ── СПИНА — многосуставные ──────────────────────────────────────────────
+    "latpulldown_wide":       "compound",
+    "latpulldown_narrow":     "compound",
+    "pullup_chinup":          "compound",
+    "pullup_wide":            "compound",
+    "pullup_narrow":          "compound",
+    "australian_pullup":      "compound",
+    "rowtrain":               "compound",
+    "dumbbell_row":           "compound",
+    "barbell_row":            "compound",
+    "tbar_row":               "compound",
+    "plate_row":              "compound",
+    # ── СПИНА — изолирующие ─────────────────────────────────────────────────
+    "face_pull":              "isolation",   # задняя дельта
+    "rear_delt":              "isolation",   # задняя дельта
+    "rear_delt_machine":      "isolation",   # задняя дельта
+    "rear_delt_plate":        "isolation",   # задняя дельта
+    # ── ПЛЕЧИ — многосуставные ──────────────────────────────────────────────
+    "ohp_barbell":            "compound",
+    "ohp_dumbbell":           "compound",
+    "ohp_dumbbell_sitting":   "compound",
+    "ohp_machine":            "compound",
+    "arnold_press":           "compound",
+    "ohp_plate":              "compound",
+    "pike_pushup":            "compound",
+    # ── ПЛЕЧИ — изолирующие ─────────────────────────────────────────────────
+    "lateralraise_dumbbell":  "isolation",   # боковые дельты
+    "lateralraise_plate":     "isolation",   # боковые дельты
+    "front_raise":            "isolation",   # передние дельты
+    # ── БИЦЕПС — изолирующие ────────────────────────────────────────────────
+    "biceps_barbell":         "isolation",
+    "biceps_dumbbell":        "isolation",
+    "biceps_dumbbell_sitting":"isolation",
+    "biceps_plate":           "isolation",
+    "hammer":                 "isolation",
+    "concentration_curl":     "isolation",
+    # ── ТРИЦЕПС — изолирующие ───────────────────────────────────────────────
+    "triceps_oh":             "isolation",
+    "triceps_cable":          "isolation",
+    "french_press_barbell":   "isolation",
+    "french_press_dumbbell":  "isolation",
+    "narrow_pushup":          "isolation",
+    "chair_dips_pushup":      "isolation",
+    "triceps_ext_bw":         "isolation",
+    "triceps_ext_knee":       "isolation",
+    # ── ПРЕСС / КОР — изолирующие ───────────────────────────────────────────
+    "planks_static":          "isolation",
+    "side_plank":             "isolation",
+    "ab_crunch":              "isolation",
+    "bicycle_crunch":         "isolation",
+    "russian_twist":          "isolation",
+    "cable_crunch":           "isolation",
+    "hanging_leg_raise":      "isolation",
+    "leg_raise_lying":        "isolation",
+    "elbow_leg_raise":        "isolation",
+}
+
+
 def get_alternatives(tech_key: str, place: str) -> List[Tuple[str, str]]:
     """Возвращает список (tech_key, display_name) альтернатив для упражнения.
-    Учитывает место (зал/дома). До 4 вариантов."""
+
+    Логика подбора:
+    - Многосуставное (compound): альтернативы из той же группы мышц (group),
+      также многосуставные. Это обеспечивает замену «жим штанги → жим гантелей»,
+      а не «жим штанги → разводки» (разные биомеханические задачи).
+    - Изолирующее (isolation): альтернативы строго той же мышцы (group),
+      также изолирующие. Например, «сгибания со штангой → сгибания с гантелями»,
+      но не «сгибания → подтягивания».
+
+    Если строгий фильтр не даёт результатов — используем кандидатов без
+    ограничения по типу (graceful fallback), чтобы пользователь не получил
+    пустой список.
+
+    Учитывает место (зал/дома). До 4 вариантов.
+    """
     entry = EXERCISE_ALTERNATIVES.get(tech_key)
     if not entry:
         return []
-    _, gym_keys, home_keys = entry
+
+    group, gym_keys, home_keys = entry
     is_home = "дома" in (place or "").lower()
-    keys: List[str] = list(home_keys if is_home else gym_keys)
-    if not keys:
-        keys = list(gym_keys if is_home else home_keys)
+    candidates: List[str] = list(home_keys if is_home else gym_keys)
+    if not candidates:
+        candidates = list(gym_keys if is_home else home_keys)
+
+    src_type = EXERCISE_TYPE.get(tech_key, "compound")
+
     result: List[Tuple[str, str]] = []
+    fallback: List[Tuple[str, str]] = []
     seen = {tech_key}
-    for key in keys:
+
+    for key in candidates:
         if key in seen:
             continue
         seen.add(key)
+
         name = EXERCISE_NAMES.get(key)
-        if name:
+        if not name:
+            continue
+
+        alt_entry = EXERCISE_ALTERNATIVES.get(key)
+        alt_group = alt_entry[0] if alt_entry else ""
+        alt_type = EXERCISE_TYPE.get(key, "compound")
+
+        # Кандидат в fallback (группа совпадает, тип не важен)
+        if alt_group == group or not alt_group:
+            fallback.append((key, name))
+
+        # Строгий критерий: совпадение группы И типа упражнения
+        if alt_type == src_type and (alt_group == group or not alt_group):
             result.append((key, name))
+
         if len(result) >= 4:
             break
-    return result
+
+    # Если строгий фильтр дал меньше 1 результата — берём fallback
+    if not result:
+        result = fallback[:4]
+
+    return result[:4]
 
 
 def build_workout_keyboard(day: int, exercises: List[str], done: List[int]) -> InlineKeyboardMarkup:
@@ -681,7 +851,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -821,6 +991,18 @@ class ProfileFieldEdit(StatesGroup):
     height = State()
     weight = State()
     limits = State()
+
+
+class FunnelFlow(StatesGroup):
+    """Прогревающая воронка после /start (этапы 1–6 перед полным профилем)."""
+    subscription = State()   # Этап 1: ждём «Я подписался»
+    problem = State()        # Этап 2: сообщение о проблеме
+    waiting_name = State()   # Этап 3.1: вводим имя
+    waiting_goal = State()   # Этап 3.2: выбираем цель
+    waiting_gender = State() # Этап 3.3: выбираем пол
+    dream = State()          # Этап 4: образ результата
+    solution = State()       # Этап 5: объяснение решения
+    consideration = State()  # Этап 6: ценность бота
 
 
 # =========================
@@ -3316,7 +3498,7 @@ def profile_view_kb():
 def kb_goal():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
-         InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
+         InlineKeyboardButton(text="🔥 Похудение", callback_data="p:goal:cut")],
         [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength")],
     ])
 
@@ -3466,55 +3648,188 @@ def _activity_label(factor) -> str:
 
 
 def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: str, freq: int = 3, place: str = "свой вес", activity_factor: float = None) -> int:
+    """Рассчитывает целевые калории.
+
+    Формула BMR: Mifflin–St Jeor (1990) — наиболее точная для большинства людей
+    (Frankenfield et al., 2005; Sabounchi et al., 2013).
+
+    Калорийный коридор по целям:
+    - Похудение: дефицит 300–500 ккал/день (~15–20% от TDEE).
+      Более агрессивный дефицит ускоряет потерю ЛМТ (Helms et al., 2014).
+      Потолок дефицита — 25% TDEE, чтобы не нарушать гормональный фон.
+    - Масса: +200–250 ккал (умеренный сурплюс, Barakat et al., 2020).
+      +10% от TDEE — избыточный набор жира без дополнительного прироста мышц.
+    - Сила: +100–150 ккал — минимальный сурплюс для восстановления и адаптации
+      (Ribeiro et al., 2019). Большой сурплюс не добавляет силы.
+    - Выносливость: поддержание TDEE или лёгкий дефицит −100 ккал.
+    - Поддержание: TDEE.
+    """
     sx = (sex or "м").lower()
+    # Mifflin–St Jeor
     if sx == "м":
         bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age + 5
     else:
         bmr = 10 * weight_kg + 6.25 * height_cm - 5 * age - 161
 
     if activity_factor:
-        af = activity_factor
+        af = float(activity_factor)
     else:
         af = _activity_factor(int(freq or 3), place)
     tdee = bmr * af
 
     g = (goal or "").lower()
     if "мас" in g:
-        target = tdee * 1.10
-    elif "суш" in g:
-        target = tdee * 0.85  # дефицит ~15% — безопасный максимум по науке
+        # +200–300 ккал — умеренный «чистый» сурплюс для набора без лишнего жира.
+        # Barakat et al. (2020): сурплюс >300 ккал не увеличивает прирост мышц,
+        # но существенно увеличивает набор жира.
+        target = tdee + 250
+    elif "похуд" in g or "суш" in g:
+        # Дефицит: 300–500 ккал/день, но не >20% TDEE (защита ЛМТ).
+        # Helms et al. (2014): агрессивный дефицит >500 ккал ускоряет потерю мышц.
+        # Hall et al. (2012): оптимальная скорость похудения 0.5–1% веса в неделю.
+        deficit = min(500, tdee * 0.20)
+        deficit = max(deficit, 300)  # минимум 300 ккал для реального эффекта
+        target = tdee - deficit
     elif "сил" in g:
-        target = tdee * 1.05
+        # +100–150 ккал — минимальный сурплюс для нейромышечной адаптации.
+        # Ribeiro et al. (2019): большой сурплюс не добавляет силы, только жир.
+        target = tdee + 125
     elif "вынос" in g:
-        target = tdee * 0.98
+        # Поддержание TDEE: выносливость требует достаточно энергии для тренировок.
+        # Burke et al. (2011): дефицит при тренировках на выносливость снижает производительность.
+        target = tdee
     else:
-        target = tdee * 1.00
+        target = tdee
+
+    # Абсолютные минимумы безопасности
+    min_kcal = 1400 if sx == "ж" else 1600
+    target = max(target, min_kcal)
 
     return int(round(target))
 
 
-def calc_macros(calories: int, weight_kg: float, goal: str):
-    g = (goal or "").lower()
+def _ibw(height_cm: int, sex: str) -> float:
+    """Идеальная масса тела по формуле Devine (1974).
 
-    if "суш" in g:
-        protein = int(round(weight_kg * 2.2))
-    elif "вынос" in g:
-        protein = int(round(weight_kg * 1.7))
+    Мужчины: IBW = 50 + 2.3 × (рост_дюймов − 60)
+    Женщины: IBW = 45.5 + 2.3 × (рост_дюймов − 60)
+    Используется для расчёта скорректированной массы тела при ожирении.
+    """
+    inches = height_cm / 2.54
+    if (sex or "м").lower() == "м":
+        return 50.0 + 2.3 * max(0.0, inches - 60)
+    else:
+        return 45.5 + 2.3 * max(0.0, inches - 60)
+
+
+def _protein_weight(weight_kg: float, height_cm: int, sex: str) -> float:
+    """Скорректированная масса тела для расчёта белка.
+
+    При ИМТ до ~27 (до 120% IBW) используется фактический вес.
+    При ожирении: AdjBW = IBW + 0.25 × (фактический − IBW).
+    Источник: Rafii et al. (2015); Barakat et al. (2020).
+    Это предотвращает завышение белка у людей с лишним весом
+    (2.6 г/кг × 120 кг = 312 г — нереально и избыточно).
+    """
+    i = _ibw(height_cm, sex)
+    if weight_kg <= i * 1.20:
+        return weight_kg
+    return i + 0.25 * (weight_kg - i)
+
+
+def calc_macros(calories: int, weight_kg: float, goal: str,
+                height_cm: int = 175, sex: str = "м"):
+    """Рассчитывает БЖУ по целям (научно обоснованные нормы).
+
+    Белок по скорректированной массе тела (adjusted BW, Rafii et al. 2015):
+      При ИМТ до ~27 — фактический вес. При ожирении: IBW + 0.25*(факт-IBW).
+      Это предотвращает завышение белка у людей с лишним весом.
+
+    Нормы белка (г/кг adjusted BW):
+    ┌──────────────┬──────────┬─────────────────────────────────────────────┐
+    │ Похудение    │ 2.4 г/кг │ Helms et al. 2014: 2.3–3.1 г/кг lean.     │
+    │              │          │ Высокий белок сохраняет ЛМТ при дефиците,  │
+    │              │          │ повышает сытость (Leidy et al. 2015).       │
+    ├──────────────┼──────────┼─────────────────────────────────────────────┤
+    │ Масса        │ 2.2 г/кг │ Morton et al. 2018; ISSN 2017.             │
+    │              │          │ Профицит создаёт анаболическую среду —     │
+    │              │          │ белок чуть ниже, чем при похудении.         │
+    ├──────────────┼──────────┼─────────────────────────────────────────────┤
+    │ Сила         │ 2.4 г/кг │ Stokes et al. 2018. Тяжёлые нагрузки      │
+    │              │          │ создают высокий оборот белка; важна         │
+    │              │          │ плотность мышц, а не их объём.              │
+    └──────────────┴──────────┴─────────────────────────────────────────────┘
+
+    Жиры (% от ккал):
+    - Похудение: max(0.9 г/кг adj, 20% ккал).
+      Нельзя опускать ниже 20% ккал — подавляет тестостерон/эстроген
+      (Hamalainen et al. 1984). Потолок белка — 35% ккал.
+    - Масса: 28% ккал — чуть выше нормы для гормонального фона
+      и усвоения жирорастворимых витаминов при профиците.
+    - Сила: 22% ккал — снижен в пользу углеводов.
+      Гликоген — основной субстрат при тяжёлых нагрузках (Burke et al. 2017).
+
+    Углеводы: остаток калорий.
+    - Похудение/Масса: минимум 100 г/день (IOM 2002, работа мозга + гликоген).
+    - Сила: минимум max(130 г, 3 г/кг BW) — ресинтез гликогена (Ivy 2004).
+    """
+    g  = (goal or "").lower()
+    pw = _protein_weight(weight_kg, height_cm, sex)   # adjusted BW
+
+    # ── Белок ───────────────────────────────────────────────────────────────
+    if "похуд" in g or "суш" in g:
+        # Дефицит = катаболическая среда → нужен максимальный белок
+        protein    = int(round(pw * 2.4))
+        max_p_pct  = 0.35          # до 35% ккал из белка допустимо при похудении
     elif "сил" in g:
-        protein = int(round(weight_kg * 1.9))
-    else:
-        protein = int(round(weight_kg * 2.0))  # 2.0 г/кг — оптимум для роста (Morton et al., 2018)
+        # Тяжёлые нагрузки → высокий оборот белка, цель — плотность мышц
+        protein    = int(round(pw * 2.4))
+        max_p_pct  = 0.35
+    elif "мас" in g:
+        # Профицит создаёт анаболическую среду — 2.2 г/кг достаточно
+        protein    = int(round(pw * 2.2))
+        max_p_pct  = 0.30
+    else:                          # поддержание
+        protein    = int(round(pw * 1.8))
+        max_p_pct  = 0.30
 
-    if "вынос" in g:
-        fat = int(round(weight_kg * 0.9))  # минимум 0.8-1.0 г/кг для гормонального фона
-    else:
-        fat = int(round(weight_kg * 1.0))  # 1.0 г/кг — рекомендуемый минимум по науке
+    protein = min(protein, int(calories * max_p_pct / 4))
 
-    carbs_kcal = max(calories - (protein * 4 + fat * 9), 0)
-    carbs = int(round(carbs_kcal / 4))
+    # ── Жир ─────────────────────────────────────────────────────────────────
+    if "похуд" in g or "суш" in g:
+        # Гормональный минимум: наибольшее из 0.9 г/кг adj и 20% ккал
+        fat = int(round(max(pw * 0.9, calories * 0.20 / 9)))
+    elif "мас" in g:
+        # 1 г/кг веса тела — оптимально для гормонального фона при профиците
+        # Клэмп: не ниже 20% ккал и не выше 35% ккал
+        fat = int(round(weight_kg * 1.0))
+        fat = max(fat, int(calories * 0.20 / 9))
+        fat = min(fat, int(calories * 0.35 / 9))
+    elif "сил" in g:
+        # 22% ккал — снижен в пользу углеводов (гликоген важнее при тяжёлых нагрузках)
+        fat = int(round(calories * 0.22 / 9))
+    else:                          # поддержание
+        fat = int(round(calories * 0.27 / 9))
+
+    # Абсолютный минимум жира — 0.8 г/кг adjusted BW
+    fat = max(fat, int(round(pw * 0.8)))
+
+    # ── Углеводы ─────────────────────────────────────────────────────────────
+    carbs_kcal = max(calories - protein * 4 - fat * 9, 0)
+    carbs      = int(round(carbs_kcal / 4))
+
+    # Минимум углеводов по цели
+    if "сил" in g:
+        carbs_min = max(130, int(round(weight_kg * 3.0)))   # ресинтез гликогена
+    else:
+        carbs_min = 100                                      # IOM 2002
+
+    if carbs < carbs_min:
+        carbs   = carbs_min
+        remaining = max(0, calories - carbs * 4 - fat * 9)
+        protein = min(protein, int(round(remaining / 4)))
+
     return protein, fat, carbs
-
-
 def suggest_meals_count(calories: int) -> int:
     if calories >= 3200:
         return 5
@@ -4135,6 +4450,14 @@ async def init_db():
             UNIQUE(user_id, day_date)
         )
         """)
+        # Таблица прохождения воронки
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS funnel_progress (
+            user_id INTEGER PRIMARY KEY,
+            step TEXT NOT NULL DEFAULT 'start',
+            updated_at TEXT
+        )
+        """)
         await conn.commit()
 
 
@@ -4153,6 +4476,61 @@ async def ensure_user(user_id: int, username: str):
             "INSERT OR IGNORE INTO bot_state (user_id, last_bot_msg_id, diary_prompt_msg_id) VALUES (?, NULL, NULL)",
             (user_id,)
         )
+        await conn.commit()
+
+
+# =========================
+# ВОРОНКА: трекинг этапов
+# =========================
+# Ключи этапов воронки — от начала к концу
+FUNNEL_STEPS_ORDER = [
+    "start",
+    "problem",
+    "name_goal_sex",
+    "dream",
+    "solution",
+    "finish_promo",
+    "profile_filling",
+    "profile_created",
+    "tariffs",
+]
+
+FUNNEL_STEPS_LABELS = {
+    "start":           "1. Приветствие (/start)",
+    "problem":         "2. «Почему 90% не накачаются»",
+    "name_goal_sex":   "3. Имя / цель / пол",
+    "dream":           "4. «Представь жизнь через 1 год»",
+    "solution":        "5. «5 шагов к результату»",
+    "finish_promo":    "6. «Вот мы и на финишной»",
+    "profile_filling": "7. Заполнение профиля",
+    "profile_created": "8. «Профиль успешно создан ✅»",
+    "tariffs":         "9. «💳 Тарифы»",
+}
+
+
+async def track_funnel_step(user_id: int, step: str) -> None:
+    """Записывает / обновляет максимально достигнутый этап воронки для пользователя."""
+    now = datetime.utcnow().isoformat()
+    # Обновляем только если новый шаг «глубже» текущего
+    order = FUNNEL_STEPS_ORDER
+    new_idx = order.index(step) if step in order else 0
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT step FROM funnel_progress WHERE user_id=?", (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+        if row:
+            old_idx = order.index(row[0]) if row[0] in order else 0
+            if new_idx > old_idx:
+                await conn.execute(
+                    "UPDATE funnel_progress SET step=?, updated_at=? WHERE user_id=?",
+                    (step, now, user_id)
+                )
+        else:
+            await conn.execute(
+                "INSERT INTO funnel_progress (user_id, step, updated_at) VALUES (?, ?, ?)",
+                (user_id, step, now)
+            )
         await conn.commit()
 
 
@@ -4996,6 +5374,9 @@ def parse_exercises_full(day_text: str) -> List[Tuple[str, str]]:
                 parts = content.split(" — ", 1)
                 name = parts[0].strip()
                 sets_reps = parts[1].strip()
+                # Убираем "(отдых ...)" — отдых уже показывается отдельно через ⏱
+                import re as _re
+                sets_reps = _re.sub(r'\s*\(отдых[^)]*\)', '', sets_reps).strip()
             else:
                 name = content
                 sets_reps = ""
@@ -5089,7 +5470,7 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     # ── Интервалы отдыха по цели и типу упражнения ──────────────────────────
     g = (goal or "").lower()
     is_strength_goal = "сил" in g
-    is_cut_goal = "суш" in g
+    is_cut_goal = ("похуд" in g or "суш" in g)
 
     # Тяжёлая база: присед, становая, жим штанги, жим стоя, подтягивания
     _BASE_KEYWORDS = ["присед", "станов", "жим штанг", "жим ног", "подтяг", "deadlift", "squat", "bench",
@@ -5118,22 +5499,39 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     ]
 
     def _rest_for(ex_name: str) -> str:
+        """Интервалы отдыха по цели и типу упражнения.
+
+        Schoenfeld et al. (2016): отдых 3 мин > 1 мин для гипертрофии.
+        Ralston et al. (2017): для силы 3–5 мин обязательны.
+        de Salles et al. (2009): обзор оптимальных интервалов отдыха.
+        """
         n = ex_name.lower()
         is_base = any(k in n for k in _BASE_KEYWORDS)
         is_small_iso = any(k in n for k in _SMALL_ISO_KEYWORDS)
 
         if is_strength_goal:
-            # База и крупные мышцы: 3–5 мин, малая изоляция: 2–3 мин
+            # Сила: полное восстановление ATP-PCr системы
             if is_small_iso:
                 return "2–3 мин"
             else:
                 return "3–5 мин"
-        else:
-            # Масса и сушка: база и крупные мышцы 3 мин, малая изоляция 2 мин
+        elif is_cut_goal:
+            # Похудение: умеренный отдых — плотность тренировки выше,
+            # но не в ущерб технике и качеству подхода
             if is_small_iso:
-                return "2 мин"
+                return "60–90 сек"
+            elif is_base:
+                return "2–3 мин"
             else:
-                return "3 мин"
+                return "90 сек–2 мин"
+        else:
+            # Гипертрофия / масса: Schoenfeld (2016) — 2–3 мин лучше для роста
+            if is_small_iso:
+                return "90 сек–2 мин"
+            elif is_base:
+                return "2–3 мин"
+            else:
+                return "2 мин"
 
     # Определяем тип дня из текста плана
     t = day_text.lower()
@@ -5179,7 +5577,7 @@ def build_day_display_text(day_num: int, day_text: str, exercises: List[str],
     # Памятка
     lines.append("⚠️ Разомнись 5–10 мин перед началом")
     lines.append("")
-    lines.append("💡 Чувтсвуешь, что не восстановился? Отдохни ещё немного. Главное — чтобы в следующем подходе, ты смог повторить то же число повторений.")
+    lines.append("💡 Чувствуешь, что не восстановился? Отдохни ещё немного. Главное — чтобы в следующем подходе ты смог повторить то же число повторений.")
     lines.append("")
     lines.append("📚 — техника   🔄 — заменить упражнение")
     lines.append("")
@@ -5233,45 +5631,146 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
 
     lvl = exp_level(exp)
     is_novice = (lvl == "novice")
+    is_adv = (lvl == "adv")
     g = (goal or "").lower()
 
-    is_cut = ("суш" in g)
+    is_cut = ("похуд" in g or "суш" in g)
     is_strength = ("сил" in g)
+    is_endurance = ("вынос" in g)
 
     tags = _limits_tags(limits)
 
     f = int(freq or 3)
     f = max(MIN_DAYS, min(f, MAX_DAYS))
 
-    # Три уровня нагрузки: первые базовые, вторые базовые, изоляция
-    # Логика: тяжёлая база → средняя база → добивочная изоляция
+    # ══════════════════════════════════════════════════════════════════════
+    # ПОДХОДЫ, ПОВТОРЕНИЯ, ОБЪЁМ
+    # Источники: Schoenfeld (2010, 2017), Krieger (2010), Helms et al. (2014),
+    #            Ralston et al. (2017), Grgic et al. (2018), NSCA Guidelines.
+    #
+    # Ключевые принципы:
+    # 1. Гипертрофия: диапазон 5–30 повт. эффективен при работе близко к отказу
+    #    (Schoenfeld & Grgic, 2017). Оптимальный объём: 10–20 рабочих сетов/мышцу/нед.
+    # 2. Сила: нейромышечная адаптация максимальна при 1–5 повт., 80–95% 1ПМ
+    #    (Ralston et al., 2017).
+    # 3. Новичок: 2–3 рабочих сета достаточно — нейроадаптация даёт прогресс
+    #    без высокого объёма (Krieger, 2010). Перегрузка объёмом контрпродуктивна.
+    # 4. Похудение: объём важнее интенсивности для сохранения мышц при дефиците
+    #    (Helms et al., 2014). Сохраняем рабочие подходы, диапазон 8–15 повт.
+    # 5. RIR (Reps In Reserve): работа до 1–2 RIR так же эффективна для гипертрофии,
+    #    как работа до полного отказа, но с меньшим риском травм (Schoenfeld et al., 2021).
+    # ══════════════════════════════════════════════════════════════════════
+
     if is_strength:
-        sets1   = "5"                        # первые 2 базовых: тяжело
-        reps1   = "1–5"
-        sets2   = "4"                        # следующие 1-2 базовых: чуть легче
-        reps2   = "4–6"
-        iso_sets = "3"
-        reps_iso = "6–10"                    # изоляция — контроль техники
-        rir = "1–2"
-    elif is_cut:
-        sets1   = "3"                        # первые 2 базовых: сохраняем мышцы
-        reps1   = "6–10"
-        sets2   = "3"                        # следующие 1-2 базовых
-        reps2   = "10–15"
-        iso_sets = "3"
-        reps_iso = "12–20"                   # изоляция многоповторная
-        rir = "1–2"
-    else:
-        # масса — три разных стимула роста в одной тренировке
-        sets1   = "4"                        # первые 2 базовых: механическое напряжение
-        reps1   = "5–8"
-        sets2   = "3"                        # следующие 1-2 базовых: классическая гипертрофия
-        reps2   = "8–12"
-        iso_sets = "3"
-        reps_iso = "12–20"                   # изоляция: метаболический стресс
+        # Силовой тренинг: 80–95% 1ПМ, 2–6 повт., 3–5 подходов на базе.
+        # Ralston et al. (2017): для максимальной силы ≥3 рабочих сета.
+        # Новичок: линейная прогрессия (LP) — 3×5 на базе достаточно (Starting Strength model).
+        # Средний: 4×3–5 на базе, вспомогательные 3×5–8 (Barbell Medicine).
+        # Продвинутый: 5×1–3 на базовых движениях, 4×4–6 на вспомогательных.
+        # Изоляция при силовом тренинге: 3 подхода на 8–12 — поддерживает гипертрофию
+        # вспомогательных мышц без перегрузки нервной системы (NSCA Guidelines).
+        if is_novice:
+            sets1    = "3"
+            reps1    = "5"
+            sets2    = "3"
+            reps2    = "5–8"
+            iso_sets = "2"
+            reps_iso = "10–12"
+        elif is_adv:
+            sets1    = "5"
+            reps1    = "1–3"
+            sets2    = "4"
+            reps2    = "4–6"
+            iso_sets = "3"
+            reps_iso = "8–12"
+        else:
+            sets1    = "4"
+            reps1    = "3–5"
+            sets2    = "3"
+            reps2    = "5–8"
+            iso_sets = "3"
+            reps_iso = "8–12"
         rir = "1–2"
 
-    # Обратная совместимость: base_sets/reps_base используются в нескольких местах
+    elif is_cut:
+        # Похудение: сохраняем мышечную массу через достаточный объём и интенсивность.
+        # Helms et al. (2014): сохранение ЛМТ при дефиците требует ≥3 рабочих сета/мышцу.
+        # Диапазон 8–15 повт. оптимален: гипертрофический стимул + метаболический расход.
+        # НЕ снижаем повторения ниже 8 — механическое напряжение ключевое для сохранения ЛМТ.
+        # iso_sets ≥2 даже для новичков — без минимального объёма изоляции мышечный тонус падает.
+        if is_novice:
+            sets1    = "3"
+            reps1    = "10–15"
+            sets2    = "3"
+            reps2    = "12–15"
+            iso_sets = "2"
+            reps_iso = "15–20"
+        elif is_adv:
+            sets1    = "4"
+            reps1    = "8–12"
+            sets2    = "3"
+            reps2    = "12–15"
+            iso_sets = "3"
+            reps_iso = "15–20"
+        else:
+            sets1    = "3"
+            reps1    = "10–12"
+            sets2    = "3"
+            reps2    = "12–15"
+            iso_sets = "3"
+            reps_iso = "15–20"
+        rir = "1–2"
+
+    elif is_endurance:
+        # Выносливость: высокий диапазон повторений, умеренный объём.
+        # ACSM (2009): для мышечной выносливости ≥2–3 сета, 15–20+ повт., короткий отдых.
+        # Новичок: 3 сета достаточно для адаптации нервно-мышечной системы.
+        if is_novice:
+            sets1    = "3"
+            reps1    = "15–20"
+            sets2    = "3"
+            reps2    = "15–20"
+            iso_sets = "2"
+            reps_iso = "20–25"
+        else:
+            sets1    = "3"
+            reps1    = "15–20"
+            sets2    = "3"
+            reps2    = "20–25"
+            iso_sets = "3"
+            reps_iso = "20–25"
+        rir = "2–3"
+
+    else:
+        # Гипертрофия (масса): 6–20 повт., 3–5 подходов.
+        # Schoenfeld et al. (2017): оптимальный объём 10–20 рабочих сетов/мышцу/неделю.
+        # Krieger (2010): 2–3 сета для новичка = максимальный стимул без перетренированности.
+        # Продвинутый: более низкий диапазон (6–10 повт.) при высокой нагрузке допустим,
+        # но изоляция всё равно 10–20 повт. для метаболического стресса (Schoenfeld 2010).
+        if is_novice:
+            sets1    = "3"
+            reps1    = "8–12"
+            sets2    = "3"
+            reps2    = "10–15"
+            iso_sets = "2"
+            reps_iso = "12–15"
+        elif is_adv:
+            sets1    = "4"
+            reps1    = "6–10"
+            sets2    = "4"
+            reps2    = "8–12"
+            iso_sets = "3"
+            reps_iso = "12–20"
+        else:
+            sets1    = "4"
+            reps1    = "8–12"
+            sets2    = "3"
+            reps2    = "10–15"
+            iso_sets = "3"
+            reps_iso = "12–20"
+        rir = "1–2"
+
+    # Обратная совместимость
     base_sets = sets1
     reps_base = reps1
 
@@ -5439,15 +5938,25 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         BASE_HINGE = [x for x in BASE_HINGE
                       if "румын" not in x.lower() and "становая" not in x.lower()]
 
-    if f == 3:
+    if is_strength:
+        if f == 3:
+            system = "Фулбади (Сила)"
+            template = ["STR-A", "STR-B", "STR-C"]
+        elif f == 4:
+            system = "Верх/Низ (Сила)"
+            template = ["UPPER-A", "LOWER-A", "UPPER-B", "LOWER-B"]
+        else:
+            system = "PPL (Сила)"
+            template = ["PUSH", "PULL", "LEGS", "PUSH", "PULL"]
+    elif f == 3:
         system = "Фулбади"
         template = ["FB-A", "FB-B", "FB-C"]
     elif f == 4:
         system = "Верх/Низ"
-        template = ["UPPER", "LOWER", "UPPER", "LOWER"]
+        template = ["UPPER-A", "LOWER-A", "UPPER-B", "LOWER-B"]
     else:
-        system = "PPL + Верх/Низ"
-        template = ["PUSH", "PULL", "LEGS", "UPPER", "LOWER"]
+        system = "PPL"
+        template = ["PUSH", "PULL", "LEGS", "PUSH", "PULL"]
 
     def fmt(name: str, sets: str, reps: str) -> str:
         return f"{name} — {sets}×{reps}"
@@ -5630,6 +6139,149 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
             lines.append(f"• {fmt(core, '2', '30–60 сек')}")
             return lines
 
+        # ── ВЕРХ-А: жим лёжа + горизонтальная тяга + плечи ────────────────
+        if kind == "UPPER-A":
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            lines.append("База:")
+            lines.append(f"• {fmt(hpush, sets1, reps1)}")
+            lines.append(f"• {fmt(hpull, sets1, reps1)}")
+            lines.append(f"• {fmt(vpull, sets2, reps2)}")
+            if not tags["shoulder"]:
+                vpush = pick1(BASE_VPUSH, avoid_keys, used); used.append(vpush)
+                lines.append(f"• {fmt(vpush, sets2, reps2)}")
+            lines += ["", "Изоляция:"]
+            iso1 = pick1(ISO_SHOULD, avoid_keys, used); used.append(iso1)
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
+            if not tags["elbow"]:
+                iso2 = pick1(ISO_TRI, avoid_keys, used)
+                lines.append(f"• {fmt(iso2, iso_sets, reps_iso)}")
+            return lines
+
+        # ── ВЕРХ-Б: жим под углом + вертикальная тяга + руки ────────────────
+        if kind == "UPPER-B":
+            # Другой жим и другая тяга чем в UPPER-A
+            hpush_pool = [x for x in BASE_HPUSH if "под углом" in x.lower() or "incline" in x.lower()]
+            if not hpush_pool:
+                hpush_pool = BASE_HPUSH
+            hpush = pick1(hpush_pool, avoid_keys, used); used.append(hpush)
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            lines.append("База:")
+            lines.append(f"• {fmt(hpush, sets1, reps1)}")
+            lines.append(f"• {fmt(vpull, sets1, reps1)}")
+            lines.append(f"• {fmt(hpull, sets2, reps2)}")
+            lines += ["", "Изоляция:"]
+            iso1 = pick1(ISO_BI, avoid_keys, used); used.append(iso1)
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
+            iso2 = pick1(ISO_CHEST if is_gym else ISO_TRI, avoid_keys, used)
+            lines.append(f"• {fmt(iso2, iso_sets, reps_iso)}")
+            return lines
+
+        # ── НИЗ-А: присед + румынская тяга + икры ────────────────────────────
+        if kind == "LOWER-A":
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            # Предпочитаем румынскую тягу в LOWER-A
+            rdl_pool = [x for x in BASE_HINGE if "румын" in x.lower() or "rdl" in x.lower()]
+            hinge = pick1(rdl_pool if rdl_pool else BASE_HINGE, avoid_keys, used); used.append(hinge)
+            lines.append("База:")
+            lines.append(f"• {fmt(squat, sets1, reps1)}")
+            lines.append(f"• {fmt(hinge, sets1, reps1)}")
+            pool2 = [x for x in BASE_SQUAT if x != squat]
+            if pool2 and not tags["knee"]:
+                sq2 = pick1(pool2, avoid_keys, used); used.append(sq2)
+                lines.append(f"• {fmt(sq2, sets2, reps2)}")
+            lines += ["", "Изоляция:"]
+            iso1 = pick1(ISO_LEGS, avoid_keys, used); used.append(iso1)
+            reps_iso1 = "15–20" if "носки" in iso1.lower() else reps_iso
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso1)}")
+            core = pick1(CORE_POOL, avoid_keys, used)
+            lines.append(f"• {fmt(core, '2', '40–60 сек')}")
+            return lines
+
+        # ── НИЗ-Б: жим ногами/болгарские + становая/ягодицы + пресс ─────────
+        if kind == "LOWER-B":
+            # Другие упражнения чем в LOWER-A
+            press_pool = [x for x in BASE_SQUAT if "жим" in x.lower() or "болгар" in x.lower() or "гоблет" in x.lower()]
+            squat = pick1(press_pool if press_pool else BASE_SQUAT, avoid_keys, used); used.append(squat)
+            # Предпочитаем становую в LOWER-B
+            dl_pool = [x for x in BASE_HINGE if "станов" in x.lower()]
+            hinge = pick1(dl_pool if dl_pool else BASE_HINGE, avoid_keys, used); used.append(hinge)
+            lines.append("База:")
+            lines.append(f"• {fmt(squat, sets1, reps1)}")
+            lines.append(f"• {fmt(hinge, sets1, reps1)}")
+            lines += ["", "Изоляция:"]
+            for ex in ISO_LEGS:
+                if ex not in used:
+                    reps_ex = "15–20" if "носки" in ex.lower() else reps_iso
+                    lines.append(f"• {fmt(ex, iso_sets, reps_ex)}")
+                    used.append(ex)
+            core = pick1(CORE_POOL, avoid_keys, used)
+            lines.append(f"• {fmt(core, '2', '30–60 сек')}")
+            return lines
+
+        # ── СИЛОВОЙ ДЕНЬ А: Присед 5×5 + Жим лёжа 5×5 ──────────────────────
+        if kind == "STR-A":
+            # Линейная прогрессия: 5×5 на базе, 3×8 вспомогательные
+            # Ralston et al. 2017: для силы обязательны ≥3 рабочих сета тяжёлых
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
+            lines += [
+                "База (линейная прогрессия — добавляй 2.5 кг каждую тренировку):",
+                f"• {fmt(squat, sets1, reps1)}  ★ главное движение",
+                f"• {fmt(hpush, sets1, reps1)}  ★ главное движение",
+                "",
+                "Вспомогательные (3×8, умеренный вес):"
+            ]
+            vpull = pick1(BASE_VPULL, avoid_keys, used); used.append(vpull)
+            lines.append(f"• {fmt(vpull, sets2, reps2)}")
+            iso1 = pick1(ISO_BI, avoid_keys, used)
+            lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
+            return lines
+
+        # ── СИЛОВОЙ ДЕНЬ Б: Становая 1×5 + Жим стоя 5×5 ────────────────────
+        if kind == "STR-B":
+            # Становая — обычно 1 рабочий подход (высокая нагрузка на ЦНС)
+            dl_pool = [x for x in BASE_HINGE if "станов" in x.lower()]
+            hinge = pick1(dl_pool if dl_pool else BASE_HINGE, avoid_keys, used); used.append(hinge)
+            vpush = (pick1(BASE_VPUSH, avoid_keys, used)
+                     if not tags["shoulder"] else pick1(BASE_HPUSH, avoid_keys, used))
+            used.append(vpush)
+            lines += [
+                "База (линейная прогрессия):",
+                f"• {fmt(hinge, '1', reps1)}  ★ становая — 1 рабочий подход до предела",
+                f"• {fmt(vpush, sets1, reps1)}  ★ главное движение",
+                "",
+                "Вспомогательные (3×8):"
+            ]
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            lines.append(f"• {fmt(hpull, sets2, reps2)}")
+            if not tags["elbow"]:
+                iso1 = pick1(ISO_TRI, avoid_keys, used)
+                lines.append(f"• {fmt(iso1, iso_sets, reps_iso)}")
+            return lines
+
+        # ── СИЛОВОЙ ДЕНЬ В: Присед объём + Жим объём + тяга ─────────────────
+        if kind == "STR-C":
+            # День объёма: чуть меньше вес, больше повторений — развивает базу
+            squat = pick1(BASE_SQUAT, avoid_keys, used); used.append(squat)
+            hpush = pick1(BASE_HPUSH, avoid_keys, used); used.append(hpush)
+            hpull = pick1(BASE_HPULL, avoid_keys, used); used.append(hpull)
+            lines += [
+                "Объёмный день (80% от рабочего веса):",
+                f"• {fmt(squat, sets2, reps2)}",
+                f"• {fmt(hpush, sets2, reps2)}",
+                f"• {fmt(hpull, sets2, reps2)}",
+                "",
+                "Вспомогательные:"
+            ]
+            vpull = pick1(BASE_VPULL, avoid_keys, used)
+            lines.append(f"• {fmt(vpull, iso_sets, reps_iso)}")
+            core = pick1(CORE_POOL, avoid_keys, used)
+            lines.append(f"• {fmt(core, '2', '30–60 сек')}")
+            return lines
+
         return ["—"]
 
 
@@ -5640,22 +6292,30 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         f"Система: {system}\n"
         f"Частота: {f}×/нед • {weekday_schedule(f)}\n"
         f"Цель: {goal}\n"
-        f"Уровень: {'новичок' if is_novice else 'средний+'}\n"
+        f"Уровень: {'новичок' if is_novice else ('продвинутый' if is_adv else 'средний')}\n"
         f"Огр.: {limits_line}\n\n"
-        f"Вес подбери так, чтобы последние 2–3 повторения давались с трудом — то есть близко к отказу.\n"
+        f"<b>RIR {rir}</b> — оставляй {rir} повторения «в запасе» до полного отказа. "
+        f"Это оптимальный стимул роста без излишней нагрузки на ЦНС.\n\n"
+        f"<b>Прогрессия:</b> если все повторения даются легко (RIR > 2) — добавь вес "
+        f"на 2,5–5 кг (база) или 1–2,5 кг (изоляция). Записывай веса в Дневник.\n"
         "Выбери день кнопкой 👇"
     )
 
     # Описания систем для заголовков
     KIND_TITLES = {
-        "FB-A": ("Фулбади А", "Всё тело: акцент на ноги и толчок"),
-        "FB-B": ("Фулбади Б", "Всё тело: акцент на спину и тягу"),
-        "FB-C": ("Фулбади В", "Всё тело: комплексный день"),
-        "UPPER": ("Верх тела", "Грудь, спина, плечи, руки"),
-        "LOWER": ("Низ тела", "Квадрицепс, бицепс бедра, ягодицы, икры"),
-        "PUSH": ("Толчок — Грудь и Плечи", "Грудь, передние/средние дельты, трицепс"),
-        "PULL": ("Тяга — Спина и Бицепс", "Широчайшие, ромбовидные, бицепс, задняя дельта"),
-        "LEGS": ("Ноги", "Квадрицепс, бицепс бедра, ягодицы, икры"),
+        "FB-A":    ("Фулбади А", "Всё тело: акцент на ноги и толчок"),
+        "FB-B":    ("Фулбади Б", "Всё тело: акцент на спину и тягу"),
+        "FB-C":    ("Фулбади В", "Всё тело: комплексный день"),
+        "UPPER-A": ("Верх тела — вариант А", "Жим лёжа + горизонтальная тяга + плечи"),
+        "UPPER-B": ("Верх тела — вариант Б", "Жим под углом + вертикальная тяга + руки"),
+        "LOWER-A": ("Низ тела — вариант А", "Присед + румынская тяга + икры"),
+        "LOWER-B": ("Низ тела — вариант Б", "Жим ногами/вариация приседа + ягодицы + пресс"),
+        "PUSH":    ("Толчок — Грудь и Плечи", "Грудь, передние/средние дельты, трицепс"),
+        "PULL":    ("Тяга — Спина и Бицепс", "Широчайшие, ромбовидные, бицепс, задняя дельта"),
+        "LEGS":    ("Ноги", "Квадрицепс, бицепс бедра, ягодицы, икры"),
+        "STR-A":   ("Сила — День А", "Присед + Жим лёжа + вспомогательные"),
+        "STR-B":   ("Сила — День Б", "Становая + Жим стоя + вспомогательные"),
+        "STR-C":   ("Сила — День В", "Присед объём + Жим лёжа объём + тяга"),
     }
 
     UPPER_LOWER_SCHEDULE = {
@@ -5673,33 +6333,54 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
         5: "Суббота",
     }
 
+    STR3_SCHEDULE = {
+        1: "Понедельник",
+        2: "Среда",
+        3: "Пятница",
+    }
+
+    STR4_SCHEDULE = UPPER_LOWER_SCHEDULE
+
     days: Dict[str, str] = {}
 
-    # Генерируем блок упражнений ОДИН РАЗ для каждого уникального типа дня.
-    # Это гарантирует, что все UPPER одинаковы, все LOWER одинаковы и т.д.
+    # Генерируем блок упражнений для каждого дня независимо.
+    # UPPER-A и UPPER-B — разные варианты, поэтому кэшируем по полному ключу дня,
+    # а не по типу. Это гарантирует разнообразие упражнений между днями.
     kind_cache: Dict[str, List[str]] = {}
-    for kind in set(template):
-        kind_cache[kind] = day_block(kind)
+    for idx_d, kind in enumerate(template):
+        cache_key = f"{kind}_{idx_d}"
+        kind_cache[cache_key] = day_block(kind)
 
     for d in range(1, f + 1):
         kind = template[d - 1]
         kind_title, kind_desc = KIND_TITLES.get(kind, (system, ""))
 
-        if system == "Верх/Низ":
-            day_sched = UPPER_LOWER_SCHEDULE.get(d, f"День {d}")
+        if system.startswith("Верх/Низ"):
+            sched_src = STR4_SCHEDULE if is_strength else UPPER_LOWER_SCHEDULE
+            day_sched = sched_src.get(d, f"День {d}")
+            dur = "~60–80 мин" if is_strength else "~50–70 мин"
             header = (
                 f"День {d} — {kind_title}\n"
                 f"📅 {day_sched}\n"
                 f"💡 {kind_desc}\n"
-                f"⏱ ~50–70 мин\n\n"
+                f"⏱ {dur}\n\n"
             )
         elif system.startswith("PPL"):
             day_sched = PPL_SCHEDULE.get(d, f"День {d}")
+            dur = "~70–90 мин" if is_strength else "~50–70 мин"
             header = (
                 f"День {d} — {kind_title}\n"
                 f"📅 {day_sched}\n"
                 f"💡 {kind_desc}\n"
-                f"⏱ ~50–70 мин\n\n"
+                f"⏱ {dur}\n\n"
+            )
+        elif system.startswith("Фулбади (Сила)"):
+            day_sched = STR3_SCHEDULE.get(d, f"День {d}")
+            header = (
+                f"День {d} — {kind_title}\n"
+                f"📅 {day_sched}\n"
+                f"💡 {kind_desc}\n"
+                f"⏱ ~60–75 мин\n\n"
             )
         else:
             header = (
@@ -5708,7 +6389,7 @@ def generate_workout_plan(goal: str, place: str, exp: str, freq: int, limits: st
                 f"⏱ ~45–60 мин\n\n"
             )
 
-        body = "\n".join(kind_cache[kind])
+        body = "\n".join(kind_cache[f"{kind}_{d-1}"])
         days[str(d)] = header + body
 
     plan_struct = {
@@ -6183,7 +6864,7 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
                              freq: int = 3, place: str = "свой вес", meals_pref: Optional[int] = None,
                              activity_factor: float = None) -> Tuple[str, int, int, int, int, int]:
     calories = calc_calories(height, weight, age, sex, goal, freq=freq, place=place, activity_factor=activity_factor)
-    p, f, c = calc_macros(calories, weight, goal)
+    p, f, c = calc_macros(calories, weight, goal, height_cm=height, sex=sex)
     meals = int(meals_pref or 0) if meals_pref else suggest_meals_count(calories)
     meals = max(3, min(meals, 5))
 
@@ -6192,7 +6873,10 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
     c_kcal = c * 4
     total_check = p_kcal + f_kcal + c_kcal
 
-    # Распределение по приёмам (30/40/30)
+    # Распределение по приёмам (30/40/30):
+    # Обед получает 40% т.к. это основной приём пищи + закрывает послетренировочное окно.
+    # Завтрак и ужин по 30%. Перекусы выдаются отдельно в примерах рационов.
+    # При 4–5 приёмах пищи перекусы берут часть калорий из обеда/ужина.
     b_kcal = int(round(calories * 0.30))
     l_kcal = int(round(calories * 0.40))
     d_kcal = calories - b_kcal - l_kcal
@@ -6206,13 +6890,45 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
     d_f = f - b_f - l_f
     d_c = c - b_c - l_c
 
+    g_lower = (goal or "").lower()
+    p_per_kg = round(p / weight, 1)
+    f_pct    = round(f * 9 / calories * 100)
+    c_pct    = round(c * 4 / calories * 100)
+    if "похуд" in g_lower or "суш" in g_lower:
+        goal_note = (
+            "\U0001f4cc <b>Похудение</b>: дефицит -300–500 ккал от TDEE\n"
+            f"   Белок {p_per_kg} г/кг — максимальный, сохраняет мышцы при дефиците\n"
+            f"   Жиры {f_pct}% ккал — гормональный минимум (не ниже 20%)\n"
+            f"   Углеводы {c_pct}% ккал — остаток для энергии тренировок\n"
+        )
+    elif "мас" in g_lower:
+        goal_note = (
+            "\U0001f4cc <b>Набор массы</b>: профицит +250 ккал к TDEE\n"
+            f"   Белок {p_per_kg} г/кг — достаточно для роста (профицит = анаболическая среда)\n"
+            f"   Жиры {f_pct}% ккал — чуть выше нормы для гормонов и витаминов\n"
+            f"   Углеводы {c_pct}% ккал — основной источник энергии для роста\n"
+        )
+    elif "сил" in g_lower:
+        goal_note = (
+            "\U0001f4cc <b>Сила</b>: профицит +125 ккал к TDEE — только для восстановления\n"
+            f"   Белок {p_per_kg} г/кг — высокий, тяжёлые нагрузки = высокий оборот белка\n"
+            f"   Жиры {f_pct}% ккал — снижены в пользу углеводов\n"
+            f"   Углеводы {c_pct}% ккал — приоритет: гликоген = топливо для силовых\n"
+        )
+    else:
+        goal_note = (
+            "\U0001f4cc <b>Поддержание</b>: калории = TDEE\n"
+            f"   Белок {p_per_kg} г/кг поддерживает мышечную массу\n"
+        )
+
     summary = (
         "🍽 <b>Питание — твой расчёт</b>\n\n"
         f"⚡️ Калории: {calories} ккал/день\n"
-        f"💪 Белок: {p} г\n"
-        f"🥑 Жиры: {f} г\n"
-        f"🍚 Углеводы: {c} г\n"
+        f"💪 Белок: {p} г ({round(p/weight,1)} г/кг)\n"
+        f"🥑 Жиры: {f} г ({round(f*9/calories*100)}% ккал)\n"
+        f"🍚 Углеводы: {c} г ({round(c*4/calories*100)}% ккал)\n"
         f"🍽 Приёмов пищи: {meals}\n\n"
+        f"{goal_note}"
         "━━━━━━━━━━━━━━━━\n\n"
         f"🌅 Завтрак — {b_kcal} ккал (30%)\n"
         f"   Б: {b_p} г  |  Ж: {b_f} г  |  У: {b_c} г\n\n"
@@ -6274,7 +6990,7 @@ FAQ_QUESTIONS = {
             "Хочешь набрать, но вес стоит:\n"
             "→ Добавь 150–200 ккал в день (кефир, орехи, доп. каша)\n"
             "→ Цель: +0.5–1 кг в неделю — оптимальный темп\n\n"
-            "Вес растёт, но ты на сушке:\n"
+            "Вес растёт, но ты на похудении:\n"
             "→ Убери 100–150 ккал, неделю понаблюдай\n"
             "→ Проверь скрытые калории\n\n"
             "Меняй калории шагами по 100–150 ккал.\n"
@@ -6357,7 +7073,7 @@ FAQ_QUESTIONS = {
             "🍽 Питание под твою цель\n\n"
             "Не знаешь сколько есть, что есть и почему вес не двигается — это сюда.\n\n"
             "В статье ты узнаешь:\n"
-            "• сколько калорий и белка нужно конкретно под набор или сушку\n"
+            "• сколько калорий и белка нужно конкретно под набор или похудение\n"
             "• конкретные приёмы пищи с цифрами — что и сколько есть\n"
             "• почему нельзя убирать жиры и углеводы полностью\n"
             "• один простой первый шаг, который даёт результат за 3–4 недели"
@@ -6561,16 +7277,14 @@ def welcome_kb():
     ])
 
 
-async def cmd_start(message: Message, bot: Bot):
+async def cmd_start(message: Message, state: FSMContext, bot: Bot):
     uid = message.from_user.id
     await ensure_user(uid, message.from_user.username or "")
     await try_delete_user_message(bot, message)
 
     # Deep link — обрабатываем параметр после /start
-    # Пример ссылки: https://t.me/zelbeta_bot?start=open
     deep_link = message.text.split()[-1] if message.text and len(message.text.split()) > 1 else ""
 
-    # Проверяем: профиль заполнен, но подписки нет
     u = await get_user(uid)
     profile_complete = bool(
         u.get("goal") and u.get("sex") and u.get("height")
@@ -6582,14 +7296,12 @@ async def cmd_start(message: Message, bot: Bot):
     if deep_link == "open":
         await bot.send_message(
             chat_id=message.chat.id,
-            text="✅ Я на месте. Кнопки снизу 👇",
+            text="✅ Я на месте.",
             reply_markup=control_reply_kb()
         )
         if subscription_active:
-            # Есть подписка — открываем главное меню
             await show_main_menu(bot, message.chat.id, uid)
         else:
-            # Нет подписки — показываем оффер с тарифами
             open_text = (
                 "👋 Ты уже заполнил профиль — осталось открыть доступ.\n\n"
                 "Что умеет бот:\n\n"
@@ -6607,25 +7319,34 @@ async def cmd_start(message: Message, bot: Bot):
             )
         return
 
-    if profile_complete and not subscription_active:
+    # Если профиль уже полностью заполнен — направляем к тарифам/меню
+    if profile_complete:
         await bot.send_message(
             chat_id=message.chat.id,
             text="✅ Я на месте. Кнопки снизу 👇",
             reply_markup=control_reply_kb()
         )
-        spec_text = (
-            "👋 Ты уже заполнил профиль — осталось открыть доступ.\n\n"
-            "Что умеет бот:\n\n"
-            "✅ составит программу под твою цель\n"
-            "✅ покажет технику упражнений\n"
-            "✅ поможет отслеживать прогресс\n\n"
-            "Чтобы продолжить, выбери доступ 👇"
-        )
-        await _send_with_image(
-            bot, message.chat.id, uid,
-            spec_text, "restart", reply_markup=build_program_tariff_kb()
-        )
+        if subscription_active:
+            await show_main_menu(bot, message.chat.id, uid)
+        else:
+            spec_text = (
+                "👋 Ты уже заполнил профиль — осталось открыть доступ.\n\n"
+                "Что умеет бот:\n\n"
+                "✅ составит программу под твою цель\n"
+                "✅ покажет технику упражнений\n"
+                "✅ поможет отслеживать прогресс\n\n"
+                "Чтобы продолжить, выбери доступ 👇"
+            )
+            await _send_with_image(
+                bot, message.chat.id, uid,
+                spec_text, "restart", reply_markup=build_program_tariff_kb()
+            )
         return
+
+    # ── ВОРОНКА: Этап 1 — подписка на канал ─────────────────────────────────
+    await track_funnel_step(uid, "start")
+    await state.clear()
+    await state.set_state(FunnelFlow.subscription)
 
     await bot.send_message(
         chat_id=message.chat.id,
@@ -6633,25 +7354,332 @@ async def cmd_start(message: Message, bot: Bot):
         reply_markup=control_reply_kb()
     )
 
-    welcome_text = (
-        "<b>👋 Привет! Я твой персональный тренер.</b>\n\n"
-        "Что умею:\n\n"
-        "— Составляю программу под твою цель, уровень и место (зал / дома)\n"
-        "— Считаю КБЖУ индивидуально — с учётом веса, цели и активности\n"
-        "— Даю готовый план питания\n"
-        "— Веду дневник тренировок: веса, повторения, история\n"
-        "— Показываю технику с картинкой — кнопка под каждым упражнением\n"
-        "— Отвечаю на частые вопросы: плато, питание, мотивация\n\n"
-        "Как начать:\n\n"
-        "1. Жми на «📋 Заполнить профиль» и пройди короткий опрос\n"
-        "2. Выбери тариф — получи готовый план под свою цель\n\n"
-        "Поехали!"
+    text = (
+        "👋 Привет!\n\n"
+        "Перед тем как мы начнём, подпишись на мой Telegram-канал.\n\n"
+        "Там я делюсь полезными материалами по тренировкам, питанию, дисциплине и результатам учеников.\n\n"
+        "Это поможет тебе быстрее разобраться, как двигаться к своей цели без хаоса и ошибок."
     )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 Перейти в канал", url="https://t.me/+AqBrCX6d0jI5NTcy")],
+        [InlineKeyboardButton(text="✅ Я подписался", callback_data="funnel:subscribed")],
+    ])
+    await _send_with_image(bot, message.chat.id, uid, text, "welcome", reply_markup=kb)
 
-    await _send_with_image(
-        bot, message.chat.id, uid,
-        welcome_text, "welcome", reply_markup=welcome_kb()
+
+# =========================
+# ВОРОНКА: хендлеры этапов
+# =========================
+
+# ── Конфигурация этапов с медиа-поддержкой ──────────────────────────────────
+# Для этапов 2, 4, 5, 6 можно указать:
+# "video": "путь/к/файлу.mp4" — отправить видео вместо/вместе с текстом
+# "url": "https://..." — добавить кнопку «Читать статью»
+# Если поля не заданы — отправляется только текст.
+
+FUNNEL_STAGE_CONFIG = {
+    "problem": {
+        "video": None,
+        "image": "media2/funnel/problem.jpg",
+        "url": None,
+    },
+    "dream": {
+        "video": None,
+        "image": "media2/funnel/dream.jpg",
+        "url": None,
+    },
+    "solution": {
+        "video": "BAACAgIAAxkBAAILvWoNx9T4i6FcnA1u7V8Cg9YXTxirAAObAAKo4GlIjsoIMbMAAVBgOwQ",
+        "image": "media2/funnel/solution.jpg",
+        "url": None,
+    },
+    "consideration": {
+        "video": None,
+        "image": "media2/funnel/consideration.jpg",
+        "url": None,
+    },
+}
+
+
+async def _funnel_send(bot: Bot, chat_id: int, uid: int, text: str, stage_key: str,
+                       reply_markup: InlineKeyboardMarkup) -> None:
+    """Отправляет сообщение этапа воронки. Поддерживает видео, фото и текст+ссылку."""
+    cfg = FUNNEL_STAGE_CONFIG.get(stage_key, {})
+    video_path = cfg.get("video")
+    image_path = cfg.get("image")
+    article_url = cfg.get("url")
+
+    # Если в клавиатуре нужна кнопка статьи — добавляем её перед основными
+    if article_url:
+        extra_row = [InlineKeyboardButton(text="📖 Читать статью", url=article_url)]
+        rows = [extra_row] + list(reply_markup.inline_keyboard)
+        reply_markup = InlineKeyboardMarkup(inline_keyboard=rows)
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=last_id)
+        except Exception:
+            pass
+
+    # video_path может быть локальным путём к файлу ИЛИ Telegram file_id (строка без слэшей)
+    video_input = None
+    if video_path:
+        if os.path.exists(video_path):
+            video_input = FSInputFile(video_path)
+        elif os.sep not in video_path:  # нет разделителя пути → это file_id
+            video_input = video_path
+
+    if video_input is not None:
+        m = await bot.send_video(
+            chat_id=chat_id,
+            video=video_input,
+            caption=text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+        )
+    elif image_path and os.path.exists(image_path):
+        m = await bot.send_photo(
+            chat_id=chat_id,
+            photo=FSInputFile(image_path),
+            caption=text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+        )
+    else:
+        m = await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+        )
+    await set_last_bot_msg_id(uid, m.message_id)
+
+
+# Этап 1 → 2: нажата кнопка «Я подписался»
+async def cb_funnel_subscribed(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    await track_funnel_step(uid, "problem")
+    await state.set_state(FunnelFlow.problem)
+    await callback.answer()
+
+    text = (
+        "<b>Почему 90% людей никогда не накачаются или не похудеют?</b>\n\n"
+        "Чаще всего проблема в том, что человек просто не понимает, что именно ему нужно делать, чтобы тело начало меняться. Он вроде как старается:\n\n"
+        "— тренируется\n"
+        "— питается «правильно»\n"
+        "— да и сон вроде налажен\n\n"
+        "Но по итогу — результата всё равно нет...\n\n"
+        "Проходит неделя, месяц, полгода — а тело почти не меняется. И человек начинает думать, что проблема в нём, плохая генетика и тому подобное.\n\n"
+        "Но на самом деле проблема не в человеке, а в том, что у него нету <b>ПРАВИЛЬНОГО и ПОНЯТНОГО ПЛАНА.</b>\n\n"
+        "И когда он появится, прогресс обязательно будет!"
     )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➡️ Продолжить", callback_data="funnel:problem_continue")],
+    ])
+    await _funnel_send(bot, callback.message.chat.id, uid, text, "problem", kb)
+
+
+# Этап 2 → 3.1: нажата кнопка «Продолжить» после проблемы
+async def cb_funnel_problem_continue(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    await track_funnel_step(uid, "name_goal_sex")
+    await state.set_state(FunnelFlow.waiting_name)
+    await callback.answer()
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
+    m = await bot.send_message(
+        chat_id=callback.message.chat.id,
+        text="Как тебя зовут?",
+        parse_mode=ParseMode.HTML,
+    )
+    await set_last_bot_msg_id(uid, m.message_id)
+
+
+# Этап 3.1: пользователь вводит имя → спрашиваем цель
+async def funnel_waiting_name(message: Message, state: FSMContext, bot: Bot):
+    name = (message.text or "").strip()
+    if not name or len(name) > 50:
+        await message.answer("Введи своё имя 🙂")
+        await try_delete_user_message(bot, message)
+        return
+
+    await state.update_data(funnel_name=name)
+    await state.set_state(FunnelFlow.waiting_goal)
+    await try_delete_user_message(bot, message)
+
+    last_id = await get_last_bot_msg_id(message.from_user.id)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔥 Похудеть", callback_data="funnel:goal:fat_loss")],
+        [InlineKeyboardButton(text="💪 Набрать мышечную массу", callback_data="funnel:goal:mass")],
+        [InlineKeyboardButton(text="🏋️ Стать сильнее", callback_data="funnel:goal:strength")],
+    ])
+    m = await bot.send_message(
+        chat_id=message.chat.id,
+        text=f"Отлично, {name}!\nКакая у тебя главная цель сейчас?",
+        reply_markup=kb,
+        parse_mode=ParseMode.HTML,
+    )
+    await set_last_bot_msg_id(message.from_user.id, m.message_id)
+
+
+# Этап 3.2: выбор цели → спрашиваем пол
+async def cb_funnel_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    goal_raw = callback.data.split(":")[2]
+    goal_map = {
+        "fat_loss": "похудение",
+        "mass": "масса",
+        "strength": "сила",
+        "cut": "похудение",
+    }
+    db_goal_map = {
+        "fat_loss": "похудение",
+        "mass": "масса",
+        "strength": "сила",
+        "cut": "похудение",
+    }
+    goal_display = goal_map.get(goal_raw, goal_raw)
+    db_goal = db_goal_map.get(goal_raw, "масса")
+
+    await state.update_data(funnel_goal=db_goal, funnel_goal_display=goal_display)
+    await state.set_state(FunnelFlow.waiting_gender)
+    await callback.answer()
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👨 Мужчина", callback_data="funnel:sex:m"),
+         InlineKeyboardButton(text="👩 Женщина", callback_data="funnel:sex:f")],
+    ])
+    m = await bot.send_message(
+        chat_id=callback.message.chat.id,
+        text="Понял. Теперь укажи свой пол:",
+        reply_markup=kb,
+        parse_mode=ParseMode.HTML,
+    )
+    await set_last_bot_msg_id(uid, m.message_id)
+
+
+# Этап 3.3: выбор пола → этап 4 (образ результата)
+async def cb_funnel_sex(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    sex_raw = callback.data.split(":")[2]
+    sex_db = "м" if sex_raw == "m" else "ж"
+
+    data = await state.get_data()
+    name = data.get("funnel_name", "")
+    goal = data.get("funnel_goal", "масса")
+
+    await state.update_data(funnel_sex=sex_db)
+
+    # Сохраняем имя, цель и пол в профиль пользователя
+    await update_user(uid, goal=goal, sex=sex_db)
+    await track_funnel_step(uid, "dream")
+    await state.set_state(FunnelFlow.dream)
+    await callback.answer()
+
+    text = (
+        "📆 <b>Представь свою жизнь через 1 год.</b>\n\n"
+        "Возможны два варианта, и они кардинально отличаются друг от друга.\n\n"
+        "<blockquote><b>Вариант 1.</b>\n"
+        "Прошёл год, а ты всё ещё в теле, которое тебе не нравится. Причин может быть очень много — лень, отсутствие понимания что делать, постоянные откладывания на потом. Но суть одна: <u>ты остался на том же месте, что и год назад.</u>\n\n"
+        "<b>Вариант 2.</b>\n"
+        "Ты просыпаешься ранним утром, подходишь к зеркалу — и видишь в отражении человека, который смог. Который не сдался и построил тело своей мечты.</blockquote>\n\n"
+        "И запомни главное: каким ты будешь через год — зависит от твоих действий сейчас."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➡️ Хочу так же", callback_data="funnel:dream_continue")],
+    ])
+    await _funnel_send(bot, callback.message.chat.id, uid, text, "dream", kb)
+
+
+# Этап 4 → 5: нажата «Хочу так же»
+async def cb_funnel_dream_continue(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    await track_funnel_step(uid, "solution")
+    await state.set_state(FunnelFlow.solution)
+    await callback.answer()
+
+    text = (
+        "<b>5 шагов к результату</b>\n\n"
+        "<blockquote>"
+        "1. <b>Цель</b> — конкретная: «минус 10 кг за 3 месяца», а не «хочу похудеть».\n"
+        "2. <b>Питание</b> — без него тренировки не работают.\n"
+        "3. <b>План</b> — конкретные упражнения под твоё тело и цель.\n"
+        "4. <b>Восстановление</b> — мышцы растут после тренировки, не во время.\n"
+        "5. <b>Прогресс</b> — отслеживай и корректируй план раз в месяц."
+        "</blockquote>\n\n"
+        "Большинство не делает даже половины — просто не знает с чего начать.\n\n"
+        "<b><u>Именно поэтому я создал бота.</u></b>\n"
+        "Отвечаешь на несколько вопросов — получаешь готовый персональный план."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➡️ Понятно, идём дальше", callback_data="funnel:solution_continue")],
+    ])
+    await _funnel_send(bot, callback.message.chat.id, uid, text, "solution", kb)
+
+
+# Этап 5 → 6: нажата «Понятно, идём дальше»
+async def cb_funnel_solution_continue(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    await track_funnel_step(uid, "finish_promo")
+    await state.set_state(FunnelFlow.consideration)
+    await callback.answer()
+
+    text = (
+        "🙂 <b>Вот мы и на финишной.</b>\n\n"
+        "Осталось лишь заполнить профиль до конца — это займёт немного времени. Но даст боту больше информации для персональной работы с тобой.\n\n"
+        "После этого ты сможешь приступить к построению тела своей мечты.\n\n"
+        "<blockquote>⭐️ <a href=\"https://t.me/repbotzel/4\">Посмотри, что говорят те, кто уже попробовал →</a></blockquote>"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📝 Заполнить профиль до конца", callback_data="funnel:complete_profile")],
+    ])
+    await _funnel_send(bot, callback.message.chat.id, uid, text, "consideration", kb)
+
+
+# Этап 6 → 7: нажата «Заполнить профиль до конца» → запускаем полный профиль-мастер
+async def cb_funnel_complete_profile(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    uid = callback.from_user.id
+    await track_funnel_step(uid, "profile_filling")
+    await callback.answer()
+
+    # goal и sex уже сохранены — начинаем с age
+    await state.set_state(ProfileWizard.age)
+
+    last_id = await get_last_bot_msg_id(uid)
+    if last_id:
+        try:
+            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_id)
+        except Exception:
+            pass
+
+    text = _profile_header(3) + "🎂 Возраст (числом):"
+    m = await bot.send_message(
+        chat_id=callback.message.chat.id,
+        text=text,
+        reply_markup=kb_text_step("sex"),
+        parse_mode=ParseMode.HTML,
+    )
+    await set_last_bot_msg_id(uid, m.message_id)
 
 
 async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None, source: str = ""):
@@ -6706,8 +7734,10 @@ async def open_upgrade(user_id: int, chat_id: int, bot: Bot, callback: Optional[
     ])
 
     if callback:
+        await track_funnel_step(user_id, "tariffs")
         await clean_edit(callback, user_id, text, reply_markup=kb)
     else:
+        await track_funnel_step(user_id, "tariffs")
         await _send_with_image(bot, chat_id, user_id, text, "upgrade", reply_markup=kb)
 
 
@@ -6856,7 +7886,7 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
             "Берёшь вес наугад — слишком легко или техника разваливается.\n\n"
             "В статье ты узнаешь:\n"
             "• как посчитать примерный максимум без проверки на практике\n"
-            "• какой процент от максимума брать под масс, сушку и силу\n"
+            "• какой процент от максимума брать под набор, похудение и силу\n"
             "• как ощущения в подходе точнее любой формулы\n"
             "• на сколько добавлять вес в базовых и изолирующих упражнениях"
         )
@@ -7266,7 +8296,7 @@ async def cb_profile_field_edit(callback: CallbackQuery, state: FSMContext):
         text = "Выбери новую цель:"
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="💪 Масса", callback_data="p:goal:mass"),
-             InlineKeyboardButton(text="🔥 Сушка", callback_data="p:goal:cut")],
+             InlineKeyboardButton(text="🔥 Похудение", callback_data="p:goal:cut")],
             [InlineKeyboardButton(text="🏋️ Сила", callback_data="p:goal:strength")],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="p:edit")],
         ])
@@ -7481,7 +8511,7 @@ async def cb_profile_goal(callback: CallbackQuery, state: FSMContext, bot: Bot):
     v = callback.data.split(":")[2]
     goal = {
         "mass": "масса",
-        "cut": "сушка",
+        "cut": "похудение",
         "strength": "сила",
     }.get(v, v)
 
@@ -7708,6 +8738,7 @@ async def profile_limits_text(message: Message, state: FSMContext, bot: Bot):
 
     await update_user(message.from_user.id, limits=limits)
     await state.clear()
+    await track_funnel_step(message.from_user.id, "profile_created")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Перейти к тарифам", callback_data="nav:upgrade")]
@@ -8334,7 +9365,7 @@ async def get_nutrition_log_today(user_id: int) -> Optional[int]:
 
 GOAL_DISPLAY = {
     "mass": "Набор мышечной массы",
-    "cut": "Похудение / сушка",
+    "cut": "Похудение",
     "strength": "Рост силы",
     "keep": "Поддержание формы",
 }
@@ -9187,7 +10218,7 @@ def build_shopping_basket(goal: str, calories: int, protein_g: int, fat_g: int, 
         return f"{g} г  ({packs} баночки ~400 г)"
 
     g = (goal or "").lower()
-    is_cut = "суш" in g
+    is_cut = ("похуд" in g or "суш" in g)
     is_mass = "мас" in g
 
     # ── Недельные количества (граммы / штуки) ──────────────────────────
@@ -9230,7 +10261,7 @@ def build_shopping_basket(goal: str, calories: int, protein_g: int, fat_g: int, 
         f"☐  Рис (сухой) — {_pkg_cereal(rice_g, 'рис')}",
         f"☐  Гречка (сухая) — {_pkg_cereal(buckwheat_g, 'гречка')}",
         f"☐  Овсянка (сухая) — {_pkg_oats(oats_g)}",
-        f"☐  Картофель — {_pkg_potato(potato_g)}" + ("  (на сушке меньше)" if is_cut else ""),
+        f"☐  Картофель — {_pkg_potato(potato_g)}" + ("  (при похудении меньше)" if is_cut else ""),
         f"☐  Фрукты — {_pkg_fruit(fruit_g)}",
         "",
         "─── 🥦 ОВОЩИ ───",
@@ -9312,14 +10343,14 @@ async def cb_nutr_questions(callback: CallbackQuery, bot: Bot):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="📈 Вес стоит на массе", callback_data="nutr:weight_stall_mass"),
-            InlineKeyboardButton(text="📉 Вес стоит на сушке", callback_data="nutr:weight_stall_cut"),
+            InlineKeyboardButton(text="📉 Вес стоит при похудении", callback_data="nutr:weight_stall_cut"),
         ],
         [
             InlineKeyboardButton(text="🔢 Как считать калории", callback_data="nutr:calories_how"),
             InlineKeyboardButton(text="💪 Фишки при наборе", callback_data="nutr:tips_mass"),
         ],
         [
-            InlineKeyboardButton(text="🔥 Фишки при сушке", callback_data="nutr:tips_cut"),
+            InlineKeyboardButton(text="🔥 Фишки при похудении", callback_data="nutr:tips_cut"),
         ],
         [InlineKeyboardButton(text="⬅️ Назад к питанию", callback_data="nutr:back")],
     ])
@@ -9372,12 +10403,12 @@ async def cb_nutr_tips_mass(callback: CallbackQuery, bot: Bot):
 
 
 async def cb_nutr_tips_cut(callback: CallbackQuery, bot: Bot):
-    """Фишки при сушке — HTML-статья."""
+    """Фишки при похудении — HTML-статья."""
     uid = callback.from_user.id
     chat_id = callback.message.chat.id
     html_path = "media/faq/faq_nutrition_tips_cut.html"
     caption = (
-        "🔥 Фишки при сушке\n\n"
+        "🔥 Фишки при похудении\n\n"
         "Держать дефицит неделями сложно — голод и тяга к еде мешают.\n\n"
         "В статье ты узнаешь:\n"
         "• почему высокий белок снижает голод без ограничений\n"
@@ -9460,17 +10491,17 @@ async def cb_nutr_weight_stall_mass(callback: CallbackQuery, bot: Bot):
 
 
 async def cb_nutr_weight_stall_cut(callback: CallbackQuery, bot: Bot):
-    """Вес стоит на сушке — HTML-статья."""
+    """Вес стоит при похудении — HTML-статья."""
     uid = callback.from_user.id
     chat_id = callback.message.chat.id
     html_path = "media/faq/faq_weight_stall_cut.html"
     caption = (
-        "📉 Вес стоит на сушке — что делать?\n\n"
-        "Соблюдаешь диету, но весы не двигаются — это не быстрый метаболизм.\n\n"
+        "📉 Вес стоит при похудении — что делать?\n\n"
+        "Соблюдаешь дефицит, но весы не двигаются — это не быстрый метаболизм.\n\n"
         "В статье ты узнаешь:\n"
         "• почему скрытые калории перекрывают весь дефицит\n"
         "• когда вес стоит из-за воды, а жир на самом деле уходит\n"
-        "• сколько белка нужно на сушке чтобы не терять мышцы\n"
+        "• сколько белка нужно при похудении чтобы не терять мышцы\n"
         "• почему убирать углеводы не эффективнее обычного дефицита"
     )
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -9642,6 +10673,7 @@ def admin_main_kb():
         [InlineKeyboardButton(text="📢 Создать рассылку", callback_data="admin:post_new")],
         [InlineKeyboardButton(text="📋 Мои рассылки", callback_data="admin:posts_list")],
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin:stats")],
+        [InlineKeyboardButton(text="🔽 Воронка", callback_data="admin:funnel")],
         [InlineKeyboardButton(text="👤 Найти пользователя", callback_data="admin:find_user")],
     ])
 
@@ -9748,6 +10780,63 @@ async def cb_admin_stats(callback: CallbackQuery, bot: Bot):
         f"{tariff_lines}\n"
         f"🏋️ Тренировок сегодня: {workouts_today}"
     )
+
+    back_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")],
+    ])
+    await clean_edit(callback, callback.from_user.id, text, reply_markup=back_kb)
+    await callback.answer()
+
+
+async def cb_admin_funnel(callback: CallbackQuery, bot: Bot):
+    """Воронка — на каком этапе пользователи остановились."""
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа", show_alert=True)
+        return
+
+    async with db() as conn:
+        async with conn.execute("SELECT COUNT(*) FROM users") as cur:
+            total_users = (await cur.fetchone())[0]
+
+        # Сколько дошли до каждого этапа и дальше
+        step_counts: dict[str, int] = {}
+        for step in FUNNEL_STEPS_ORDER:
+            step_idx = FUNNEL_STEPS_ORDER.index(step)
+            # Считаем пользователей, чей максимальный шаг >= текущему
+            placeholders = ",".join(f"'{s}'" for s in FUNNEL_STEPS_ORDER[step_idx:])
+            async with conn.execute(
+                f"SELECT COUNT(*) FROM funnel_progress WHERE step IN ({placeholders})"
+            ) as cur:
+                step_counts[step] = (await cur.fetchone())[0]
+
+    if total_users == 0:
+        pct = lambda n: 0
+    else:
+        pct = lambda n: round(n / total_users * 100)
+
+    lines = ["🔽 <b>Воронка прохождения</b>\n"]
+    prev_count = None
+    for step in FUNNEL_STEPS_ORDER:
+        label = FUNNEL_STEPS_LABELS[step]
+        count = step_counts.get(step, 0)
+        p = pct(count)
+        bar = "█" * (p // 10) + "░" * (10 - p // 10)
+
+        # Конверсия от предыдущего этапа
+        if prev_count is not None and prev_count > 0:
+            conv = round(count / prev_count * 100)
+            conv_str = f"  ↳ {conv}% от предыдущего"
+        else:
+            conv_str = ""
+
+        lines.append(f"{label}\n{bar} {count} чел. ({p}%){conv_str}\n")
+        prev_count = count
+
+    # Сколько вообще не записано в воронке (зашли, но не нажали «Я подписался»)
+    not_tracked = total_users - step_counts.get("start", 0)
+    lines.append(f"❓ Не начали воронку: {not_tracked} чел.")
+
+    text = "\n".join(lines)
 
     back_kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="admin:main")],
@@ -10510,6 +11599,20 @@ async def cb_post_send(callback: CallbackQuery, bot: Bot, state: FSMContext):
 
 
 # =========================
+# ADMIN: получить file_id видео
+# =========================
+async def admin_get_file_id(message: Message):
+    """Если админ отправляет видео боту — отвечает его file_id."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    file_id = message.video.file_id
+    await message.answer(
+        f"📋 <b>file_id видео:</b>\n\n<code>{file_id}</code>",
+        parse_mode=ParseMode.HTML
+    )
+
+
+# =========================
 # ПОДДЕРЖКА: любой текст -> админу
 # =========================
 async def forward_to_admin(message: Message, bot: Bot):
@@ -10619,6 +11722,17 @@ def setup_handlers(dp: Dispatcher):
 
     dp.message.register(cmd_start, CommandStart())
 
+    # ── Воронка продаж ───────────────────────────────────────────────────────
+    dp.callback_query.register(cb_funnel_subscribed, F.data == "funnel:subscribed")
+    dp.callback_query.register(cb_funnel_problem_continue, F.data == "funnel:problem_continue")
+    dp.message.register(funnel_waiting_name, FunnelFlow.waiting_name)
+    dp.callback_query.register(cb_funnel_goal, F.data.startswith("funnel:goal:"))
+    dp.callback_query.register(cb_funnel_sex, F.data.startswith("funnel:sex:"))
+    dp.callback_query.register(cb_funnel_dream_continue, F.data == "funnel:dream_continue")
+    dp.callback_query.register(cb_funnel_solution_continue, F.data == "funnel:solution_continue")
+    dp.callback_query.register(cb_funnel_complete_profile, F.data == "funnel:complete_profile")
+    # ─────────────────────────────────────────────────────────────────────────
+
     dp.callback_query.register(cb_nav, F.data.startswith("nav:"))
 
     dp.callback_query.register(cb_profile_edit, F.data == "p:edit")
@@ -10689,6 +11803,7 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(cmd_posts, Command("posts"))
     dp.callback_query.register(cb_admin_main, F.data == "admin:main")
     dp.callback_query.register(cb_admin_stats, F.data == "admin:stats")
+    dp.callback_query.register(cb_admin_funnel, F.data == "admin:funnel")
     dp.callback_query.register(cb_admin_post_new, F.data == "admin:post_new")
     dp.callback_query.register(cb_post_new, F.data == "post:new")
     dp.callback_query.register(cb_post_cancel, F.data == "post:cancel")
@@ -10713,6 +11828,7 @@ def setup_handlers(dp: Dispatcher):
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
 
 
+    dp.message.register(admin_get_file_id, F.video)
     dp.message.register(forward_to_admin)
 
 
