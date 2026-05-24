@@ -2170,6 +2170,7 @@ TECH = {
     "pike_pushup": {
         "title": "Пайк отжимания",
         "mp4": "media/tech/pike_pushup.mp4",
+        "gif": "media/tech/pike_pushup.gif",
         "text": (
             "📚 Пайк отжимания (плечи)\n\n"
             "✅ Настройка\n"
@@ -4170,6 +4171,23 @@ async def send_tech(
     if not video_path:
         # Проверяем поле "mp4" прямо в словаре TECH (устаревший формат хранения)
         video_path = tech_item.get("mp4", "")
+
+    # ── Вариант 1б: GIF из поля TECH[key]["gif"] — приоритет выше mp4 ─────────
+    gif_inline_path = tech_item.get("gif", "")
+    if gif_inline_path and os.path.exists(gif_inline_path):
+        try:
+            m = await bot.send_animation(
+                chat_id=chat_id,
+                animation=FSInputFile(gif_inline_path),
+                caption=caption,
+                reply_markup=reply_markup,
+            )
+            await set_last_bot_msg_id(user_id, m.message_id)
+            return
+        except Exception as _e:
+            logging.warning(f"[send_tech] send_animation (gif field) failed key={tech_key!r}: {_e}")
+            # fallback → mp4
+
     if video_path and os.path.exists(video_path):
         if await _try_send_video(video_path):
             return
