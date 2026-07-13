@@ -56,6 +56,7 @@ IMAGE_PATHS = {
     # ────────────────────────────────────────────────────────────────────────
     "upgrade":      "media2/tech/upgrade.jpg",
     "faq":          "media2/tech/faq.jpg",
+    "info":         "media2/tech/info.jpg",
 }
 
 # Словарь JPG/PNG картинок для техник упражнений.
@@ -3335,6 +3336,7 @@ def control_reply_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🏠 Меню"), KeyboardButton(text="🆘 Поддержка")],
+            [KeyboardButton(text="ℹ️ Инфо")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -3367,6 +3369,104 @@ def simple_back_to_menu_inline_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
     ])
+
+
+# =========================
+# ✅ Инфо
+# =========================
+TERMS_OF_USE_URL = "https://telegra.ph/Usloviya-ispolzovaniya-servisa-Zelyonyj-trener-07-13"
+
+PRIVACY_POLICY_TEXT = (
+    "🔒 <b>Политика конфиденциальности</b>\n\n"
+    "<b>1. Общие положения</b>\n"
+    "1.1. Настоящая Политика конфиденциальности определяет порядок обработки, хранения и защиты информации, "
+    "которую Пользователь предоставляет при использовании сервиса «Зелёный тренер» (далее — «Сервис»).\n"
+    "1.2. Используя Сервис, Пользователь подтверждает, что ознакомился с настоящей Политикой и принимает её условия.\n"
+    "1.3. Если Пользователь не согласен с условиями настоящей Политики, он должен прекратить использование Сервиса.\n\n"
+    "<b>2. Какие данные собирает Сервис</b>\n"
+    "2.1. Для работы Сервиса могут обрабатываться следующие данные: Telegram ID; имя пользователя Telegram; "
+    "имя, указанное в Telegram; возраст; пол; рост; вес; цель тренировок; уровень физической подготовки; "
+    "место тренировок; доступное спортивное оборудование; история тренировок; тренировочный дневник; "
+    "история прогресса; сведения о приобретённой подписке; обращения в службу поддержки; техническая "
+    "информация, необходимая для корректной работы Сервиса.\n"
+    "2.2. Сервис не запрашивает паспортные данные, банковские карты, фотографии документов или иную "
+    "информацию, не связанную с его работой.\n\n"
+    "<b>3. Для чего используются данные</b>\n"
+    "3.1. Полученная информация используется исключительно для: предоставления доступа к Сервису; "
+    "формирования персонализированных рекомендаций; ведения тренировочного дневника; сохранения прогресса; "
+    "обработки оплаты и подписки; технической поддержки Пользователей; улучшения качества работы Сервиса; "
+    "обеспечения безопасности Сервиса.\n\n"
+    "<b>4. Передача данных третьим лицам</b>\n"
+    "4.1. Сервис не продаёт и не передаёт персональные данные Пользователей третьим лицам.\n"
+    "4.2. Передача данных возможна только в случаях, когда это необходимо для работы Сервиса, например: "
+    "Telegram; ЮKassa (при оплате); сервисам, обеспечивающим работу Сервиса.\n"
+    "4.3. Передача данных также может осуществляться в случаях, предусмотренных законодательством "
+    "Российской Федерации.\n\n"
+    "<b>5. Хранение и защита данных</b>\n"
+    "5.1. Данные хранятся только в течение срока, необходимого для работы Сервиса и достижения целей их обработки.\n"
+    "5.2. Сервис принимает разумные организационные и технические меры для защиты информации от "
+    "несанкционированного доступа, изменения или удаления.\n\n"
+    "<b>6. Отказ от ответственности</b>\n"
+    "6.1. Передача информации через интернет всегда связана с определёнными рисками.\n"
+    "6.2. Несмотря на принимаемые меры безопасности, Сервис не может гарантировать абсолютную защиту данных "
+    "при их передаче через интернет.\n"
+    "6.3. Сервис не несёт ответственности за утрату или раскрытие информации, произошедшие по вине "
+    "Пользователя, третьих лиц или вследствие обстоятельств, не зависящих от Сервиса.\n\n"
+    "<b>7. Изменение Политики</b>\n"
+    "7.1. Владелец Сервиса вправе вносить изменения в настоящую Политику.\n"
+    "7.2. Новая редакция вступает в силу с момента её публикации.\n"
+    "7.3. Продолжение использования Сервиса после публикации новой редакции означает согласие Пользователя "
+    "с внесёнными изменениями.\n\n"
+    "<b>8. Контакты</b>\n"
+    "8.1. По вопросам, связанным с обработкой персональных данных или настоящей Политикой, Пользователь "
+    "может обратиться в службу поддержки через официальный Telegram-аккаунт: @zel_support"
+)
+
+
+def info_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🛡 Конфиденциальность", callback_data="info:privacy")],
+        [InlineKeyboardButton(text="📄 Пользовательское соглашение", url=TERMS_OF_USE_URL)],
+        [InlineKeyboardButton(text="🏠 Назад", callback_data="nav:menu")],
+    ])
+
+
+def info_privacy_back_kb():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="nav:info")],
+        [InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")],
+    ])
+
+
+async def open_info(user_id: int, chat_id: int, bot: Bot, callback: Optional[CallbackQuery] = None):
+    text = (
+        "ℹ️ <b>Информация</b>\n\n"
+        "Выберите раздел:"
+    )
+    if callback:
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["info"], text, reply_markup=info_kb(),
+            callback=callback,
+        )
+    else:
+        await send_section(
+            bot, chat_id, user_id,
+            IMAGE_PATHS["info"], text, reply_markup=info_kb(),
+        )
+
+
+async def cb_info_privacy(callback: CallbackQuery, bot: Bot):
+    uid = callback.from_user.id
+    await clean_edit(callback, uid, PRIVACY_POLICY_TEXT, reply_markup=info_privacy_back_kb())
+    await callback.answer()
+
+
+async def open_info_from_reply(message: Message, state: FSMContext, bot: Bot):
+    await ensure_user(message.from_user.id, message.from_user.username or "")
+    await state.clear()
+    await open_info(user_id=message.from_user.id, chat_id=message.chat.id, bot=bot)
+    await try_delete_user_message(bot, message)
 
 
 # =========================
@@ -7810,6 +7910,8 @@ async def cb_nav(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await open_diary(user_id=uid, chat_id=chat_id, bot=bot, state=state, callback=callback)
     elif key == "faq":
         await open_faq(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
+    elif key == "info":
+        await open_info(user_id=uid, chat_id=chat_id, bot=bot, callback=callback)
     elif key == "progress_tip":
         u = await get_user(uid)
         place = (u.get("place") or "").strip().lower()
@@ -11844,6 +11946,8 @@ def setup_handlers(dp: Dispatcher):
 
     dp.message.register(open_support_from_reply, F.text == "🆘 Поддержка")
     dp.message.register(open_menu_from_reply, F.text == "🏠 Меню")
+    dp.message.register(open_info_from_reply, F.text == "ℹ️ Инфо")
+    dp.callback_query.register(cb_info_privacy, F.data == "info:privacy")
 
 
     dp.message.register(admin_get_file_id, F.video)
