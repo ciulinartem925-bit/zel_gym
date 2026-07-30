@@ -57,6 +57,7 @@ IMAGE_PATHS = {
     "upgrade":      "media2/tech/upgrade.jpg",
     "faq":          "media2/tech/faq.jpg",
     "info":         "media2/tech/info.jpg",
+    "cardio":       "media2/tech/cardio.jpg",
 }
 
 # Словарь JPG/PNG картинок для техник упражнений.
@@ -852,7 +853,7 @@ def show_replacements(day_num: int, ex_idx: int, ex_name: str,
 TARIFFS = {
     "t1":    {"title": "1 месяц",                "days": 30,   "price": 349,  "plan_regens": 3},
     "t3":    {"title": "3 месяца",               "days": 90,   "price": 799,  "plan_regens": 10},
-    "life":  {"title": "Навсегда",               "days": None, "price": 1490, "plan_regens": None},
+    "life":  {"title": "Навсегда",               "days": None, "price": 1, "plan_regens": None},
 }
 
 # Полный доступ (питание + все цели + смена программы) только на t3 и life
@@ -3482,6 +3483,7 @@ def workout_days_kb(freq: int, has_full_access: bool = False, plan_struct: dict 
     for i in range(0, len(btns), 2):
         rows.append(btns[i:i+2])
 
+    rows.append([InlineKeyboardButton(text="🏃 Кардио", callback_data="cardio:menu")])
     rows.append([InlineKeyboardButton(text="❓ Вопросы в тренировках", callback_data="nav:workout_questions")])
     rows.append([InlineKeyboardButton(text="🏠 Меню", callback_data="nav:menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -3755,11 +3757,8 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
     (Frankenfield et al., 2005; Sabounchi et al., 2013).
 
     Калорийный коридор по целям:
-    - Похудение: дефицит 300–500 ккал/день (~15–20% от TDEE).
-      Более агрессивный дефицит ускоряет потерю ЛМТ (Helms et al., 2014).
-      Потолок дефицита — 25% TDEE, чтобы не нарушать гормональный фон.
-    - Масса: +200–250 ккал (умеренный сурплюс, Barakat et al., 2020).
-      +10% от TDEE — избыточный набор жира без дополнительного прироста мышц.
+    - Похудение: калорийность = TDEE − 15% (фиксированное значение, без диапазонов).
+    - Масса: калорийность = TDEE + 10% (фиксированное значение, без диапазонов).
     - Сила: +100–150 ккал — минимальный сурплюс для восстановления и адаптации
       (Ribeiro et al., 2019). Большой сурплюс не добавляет силы.
     - Выносливость: поддержание TDEE или лёгкий дефицит −100 ккал.
@@ -3780,17 +3779,11 @@ def calc_calories(height_cm: int, weight_kg: float, age: int, sex: str, goal: st
 
     g = (goal or "").lower()
     if "мас" in g:
-        # +200–300 ккал — умеренный «чистый» сурплюс для набора без лишнего жира.
-        # Barakat et al. (2020): сурплюс >300 ккал не увеличивает прирост мышц,
-        # но существенно увеличивает набор жира.
-        target = tdee + 250
+        # Набор массы: фиксированная калорийность = TDEE + 10%.
+        target = tdee * 1.10
     elif "похуд" in g or "суш" in g:
-        # Дефицит: 300–500 ккал/день, но не >20% TDEE (защита ЛМТ).
-        # Helms et al. (2014): агрессивный дефицит >500 ккал ускоряет потерю мышц.
-        # Hall et al. (2012): оптимальная скорость похудения 0.5–1% веса в неделю.
-        deficit = min(500, tdee * 0.20)
-        deficit = max(deficit, 300)  # минимум 300 ккал для реального эффекта
-        target = tdee - deficit
+        # Похудение: фиксированная калорийность = TDEE − 15%.
+        target = tdee * 0.85
     elif "сил" in g:
         # +100–150 ккал — минимальный сурплюс для нейромышечной адаптации.
         # Ribeiro et al. (2019): большой сурплюс не добавляет силы, только жир.
@@ -3840,56 +3833,55 @@ def _protein_weight(weight_kg: float, height_cm: int, sex: str) -> float:
 
 def calc_macros(calories: int, weight_kg: float, goal: str,
                 height_cm: int = 175, sex: str = "м"):
-    """Рассчитывает БЖУ по целям (научно обоснованные нормы).
+    """Рассчитывает БЖУ по целям.
 
-    Белок по скорректированной массе тела (adjusted BW, Rafii et al. 2015):
-      При ИМТ до ~27 — фактический вес. При ожирении: IBW + 0.25*(факт-IBW).
-      Это предотвращает завышение белка у людей с лишним весом.
+    Похудение и набор массы используют фиксированные, не диапазонные нормы
+    на кг фактической массы тела:
 
-    Нормы белка (г/кг adjusted BW):
-    ┌──────────────┬──────────┬─────────────────────────────────────────────┐
-    │ Похудение    │ 2.4 г/кг │ Helms et al. 2014: 2.3–3.1 г/кг lean.     │
-    │              │          │ Высокий белок сохраняет ЛМТ при дефиците,  │
-    │              │          │ повышает сытость (Leidy et al. 2015).       │
-    ├──────────────┼──────────┼─────────────────────────────────────────────┤
-    │ Масса        │ 2.2 г/кг │ Morton et al. 2018; ISSN 2017.             │
-    │              │          │ Профицит создаёт анаболическую среду —     │
-    │              │          │ белок чуть ниже, чем при похудении.         │
-    ├──────────────┼──────────┼─────────────────────────────────────────────┤
-    │ Сила         │ 2.4 г/кг │ Stokes et al. 2018. Тяжёлые нагрузки      │
-    │              │          │ создают высокий оборот белка; важна         │
-    │              │          │ плотность мышц, а не их объём.              │
-    └──────────────┴──────────┴─────────────────────────────────────────────┘
+    ┌──────────────┬────────────┬────────────┐
+    │ Цель         │ Белок      │ Жиры       │
+    ├──────────────┼────────────┼────────────┤
+    │ Похудение    │ 2.2 г/кг   │ 1.0 г/кг   │
+    │ Набор массы  │ 2.0 г/кг   │ 1.0 г/кг   │
+    └──────────────┴────────────┴────────────┘
 
-    Жиры (% от ккал):
-    - Похудение: max(0.9 г/кг adj, 20% ккал).
-      Нельзя опускать ниже 20% ккал — подавляет тестостерон/эстроген
-      (Hamalainen et al. 1984). Потолок белка — 35% ккал.
-    - Масса: 28% ккал — чуть выше нормы для гормонального фона
-      и усвоения жирорастворимых витаминов при профиците.
-    - Сила: 22% ккал — снижен в пользу углеводов.
-      Гликоген — основной субстрат при тяжёлых нагрузках (Burke et al. 2017).
+    Углеводы = оставшиеся калории после расчёта белков и жиров.
+    1 г белка = 4 ккал, 1 г углеводов = 4 ккал, 1 г жира = 9 ккал.
+    Никаких диапазонов, минимумов или клэмпов для этих двух целей не применяется.
 
-    Углеводы: остаток калорий.
-    - Похудение/Масса: минимум 100 г/день (IOM 2002, работа мозга + гликоген).
-    - Сила: минимум max(130 г, 3 г/кг BW) — ресинтез гликогена (Ivy 2004).
+    Для целей «сила» и «поддержание» (не затронуты этим изменением) используется
+    прежняя логика на основе скорректированной массы тела (adjusted BW).
     """
     g  = (goal or "").lower()
+
+    if "похуд" in g or "суш" in g:
+        # 1. Белок = 2.2 г/кг фактической массы тела.
+        protein = int(round(weight_kg * 2.2))
+        # 2. Жиры = 1.0 г/кг фактической массы тела.
+        fat = int(round(weight_kg * 1.0))
+        # 3. Углеводы = остаток калорий после белков и жиров.
+        carbs_kcal = max(calories - protein * 4 - fat * 9, 0)
+        carbs = int(round(carbs_kcal / 4))
+        return protein, fat, carbs
+
+    if "мас" in g:
+        # 1. Белок = 2.0 г/кг фактической массы тела.
+        protein = int(round(weight_kg * 2.0))
+        # 2. Жиры = 1.0 г/кг фактической массы тела.
+        fat = int(round(weight_kg * 1.0))
+        # 3. Углеводы = остаток калорий после белков и жиров.
+        carbs_kcal = max(calories - protein * 4 - fat * 9, 0)
+        carbs = int(round(carbs_kcal / 4))
+        return protein, fat, carbs
+
+    # ── Остальные цели (сила, выносливость, поддержание) — прежняя логика ──
     pw = _protein_weight(weight_kg, height_cm, sex)   # adjusted BW
 
     # ── Белок ───────────────────────────────────────────────────────────────
-    if "похуд" in g or "суш" in g:
-        # Дефицит = катаболическая среда → нужен максимальный белок
-        protein    = int(round(pw * 2.4))
-        max_p_pct  = 0.35          # до 35% ккал из белка допустимо при похудении
-    elif "сил" in g:
+    if "сил" in g:
         # Тяжёлые нагрузки → высокий оборот белка, цель — плотность мышц
         protein    = int(round(pw * 2.4))
         max_p_pct  = 0.35
-    elif "мас" in g:
-        # Профицит создаёт анаболическую среду — 2.2 г/кг достаточно
-        protein    = int(round(pw * 2.2))
-        max_p_pct  = 0.30
     else:                          # поддержание
         protein    = int(round(pw * 1.8))
         max_p_pct  = 0.30
@@ -3897,16 +3889,7 @@ def calc_macros(calories: int, weight_kg: float, goal: str,
     protein = min(protein, int(calories * max_p_pct / 4))
 
     # ── Жир ─────────────────────────────────────────────────────────────────
-    if "похуд" in g or "суш" in g:
-        # Гормональный минимум: наибольшее из 0.9 г/кг adj и 20% ккал
-        fat = int(round(max(pw * 0.9, calories * 0.20 / 9)))
-    elif "мас" in g:
-        # 1 г/кг веса тела — оптимально для гормонального фона при профиците
-        # Клэмп: не ниже 20% ккал и не выше 35% ккал
-        fat = int(round(weight_kg * 1.0))
-        fat = max(fat, int(calories * 0.20 / 9))
-        fat = min(fat, int(calories * 0.35 / 9))
-    elif "сил" in g:
+    if "сил" in g:
         # 22% ккал — снижен в пользу углеводов (гликоген важнее при тяжёлых нагрузках)
         fat = int(round(calories * 0.22 / 9))
     else:                          # поддержание
@@ -4574,6 +4557,17 @@ async def init_db():
             user_id INTEGER PRIMARY KEY,
             step TEXT NOT NULL DEFAULT 'start',
             updated_at TEXT
+        )
+        """)
+        # ── Кардио: отдельная таблица, силовые тренировки не затрагиваются ─────
+        await conn.execute("""
+        CREATE TABLE IF NOT EXISTS cardio_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            cardio_type TEXT NOT NULL,
+            duration INTEGER NOT NULL,
+            intensity TEXT NOT NULL,
+            completed_at TEXT NOT NULL
         )
         """)
         await conn.commit()
@@ -7014,17 +7008,17 @@ def generate_nutrition_summary(goal: str, sex: str, age: int, height: int, weigh
     c_pct    = round(c * 4 / calories * 100)
     if "похуд" in g_lower or "суш" in g_lower:
         goal_note = (
-            "\U0001f4cc <b>Похудение</b>: дефицит -300–500 ккал от TDEE\n"
-            f"   Белок {p_per_kg} г/кг — максимальный, сохраняет мышцы при дефиците\n"
-            f"   Жиры {f_pct}% ккал — гормональный минимум (не ниже 20%)\n"
-            f"   Углеводы {c_pct}% ккал — остаток для энергии тренировок\n"
+            "\U0001f4cc <b>Похудение</b>: калории = TDEE − 15%\n"
+            f"   Белок {p_per_kg} г/кг (2.2 г/кг) — сохраняет мышцы при дефиците\n"
+            f"   Жиры {f_pct}% ккал (1.0 г/кг) — фиксированная норма\n"
+            f"   Углеводы {c_pct}% ккал — остаток после белков и жиров\n"
         )
     elif "мас" in g_lower:
         goal_note = (
-            "\U0001f4cc <b>Набор массы</b>: профицит +250 ккал к TDEE\n"
-            f"   Белок {p_per_kg} г/кг — достаточно для роста (профицит = анаболическая среда)\n"
-            f"   Жиры {f_pct}% ккал — чуть выше нормы для гормонов и витаминов\n"
-            f"   Углеводы {c_pct}% ккал — основной источник энергии для роста\n"
+            "\U0001f4cc <b>Набор массы</b>: калории = TDEE + 10%\n"
+            f"   Белок {p_per_kg} г/кг (2.0 г/кг) — достаточно для роста\n"
+            f"   Жиры {f_pct}% ккал (1.0 г/кг) — фиксированная норма\n"
+            f"   Углеводы {c_pct}% ккал — остаток после белков и жиров\n"
         )
     elif "сил" in g_lower:
         goal_note = (
@@ -11794,6 +11788,465 @@ async def cb_workout_rebuild(callback: CallbackQuery, bot: Bot):
 
 
 # =========================
+# 🏃 КАРДИО — отдельный раздел (не затрагивает силовые тренировки)
+# =========================
+
+CARDIO_TYPE_LABELS: Dict[str, str] = {
+    "walk":       "Быстрая ходьба",
+    "bike":       "Велосипед",
+    "run":        "Лёгкий бег",
+    "elliptical": "Эллипс",
+    "swim":       "Плавание",
+}
+
+CARDIO_TYPE_EMOJI: Dict[str, str] = {
+    "walk":       "🚶",
+    "bike":       "🚴",
+    "run":        "🏃",
+    "elliptical": "⭕",
+    "swim":       "🏊",
+}
+
+
+def get_cardio_recommendation(goal: str) -> dict:
+    """Возвращает персональную рекомендацию по кардио на основе цели пользователя.
+
+    Возвращает словарь:
+    - sessions_per_week: рекомендуемое кол-во тренировок в неделю (для прогресс-бара)
+    - duration_minutes: рекомендуемая длительность (мин)
+    - intensity: текстовое описание интенсивности
+    - note: готовый поясняющий текст (буллеты) для вставки в экран
+    """
+    # В БД цель хранится обычным текстом ("похудение", "масса", "сила"), а не
+    # английскими кодами — сравниваем именно с реальными значениями из профиля.
+    g = (goal or "").strip().lower()
+
+    if g in ("похудение", "cut", "fat_loss", "похудеть"):
+        return {
+            "sessions_per_week": 3,
+            "duration_minutes": 30,
+            "intensity": "низкая или умеренная",
+            "note": (
+                "Рекомендуется:\n"
+                "• 3 кардиотренировки в неделю\n"
+                "• 30 минут\n"
+                "• Низкая или умеренная интенсивность\n"
+                "• Быстрая ходьба, велосипед или эллипс"
+            ),
+        }
+    elif g in ("масса", "mass", "набор мышечной массы"):
+        return {
+            "sessions_per_week": 2,
+            "duration_minutes": 20,
+            "intensity": "низкая или умеренная",
+            "note": (
+                "Рекомендуется:\n"
+                "• 2 кардиотренировки в неделю\n"
+                "• 20 минут\n"
+                "• Низкая или умеренная интенсивность\n"
+                "• Не выполнять тяжёлое кардио перед силовой тренировкой ног"
+            ),
+        }
+    elif g in ("поддержание", "keep", "поддержание формы"):
+        return {
+            "sessions_per_week": 3,
+            "duration_minutes": 25,
+            "intensity": "умеренная",
+            "note": (
+                "Рекомендуется:\n"
+                "• 3 кардиотренировки в неделю\n"
+                "• 25 минут\n"
+                "• Умеренная интенсивность"
+            ),
+        }
+    else:
+        # Цель не определена (в т.ч. "сила" или пустой профиль) — универсальная рекомендация
+        return {
+            "sessions_per_week": 3,
+            "duration_minutes": 25,
+            "intensity": "низкая или умеренная",
+            "note": (
+                "Рекомендуется:\n"
+                "• 2–3 кардиотренировки в неделю\n"
+                "• 20–30 минут\n"
+                "• Низкая или умеренная интенсивность"
+            ),
+        }
+
+
+async def save_cardio_session(user_id: int, cardio_type: str, duration: int, intensity: str):
+    """Сохраняет завершённую кардиотренировку в SQLite (параметризованный запрос)."""
+    completed_at = datetime.now().isoformat()
+    async with db() as conn:
+        await conn.execute(
+            "INSERT INTO cardio_sessions (user_id, cardio_type, duration, intensity, completed_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (user_id, cardio_type, duration, intensity, completed_at),
+        )
+        await conn.commit()
+
+
+async def get_weekly_cardio_sessions(user_id: int) -> List[dict]:
+    """Возвращает список кардиотренировок за текущую неделю (пн–вс)."""
+    today = datetime.now().date()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    start_str = week_start.strftime("%Y-%m-%d")
+    end_str = week_end.strftime("%Y-%m-%d 23:59:59")
+
+    async with db() as conn:
+        async with conn.execute(
+            "SELECT cardio_type, duration, intensity, completed_at "
+            "FROM cardio_sessions WHERE user_id=? AND completed_at>=? AND completed_at<=? "
+            "ORDER BY completed_at",
+            (user_id, start_str, end_str),
+        ) as cur:
+            rows = await cur.fetchall()
+
+    return [
+        {"cardio_type": r[0], "duration": r[1], "intensity": r[2], "completed_at": r[3]}
+        for r in rows
+    ]
+
+
+async def get_weekly_cardio_stats(user_id: int) -> dict:
+    """Статистика кардио за неделю: количество, общая длительность, список тренировок."""
+    sessions = await get_weekly_cardio_sessions(user_id)
+    total_minutes = sum(int(s["duration"] or 0) for s in sessions)
+    return {
+        "count": len(sessions),
+        "total_minutes": total_minutes,
+        "sessions": sessions,
+    }
+
+
+# ── Клавиатуры раздела «Кардио» ─────────────────────────────────────────────
+def cardio_menu_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏃 Начать кардио", callback_data="cardio:start")],
+        [InlineKeyboardButton(text="📊 Прогресс недели", callback_data="cardio:progress")],
+        [InlineKeyboardButton(text="ℹ️ Рекомендации", callback_data="cardio:recommendations")],
+        [InlineKeyboardButton(text="⬅️ Назад к тренировкам", callback_data="nav:workouts")],
+    ])
+
+
+def cardio_type_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚶 Быстрая ходьба", callback_data="cardio:type:walk")],
+        [InlineKeyboardButton(text="🚴 Велосипед", callback_data="cardio:type:bike")],
+        [InlineKeyboardButton(text="🏃 Лёгкий бег", callback_data="cardio:type:run")],
+        [InlineKeyboardButton(text="⭕ Эллипс", callback_data="cardio:type:elliptical")],
+        [InlineKeyboardButton(text="🏊 Плавание", callback_data="cardio:type:swim")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="cardio:menu")],
+    ])
+
+
+def cardio_duration_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="15 минут", callback_data="cardio:duration:15")],
+        [InlineKeyboardButton(text="20 минут", callback_data="cardio:duration:20")],
+        [InlineKeyboardButton(text="30 минут", callback_data="cardio:duration:30")],
+        [InlineKeyboardButton(text="40 минут", callback_data="cardio:duration:40")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="cardio:start")],
+    ])
+
+
+def cardio_card_kb(cardio_type: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="▶️ Начать", callback_data="cardio:confirm")],
+        [InlineKeyboardButton(text="❌ Отменить", callback_data="cardio:cancel")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"cardio:type:{cardio_type}")],
+    ])
+
+
+def cardio_started_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Завершить тренировку", callback_data="cardio:finish")],
+        [InlineKeyboardButton(text="❌ Отменить тренировку", callback_data="cardio:cancel")],
+    ])
+
+
+def cardio_finish_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏃 Ещё тренировка", callback_data="cardio:start")],
+        [InlineKeyboardButton(text="📊 Прогресс недели", callback_data="cardio:progress")],
+        [InlineKeyboardButton(text="🏋️ К тренировкам", callback_data="nav:workouts")],
+    ])
+
+
+def cardio_progress_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏃 Начать кардио", callback_data="cardio:start")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="cardio:menu")],
+    ])
+
+
+def cardio_recommendations_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад к кардио", callback_data="cardio:menu")],
+    ])
+
+
+def _cardio_progress_bar(done: int, total: int) -> str:
+    """Визуальный прогресс: ■■□□ done/total. Не падает, если done > total."""
+    total = max(1, int(total or 1))
+    done = max(0, int(done or 0))
+    filled = min(done, total)
+    bar = "■" * filled + "□" * max(0, total - filled)
+    return f"Прогресс: {bar} {done}/{total}"
+
+
+async def _cardio_send(callback: CallbackQuery, bot: Bot, uid: int, text: str, reply_markup=None):
+    """Унифицированная отправка экрана кардио с картинкой раздела (без падения, если файла нет)."""
+    await send_section(
+        bot, callback.message.chat.id, uid,
+        IMAGE_PATHS.get("cardio", ""), text, reply_markup=reply_markup,
+        callback=callback,
+    )
+
+
+# ── Хендлеры раздела «Кардио» ───────────────────────────────────────────────
+async def cb_cardio_menu(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """🏃 Главный экран кардио."""
+    uid = callback.from_user.id
+    await state.update_data(cardio_type=None, cardio_duration=None)
+
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    u = await get_user(uid)
+    goal = (u.get("goal") or "").strip()
+    # goal уже хранится человекочитаемым текстом ("похудение"/"масса"/"сила") —
+    # GOAL_DISPLAY тут не подходит, просто показываем то, что есть в профиле.
+    goal_label = goal.capitalize() if goal else "не указана"
+    rec = get_cardio_recommendation(goal)
+
+    text = (
+        "🏃 <b>Кардиотренировки</b>\n\n"
+        "Кардио помогает улучшить выносливость, здоровье сердечно-сосудистой системы и контролировать расход энергии.\n\n"
+        f"Твоя цель: {goal_label}\n\n"
+        f"{rec['note']}\n\n"
+        "Выбери действие 👇"
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_menu_kb())
+    await callback.answer()
+
+
+async def cb_cardio_start(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """🏃 Начать кардио → выбор вида кардио."""
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    await state.update_data(cardio_type=None, cardio_duration=None)
+    text = "🏃 <b>Выбери вид кардио</b>"
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_type_kb())
+    await callback.answer()
+
+
+async def cb_cardio_type(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Выбор вида кардио → показать выбор длительности."""
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    cardio_type = callback.data.split(":", 2)[2]
+    if cardio_type not in CARDIO_TYPE_LABELS:
+        await callback.answer("Не удалось распознать вид кардио 😅", show_alert=True)
+        return
+
+    await state.update_data(cardio_type=cardio_type)
+
+    u = await get_user(uid)
+    rec = get_cardio_recommendation((u.get("goal") or "").strip())
+
+    text = (
+        "⏱ <b>Выбери длительность</b>\n\n"
+        f"Рекомендация для твоей цели: {rec['duration_minutes']} минут"
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_duration_kb())
+    await callback.answer()
+
+
+async def cb_cardio_duration(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """Выбор длительности → карточка тренировки."""
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    try:
+        duration = int(callback.data.split(":", 2)[2])
+    except (ValueError, IndexError):
+        await callback.answer("Не удалось распознать длительность 😅", show_alert=True)
+        return
+
+    data = await state.get_data()
+    cardio_type = data.get("cardio_type")
+    if not cardio_type or cardio_type not in CARDIO_TYPE_LABELS:
+        # Состояние потеряно (например, старое сообщение) — возвращаем к выбору вида
+        await cb_cardio_start(callback, state, bot)
+        return
+
+    await state.update_data(cardio_duration=duration)
+
+    type_label = CARDIO_TYPE_LABELS[cardio_type]
+    text = (
+        "🏃 <b>Кардиотренировка</b>\n\n"
+        f"Вид: {type_label}\n"
+        f"Длительность: {duration} минут\n"
+        "Интенсивность: умеренная\n\n"
+        "Ориентир интенсивности:\n"
+        "Ты дышишь чаще обычного, но всё ещё можешь говорить короткими предложениями."
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_card_kb(cardio_type))
+    await callback.answer()
+
+
+async def cb_cardio_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """▶️ Начать — тренировка стартует (без автотаймера)."""
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    data = await state.get_data()
+    cardio_type = data.get("cardio_type")
+    duration = data.get("cardio_duration")
+    if not cardio_type or not duration:
+        await cb_cardio_start(callback, state, bot)
+        return
+
+    type_label = CARDIO_TYPE_LABELS.get(cardio_type, cardio_type)
+    text = (
+        "✅ <b>Кардиотренировка началась</b>\n\n"
+        f"Вид: {type_label}\n"
+        f"Запланировано: {duration} минут\n\n"
+        "Заверши тренировку после фактического выполнения."
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_started_kb())
+    await callback.answer()
+
+
+async def cb_cardio_finish(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """✅ Завершить тренировку — сохраняем в БД (защита от двойного сохранения)."""
+    uid = callback.from_user.id
+
+    data = await state.get_data()
+    cardio_type = data.get("cardio_type")
+    duration = data.get("cardio_duration")
+
+    if not cardio_type or not duration:
+        # Уже сохранено этим же нажатием ранее — второй раз не сохраняем повторно
+        await callback.answer("Тренировка уже сохранена ✅")
+        return
+
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    u = await get_user(uid)
+    rec = get_cardio_recommendation((u.get("goal") or "").strip())
+    intensity = rec["intensity"]
+
+    # Сразу очищаем данные FSM, чтобы повторное нажатие не сохранило тренировку дважды
+    await state.update_data(cardio_type=None, cardio_duration=None)
+
+    await save_cardio_session(uid, cardio_type, int(duration), intensity)
+
+    stats = await get_weekly_cardio_stats(uid)
+    sessions_per_week = rec["sessions_per_week"]
+
+    type_label = CARDIO_TYPE_LABELS.get(cardio_type, cardio_type)
+    text = (
+        "✅ <b>Кардиотренировка выполнена!</b>\n\n"
+        f"Вид: {type_label}\n"
+        f"Длительность: {duration} минут\n\n"
+        "Кардио за эту неделю:\n"
+        f"{stats['count']}/{sessions_per_week}"
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_finish_kb())
+    await callback.answer()
+
+
+async def cb_cardio_cancel(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """❌ Отмена (с карточки или из уже начатой тренировки) — ничего не сохраняем."""
+    uid = callback.from_user.id
+    await state.update_data(cardio_type=None, cardio_duration=None)
+    await cb_cardio_menu(callback, state, bot)
+
+
+async def cb_cardio_progress(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """📊 Прогресс недели."""
+    uid = callback.from_user.id
+    if not await is_access_active(uid):
+        await clean_edit(callback, uid, locked_text())
+        await callback.answer()
+        return
+
+    u = await get_user(uid)
+    rec = get_cardio_recommendation((u.get("goal") or "").strip())
+    stats = await get_weekly_cardio_stats(uid)
+
+    if stats["count"] == 0:
+        sessions_text = (
+            "На этой неделе кардиотренировок пока не было.\n\n"
+            "Начни с короткой тренировки — даже 15–20 минут имеют значение."
+        )
+    else:
+        lines = []
+        for s in stats["sessions"]:
+            label = CARDIO_TYPE_LABELS.get(s["cardio_type"], s["cardio_type"])
+            lines.append(f"✅ {label} — {s['duration']} минут")
+        sessions_text = "\n".join(lines)
+
+    progress_bar = _cardio_progress_bar(stats["count"], rec["sessions_per_week"])
+
+    text = (
+        "📊 <b>Кардио за неделю</b>\n\n"
+        f"Выполнено: {stats['count']}/{rec['sessions_per_week']}\n"
+        f"Общее время: {stats['total_minutes']} минут\n\n"
+        f"{sessions_text}\n\n"
+        f"{progress_bar}"
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_progress_kb())
+    await callback.answer()
+
+
+async def cb_cardio_recommendations(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    """ℹ️ Рекомендации."""
+    uid = callback.from_user.id
+    text = (
+        "ℹ️ <b>Рекомендации по кардио</b>\n\n"
+        "Для похудения:\n"
+        "• Кардио увеличивает расход энергии, но основой похудения остаётся дефицит калорий.\n"
+        "• Сохраняй силовые тренировки.\n"
+        "• Начни с 2–3 спокойных кардиотренировок.\n"
+        "• Увеличивай объём постепенно.\n\n"
+        "Для набора мышечной массы:\n"
+        "• Используй кардио для здоровья и выносливости.\n"
+        "• Не выполняй интенсивное кардио перед силовой тренировкой.\n"
+        "• По возможности разделяй тяжёлую тренировку ног и кардио.\n"
+        "• Следи, чтобы кардио не ухудшало восстановление и прогрессию в силовых упражнениях.\n\n"
+        "Общие рекомендации:\n"
+        "• Для большинства пользователей подходят ходьба, велосипед и эллипс.\n"
+        "• Интенсивность должна позволять говорить короткими предложениями.\n"
+        "• При боли, головокружении или резком ухудшении самочувствия тренировку нужно прекратить."
+    )
+    await _cardio_send(callback, bot, uid, text, reply_markup=cardio_recommendations_kb())
+    await callback.answer()
+
+
+# =========================
 # ДИАГНОСТИКА ОПЛАТЫ (АДМИН)
 # =========================
 async def cmd_testpay(message: Message, bot: Bot):
@@ -11917,6 +12370,17 @@ def setup_handlers(dp: Dispatcher):
     dp.callback_query.register(cb_workout_ex_alt,  F.data.startswith("wex:alt:"))
     dp.callback_query.register(cb_workout_ex_apply, F.data.startswith("wex:apl:"))
     dp.callback_query.register(cb_workout_rebuild, F.data == "workout:rebuild")
+
+    # ── Кардио ───────────────────────────────────────────────────────────────
+    dp.callback_query.register(cb_cardio_menu, F.data == "cardio:menu")
+    dp.callback_query.register(cb_cardio_start, F.data == "cardio:start")
+    dp.callback_query.register(cb_cardio_type, F.data.startswith("cardio:type:"))
+    dp.callback_query.register(cb_cardio_duration, F.data.startswith("cardio:duration:"))
+    dp.callback_query.register(cb_cardio_confirm, F.data == "cardio:confirm")
+    dp.callback_query.register(cb_cardio_finish, F.data == "cardio:finish")
+    dp.callback_query.register(cb_cardio_cancel, F.data == "cardio:cancel")
+    dp.callback_query.register(cb_cardio_progress, F.data == "cardio:progress")
+    dp.callback_query.register(cb_cardio_recommendations, F.data == "cardio:recommendations")
 
     dp.message.register(cmd_testpay, Command("testpay"))
     dp.message.register(cmd_admin, Command("admin"))
